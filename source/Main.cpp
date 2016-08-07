@@ -11,32 +11,44 @@ using namespace sfz;
 using namespace sfz::gl;
 using namespace sfz::sdl;
 
+// Helper functions
+// ------------------------------------------------------------------------------------------------
+
+static Context createGLContext(const Window& window, int major, int minor) noexcept
+{
+#if !defined(SFZ_NO_DEBUG)
+#ifdef _WIN32
+	return Context(window.ptr(), major, minor, GLContextProfile::COMPATIBILITY, true);
+#else
+	return Context(window.ptr(), major, minor, GLContextProfile::CORE, true);
+#endif
+#else
+#ifdef _WIN32
+	return Context(window.ptr(), major, minor, GLContextProfile::COMPATIBILITY, false);
+#else
+	return Context(window.ptr(), major, minor, GLContextProfile::CORE, false);
+#endif
+#endif
+}
+
+// Main
+// ------------------------------------------------------------------------------------------------
+
 int main(int argc, char* argv[])
 {
-	// Small hack to enable hi-dpi awareness on Windows.
+	// Enable hi-dpi awareness on Windows.
 #ifdef _WIN32
 	SetProcessDPIAware();
 #endif
 
-	Session sdlSession({SDLInitFlags::EVERYTHING}, {});
-	Window window("VR-Experimentation", 1920, 1080, {WindowFlags::OPENGL, WindowFlags::RESIZABLE, WindowFlags::ALLOW_HIGHDPI});
+	// Start SDL session and create window
+	Session sdlSession({SDLInitFlags::EVENTS, SDLInitFlags::VIDEO, SDLInitFlags::AUDIO,
+	                    SDLInitFlags::GAMECONTROLLER}, {});
+	Window window("Phantasy Engine - Testbed", 1600, 900, {WindowFlags::OPENGL,
+	              WindowFlags::RESIZABLE, WindowFlags::ALLOW_HIGHDPI});
 
 	// OpenGL context
-	const int MAJOR_VERSION = 4;
-	const int MINOR_VERSION = 1;
-#if !defined(SFZ_NO_DEBUG)
-#ifdef _WIN32
-	gl::Context glContext{window.ptr(), MAJOR_VERSION, MINOR_VERSION, gl::GLContextProfile::COMPATIBILITY, true};
-#else
-	gl::Context glContext{window.ptr(), MAJOR_VERSION, MINOR_VERSION, gl::GLContextProfile::CORE, true};
-#endif
-#else
-#ifdef _WIN32
-	gl::Context glContext{window.ptr(), MAJOR_VERSION, MINOR_VERSION, gl::GLContextProfile::COMPATIBILITY, false};
-#else
-	gl::Context glContext{window.ptr(), MAJOR_VERSION, MINOR_VERSION, gl::GLContextProfile::CORE, false};
-#endif
-#endif
+	Context glContext = createGLContext(window, 4, 1);
 
 	// Initializes GLEW, must happen after GL context is created.
 	glewExperimental = GL_TRUE;
