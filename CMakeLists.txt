@@ -41,17 +41,25 @@ set(SOURCE_ROOT_FILES
 	${SOURCE_DIR}/Main.cpp)
 source_group(root FILES ${SOURCE_ROOT_FILES})
 
-set(SOURCE_SCREEN_FILES
+set(SOURCE_RENDERERS_FILES
+	${INCLUDE_DIR}/Renderers.hpp
+	${INCLUDE_DIR}/renderers/BaseRenderer.hpp
+	${INCLUDE_DIR}/renderers/DeferredRenderer.hpp
+	 ${SOURCE_DIR}/renderers/DeferredRenderer.cpp)
+source_group(renderers FILES ${SOURCE_RENDERERS_FILES})
+
+set(SOURCE_SCREENS_FILES
 	${INCLUDE_DIR}/Screens.hpp
 	${INCLUDE_DIR}/screens/GameScreen.hpp
 	 ${SOURCE_DIR}/screens/GameScreen.cpp
 	${INCLUDE_DIR}/screens/LevelSelectScreen.hpp
 	 ${SOURCE_DIR}/screens/LevelSelectScreen.cpp)
-source_group(screens FILES ${SOURCE_SCREEN_FILES})
+source_group(screens FILES ${SOURCE_SCREENS_FILES})
 
 set(SOURCE_ALL_FILES
 	${SOURCE_ROOT_FILES}
-	${SOURCE_SCREEN_FILES})
+	${SOURCE_RENDERERS_FILES}
+	${SOURCE_SCREENS_FILES})
 
 # Main executable
 add_executable(PhantasyEngineTestbed ${SOURCE_ALL_FILES})

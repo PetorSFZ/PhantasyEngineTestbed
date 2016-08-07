@@ -4,11 +4,12 @@
 
 #include <sfz/screens/BaseScreen.hpp>
 
+#include "renderers/BaseRenderer.hpp"
+
 namespace sfz {
 
 class GameScreen : public sfz::BaseScreen {
 public:
-
 	// Constructors & destructors
 	// --------------------------------------------------------------------------------------------
 
@@ -21,6 +22,12 @@ public:
 	virtual void render(UpdateState& state) override final;
 	virtual void onQuit() override final;
 	virtual void onResize(vec2 dimensions, vec2 drawableDimensions) override final;
+
+private:
+	// Private members
+	// --------------------------------------------------------------------------------------------
+
+	SharedPtr<BaseRenderer> mRendererPtr;
 };
 
 } // namespace sfz
