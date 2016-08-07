@@ -24,7 +24,7 @@ const Framebuffer& DeferredRenderer::getResult() const noexcept
 
 const Framebuffer& DeferredRenderer::getResultVR(uint32_t eye) const noexcept
 {
-	sfz_assert_debug(0 <= eye && eye <= 1);
+	sfz_assert_debug(eye <= 1);
 	return mResultVR[eye];
 }
 

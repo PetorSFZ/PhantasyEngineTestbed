@@ -48,6 +48,14 @@ set(SOURCE_RENDERERS_FILES
 	 ${SOURCE_DIR}/renderers/DeferredRenderer.cpp)
 source_group(renderers FILES ${SOURCE_RENDERERS_FILES})
 
+set(SOURCE_RESOURCES_FILES
+	${INCLUDE_DIR}/Resources.hpp
+	${INCLUDE_DIR}/resources/RawImage.hpp
+	 ${SOURCE_DIR}/resources/RawImage.cpp
+	${INCLUDE_DIR}/resources/RawModel.hpp
+	 ${SOURCE_DIR}/resources/RawModel.cpp)
+source_group(resources FILES ${SOURCE_RESOURCES_FILES})
+
 set(SOURCE_SCREENS_FILES
 	${INCLUDE_DIR}/Screens.hpp
 	${INCLUDE_DIR}/screens/GameScreen.hpp
@@ -59,6 +67,7 @@ source_group(screens FILES ${SOURCE_SCREENS_FILES})
 set(SOURCE_ALL_FILES
 	${SOURCE_ROOT_FILES}
 	${SOURCE_RENDERERS_FILES}
+	${SOURCE_RESOURCES_FILES}
 	${SOURCE_SCREENS_FILES})
 
 # Main executable

@@ -34,7 +34,7 @@ static Context createGLContext(const Window& window, int major, int minor) noexc
 // Main
 // ------------------------------------------------------------------------------------------------
 
-int main(int argc, char* argv[])
+int main(int, char**)
 {
 	// Enable hi-dpi awareness on Windows.
 #ifdef _WIN32

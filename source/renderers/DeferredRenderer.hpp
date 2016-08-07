@@ -12,6 +12,15 @@ namespace sfz {
 class DeferredRenderer final : public BaseRenderer {
 public:
 
+	// Constructors & destructors
+	// --------------------------------------------------------------------------------------------
+
+	DeferredRenderer() noexcept = default;
+	DeferredRenderer(const DeferredRenderer&) = delete;
+	DeferredRenderer& operator= (const DeferredRenderer&) = delete;
+	DeferredRenderer(DeferredRenderer&&) noexcept = default;
+	DeferredRenderer& operator= (DeferredRenderer&&) noexcept = default;
+
 	// Virtual methods from BaseRenderer interface
 	// --------------------------------------------------------------------------------------------
 
