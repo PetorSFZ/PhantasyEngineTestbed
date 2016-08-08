@@ -31,10 +31,14 @@ set(RUNTIME_DIR ${CMAKE_CURRENT_SOURCE_DIR}/runtime)
 set(SFZ_CORE_OPENGL TRUE)
 add_subdirectory(${EXTERNALS_DIR}/sfzCore)
 
+# tinyobjloader
+add_subdirectory(${EXTERNALS_DIR}/tinyobjloader)
+
 # Include directories
 include_directories(
 	${INCLUDE_DIR}
 	${SFZ_CORE_INCLUDE_DIRS}
+	${TINYOBJLOADER_INCLUDE_DIRS}
 )
 
 set(SOURCE_ROOT_FILES
@@ -83,6 +87,7 @@ target_link_libraries(
 	PhantasyEngineTestbed
 
 	${SFZ_CORE_LIBRARIES}
+	${TINYOBJLOADER_LIBRARIES}
 )
 
 # Windows specific file copying
