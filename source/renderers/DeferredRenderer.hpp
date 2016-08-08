@@ -2,11 +2,9 @@
 
 #pragma once
 
-#include <sfz/geometry/ViewFrustum.hpp>
 #include <sfz/gl/Program.hpp>
 
 #include "renderers/BaseRenderer.hpp"
-#include "resources/Renderable.hpp"
 
 namespace sfz {
 
@@ -31,7 +29,7 @@ public:
 	// Virtual methods from BaseRenderer interface
 	// --------------------------------------------------------------------------------------------
 
-	void render(const mat4& viewMatrix, const mat4& projMatrix) noexcept override final;
+	void render(const DynArray<DrawOp>& operations) noexcept override final;
 
 	const Framebuffer& getResult() const noexcept override final;
 
@@ -42,9 +40,6 @@ private:
 	// --------------------------------------------------------------------------------------------
 	
 	Program mTempShader;
-	Renderable mSnakeRenderable;
-	ViewFrustum mCam;
-
 	Framebuffer mResult, mResultVR[2];
 };
 

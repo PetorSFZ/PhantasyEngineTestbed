@@ -13,12 +13,8 @@ namespace sfz {
 
 DeferredRenderer::DeferredRenderer() noexcept
 {
-	StackString128 modelsPath;
-	modelsPath.printf("%sresources/models/", basePath());
 	StackString128 shadersPath;
 	shadersPath.printf("%sresources/shaders/", basePath());
-
-	mSnakeRenderable = tinyObjLoadRenderable(modelsPath.str, "head_d2u_f2.obj");
 
 	mTempShader = Program::fromFile(shadersPath.str, "temp_shader.vert", "temp_shader.frag",
 	[](uint32_t shaderProgram) {
@@ -26,16 +22,16 @@ DeferredRenderer::DeferredRenderer() noexcept
 		glBindAttribLocation(shaderProgram, 1, "inNormal");
 		glBindAttribLocation(shaderProgram, 2, "inUV");
 	});
-
-	mCam = sfz::ViewFrustum(vec3(0.0f, 3.0f, -6.0f), normalize(vec3(0.0f, -0.25f, 1.0f)),
-	                        normalize(vec3(0.0f, 1.0f, 0.0)), 60.0f, 1.0f, 0.01f, 100.0f);
 }
 
 // DeferredRenderer: Virtual methods from BaseRenderer interface
 // ------------------------------------------------------------------------------------------------
 
-void DeferredRenderer::render(const mat4& viewMatrix, const mat4& projMatrix) noexcept
+void DeferredRenderer::render(const DynArray<DrawOp>& operations) noexcept
 {
+	const mat4 viewMatrix = mMatrices.headMatrix * mMatrices.originMatrix;
+	const mat4 projMatrix = mMatrices.projMatrix;
+
 	glEnable(GL_CULL_FACE);
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS);
@@ -48,12 +44,19 @@ void DeferredRenderer::render(const mat4& viewMatrix, const mat4& projMatrix) no
 	mTempShader.useProgram();
 
 	const mat4 modelMatrix = identityMatrix4<float>();
-	gl::setUniform(mTempShader, "uProjMatrix", mCam.projMatrix());
-	gl::setUniform(mTempShader, "uViewMatrix", mCam.viewMatrix());
-	gl::setUniform(mTempShader, "uModelMatrix", modelMatrix);
-	gl::setUniform(mTempShader, "uNormalMatrix", inverse(transpose(mCam.viewMatrix() * modelMatrix))); // inverse(tranpose(modelViewMatrix))
+	gl::setUniform(mTempShader, "uProjMatrix", projMatrix);
+	gl::setUniform(mTempShader, "uViewMatrix", viewMatrix);
 
-	mSnakeRenderable.glModel.draw();
+	const int modelMatrixLoc = glGetUniformLocation(mTempShader.handle(), "uModelMatrix");
+	const int normalMatrixLoc = glGetUniformLocation(mTempShader.handle(), "uNormalMatrix");
+
+	for (const DrawOp& op : operations) {
+		sfz_assert_debug(op.renderablePtr != nullptr);
+
+		gl::setUniform(modelMatrixLoc, op.transform);
+		gl::setUniform(normalMatrixLoc, inverse(transpose(viewMatrix * op.transform))); // inverse(tranpose(modelViewMatrix))
+		op.renderablePtr->glModel.draw();
+	}
 }
 
 const Framebuffer& DeferredRenderer::getResult() const noexcept

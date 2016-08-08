@@ -2,9 +2,11 @@
 
 #pragma once
 
+#include <sfz/geometry/ViewFrustum.hpp>
 #include <sfz/screens/BaseScreen.hpp>
 
 #include "renderers/BaseRenderer.hpp"
+#include "resources/Renderable.hpp"
 
 namespace sfz {
 
@@ -27,7 +29,11 @@ private:
 	// Private members
 	// --------------------------------------------------------------------------------------------
 
-	SharedPtr<BaseRenderer> mRendererPtr;
+	ViewFrustum mCam;
+	Renderable mSnakeRenderable;
+	UniquePtr<BaseRenderer> mRendererPtr;
+	CameraMatrices mMatrices;
+	DynArray<DrawOp> mDrawOps;
 };
 
 } // namespace sfz
