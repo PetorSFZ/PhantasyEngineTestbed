@@ -32,7 +32,7 @@ void RawImage::flipVertically() noexcept
 uint8_t* RawImage::getPixelPtr(int32_t x, int32_t y) noexcept
 {
 	uint8_t* img = this->data();
-	return img + (y * mPitch + x * mBytesPerPixel);
+	return img + (uint32_t(y) * mPitch + uint32_t(x) * mBytesPerPixel);
 }
 
 uint8_t* RawImage::getPixelPtr(vec2i location) noexcept
@@ -43,7 +43,7 @@ uint8_t* RawImage::getPixelPtr(vec2i location) noexcept
 const uint8_t* RawImage::getPixelPtr(int32_t x, int32_t y) const noexcept
 {
 	const uint8_t* img = this->data();
-	return img + (y * mPitch + x * mBytesPerPixel);
+	return img + (uint32_t(y) * mPitch + uint32_t(x) * mBytesPerPixel);
 }
 
 const uint8_t* RawImage::getPixelPtr(vec2i location) const noexcept

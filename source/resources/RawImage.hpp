@@ -39,8 +39,8 @@ public:
 	inline vec2i dimensions() const noexcept { return mDim; }
 	inline int32_t width() const noexcept { return mDim.x; }
 	inline int32_t height() const noexcept { return mDim.y; }
-	inline int32_t bytesPerPixel() const noexcept { return mBytesPerPixel; }
-	inline int32_t pitch() const noexcept { return mPitch; }
+	inline uint32_t bytesPerPixel() const noexcept { return mBytesPerPixel; }
+	inline uint32_t pitch() const noexcept { return mPitch; }
 
 	uint8_t* getPixelPtr(int32_t x, int32_t y) noexcept;
 	uint8_t* getPixelPtr(vec2i location) noexcept;
@@ -53,8 +53,8 @@ private:
 
 	DynArray<uint8_t> mData;
 	vec2i mDim = vec2i(0);
-	int32_t mBytesPerPixel = 0;
-	int32_t mPitch = 0; // Length of row in bytes
+	uint32_t mBytesPerPixel = 0;
+	uint32_t mPitch = 0; // Length of row in bytes
 };
 
 } // namespace sfz
