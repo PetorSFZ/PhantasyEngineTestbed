@@ -26,9 +26,14 @@ if '%errorlevel%' NEQ '0' (
 :--------------------------------------
 
 cd Debug
-mklink /D assets\ ..\..\assets
+mklink /D resources\ ..\..\resources
+
+cd ..\RelWithDebInfo
+mklink /D resources\ ..\..\resources
+
 cd ..\Release
-mklink /D assets\ ..\..\assets
+mklink /D resources\ ..\..\resources
+
 cd ..
 
 PAUSE

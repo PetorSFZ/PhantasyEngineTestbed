@@ -2,9 +2,15 @@
 
 #pragma once
 
+#include <sfz/geometry/ViewFrustum.hpp>
+#include <sfz/gl/Program.hpp>
+
 #include "renderers/BaseRenderer.hpp"
+#include "resources/Renderable.hpp"
 
 namespace sfz {
+
+using gl::Program;
 
 // DeferredRenderer
 // ------------------------------------------------------------------------------------------------
@@ -15,11 +21,12 @@ public:
 	// Constructors & destructors
 	// --------------------------------------------------------------------------------------------
 
-	DeferredRenderer() noexcept = default;
 	DeferredRenderer(const DeferredRenderer&) = delete;
 	DeferredRenderer& operator= (const DeferredRenderer&) = delete;
 	DeferredRenderer(DeferredRenderer&&) noexcept = default;
 	DeferredRenderer& operator= (DeferredRenderer&&) noexcept = default;
+
+	DeferredRenderer() noexcept;
 
 	// Virtual methods from BaseRenderer interface
 	// --------------------------------------------------------------------------------------------
@@ -34,6 +41,10 @@ private:
 	// Private members
 	// --------------------------------------------------------------------------------------------
 	
+	Program mTempShader;
+	Renderable mSnakeRenderable;
+	ViewFrustum mCam;
+
 	Framebuffer mResult, mResultVR[2];
 };
 

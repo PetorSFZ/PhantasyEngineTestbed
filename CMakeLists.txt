@@ -93,7 +93,7 @@ target_link_libraries(
 # Windows specific file copying
 if(MSVC)
 	# Create assets symlinks batch file
-	file(COPY ${RUNTIME_DIR}/windows/CREATE_ASSETS_SYMLINKS.BAT DESTINATION ${CMAKE_BINARY_DIR})
+	file(COPY ${RUNTIME_DIR}/windows/CREATE_RESOURCES_SYMLINKS.BAT DESTINATION ${CMAKE_BINARY_DIR})
 
 	# Runtime DLLs
 	file(COPY ${RUNTIME_DIR}/windows/SDL2.dll DESTINATION ${CMAKE_BINARY_DIR}/Debug)
