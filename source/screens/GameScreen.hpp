@@ -10,6 +10,8 @@
 
 namespace sfz {
 
+using sdl::ButtonState;
+
 class GameScreen : public sfz::BaseScreen {
 public:
 	// Constructors & destructors
@@ -26,14 +28,34 @@ public:
 	virtual void onResize(vec2 dimensions, vec2 drawableDimensions) override final;
 
 private:
+	// Private structs
+	// --------------------------------------------------------------------------------------------
+
+	struct EmulatedGameController {
+		sdl::GameControllerState state;
+		sdl::ButtonState leftStickUp = ButtonState::NOT_PRESSED;
+		sdl::ButtonState leftStickDown = ButtonState::NOT_PRESSED;
+		sdl::ButtonState leftStickLeft = ButtonState::NOT_PRESSED;
+		sdl::ButtonState leftStickRight = ButtonState::NOT_PRESSED;
+		sdl::ButtonState shiftPressed = ButtonState::NOT_PRESSED;
+	};
+	
+	// Private methods
+	// --------------------------------------------------------------------------------------------
+
+	void updateEmulatedController(const DynArray<SDL_Event>& events, const sdl::Mouse& rawMouse) noexcept;
+
 	// Private members
 	// --------------------------------------------------------------------------------------------
 
-	ViewFrustum mCam;
-	Renderable mSnakeRenderable;
 	UniquePtr<BaseRenderer> mRendererPtr;
+	EmulatedGameController mEmulatedController;
+	ViewFrustum mCam;
 	CameraMatrices mMatrices;
 	DynArray<DrawOp> mDrawOps;
+
+	// Temp
+	Renderable mSnakeRenderable;
 };
 
 } // namespace sfz

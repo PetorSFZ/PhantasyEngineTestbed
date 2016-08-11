@@ -46,7 +46,7 @@ struct DrawOp final {
 	const Renderable* renderablePtr = nullptr;
 
 	DrawOp() noexcept = default;
-	inline DrawOp(const mat4& transform, const Renderable* renderablePtr)
+	inline DrawOp(const mat4& transform, const Renderable* renderablePtr) noexcept
 	:
 		transform(transform),
 		renderablePtr(renderablePtr)
