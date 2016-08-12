@@ -8,6 +8,11 @@
 
 namespace sfz {
 
+// Statics
+// ------------------------------------------------------------------------------------------------
+
+static const size_t GBUFFER_NORMALS = 0;
+
 // DeferredRenderer: Constructors & destructors
 // ------------------------------------------------------------------------------------------------
 
@@ -23,12 +28,7 @@ DeferredRenderer::DeferredRenderer() noexcept
 		glBindAttribLocation(shaderProgram, 2, "inUV");
 	});
 
-	mShadingShader = Program::fromFile(shadersPath.str, "shading.vert", "shading.frag",
-		[](uint32_t shaderProgram) {
-		glBindAttribLocation(shaderProgram, 0, "inPosition");
-		glBindAttribLocation(shaderProgram, 1, "inNormal");
-		glBindAttribLocation(shaderProgram, 2, "inUV");
-	});
+	mShadingShader = Program::postProcessFromFile(shadersPath.str, "shading.frag");
 }
 
 // DeferredRenderer: Virtual methods from BaseRenderer interface
@@ -38,17 +38,17 @@ void DeferredRenderer::render(const DynArray<DrawOp>& operations) noexcept
 {
 	const mat4 viewMatrix = mMatrices.headMatrix * mMatrices.originMatrix;
 	const mat4 projMatrix = mMatrices.projMatrix;
+	const mat4 invProjMatrix = inverse(projMatrix);
 
+	// GBuffer generation
+	// --------------------------------------------------------------------------------------------
+
+	glDisable(GL_BLEND);
 	glEnable(GL_CULL_FACE);
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS);
 
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	glViewport(0, 0, mResolution.x, mResolution.y);
-	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-	glClearDepth(1.0f);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
+	mGBuffer.bindViewportClearColorDepth(vec2i(0), mResolution);
 	mGBufferGenShader.useProgram();
 
 	const mat4 modelMatrix = identityMatrix4<float>();
@@ -65,6 +65,33 @@ void DeferredRenderer::render(const DynArray<DrawOp>& operations) noexcept
 		gl::setUniform(normalMatrixLoc, inverse(transpose(viewMatrix * op.transform))); // inverse(tranpose(modelViewMatrix))
 		op.renderablePtr->glModel.draw();
 	}
+
+	// Shading
+	// --------------------------------------------------------------------------------------------
+
+	glDisable(GL_BLEND);
+	glEnable(GL_CULL_FACE);
+	glDisable(GL_DEPTH_TEST);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glViewport(0, 0, mResolution.x, mResolution.y);
+	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+	glClearDepth(1.0f);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	mShadingShader.useProgram();
+
+	gl::setUniform(mShadingShader, "uInvProjMatrix", invProjMatrix);
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, mGBuffer.depthTexture());
+	gl::setUniform(mShadingShader, "uDepthTexture", 0);
+
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, mGBuffer.texture(GBUFFER_NORMALS));
+	gl::setUniform(mShadingShader, "uNormalTexture", 1);
+
+	mFullscreenQuad.render();
 }
 
 const Framebuffer& DeferredRenderer::getResult() const noexcept
@@ -83,12 +110,20 @@ const Framebuffer& DeferredRenderer::getResultVR(uint32_t eye) const noexcept
 
 void DeferredRenderer::maxResolutionUpdated() noexcept
 {
+	using gl::FBDepthFormat;
+	using gl::FBTextureFiltering;
+	using gl::FBTextureFormat;
+	using gl::FramebufferBuilder;
 
+	mGBuffer = FramebufferBuilder(mMaxResolution)
+	          .addDepthTexture(FBDepthFormat::F32)
+	          .addTexture(GBUFFER_NORMALS, FBTextureFormat::RGB_S8, FBTextureFiltering::LINEAR)
+	          .build();
 }
 
 void DeferredRenderer::resolutionUpdated() noexcept
 {
-
+	
 }
 
 } // namespace sfz
