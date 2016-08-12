@@ -74,11 +74,36 @@ public:
 
 	inline void updateMatrices(const CameraMatrices& matrices) noexcept { mMatrices = matrices; }
 
+	inline vec2i maxResolution() const noexcept { return mMaxResolution; }
+	inline void setMaxResolution(vec2i maxResolution) noexcept
+	{
+		sfz_assert_debug(0 < maxResolution.x);
+		sfz_assert_debug(0 < maxResolution.y);
+		this->mMaxResolution = maxResolution;
+		this->maxResolutionUpdated();
+	}
+
+	inline vec2i resolution() const noexcept { return mResolution; }
+	inline void setResolution(vec2i resolution) noexcept
+	{
+		sfz_assert_debug(resolution.x <= mMaxResolution.x);
+		sfz_assert_debug(resolution.y <= mMaxResolution.y);
+		this->mResolution = resolution;
+		this->resolutionUpdated();
+	}
+
 protected:
+	// Protected virtual methods
+	// --------------------------------------------------------------------------------------------
+
+	virtual void maxResolutionUpdated() noexcept = 0;
+	virtual void resolutionUpdated() noexcept = 0;
+
 	// Protected members
 	// --------------------------------------------------------------------------------------------
 
 	CameraMatrices mMatrices;
+	vec2i mMaxResolution, mResolution;
 };
 
 } // namespace sfz

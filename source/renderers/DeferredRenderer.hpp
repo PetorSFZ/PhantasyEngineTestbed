@@ -30,17 +30,22 @@ public:
 	// --------------------------------------------------------------------------------------------
 
 	void render(const DynArray<DrawOp>& operations) noexcept override final;
-
 	const Framebuffer& getResult() const noexcept override final;
-
 	const Framebuffer& getResultVR(uint32_t eye) const noexcept override final;
+
+protected:
+	// Protected virtual methods from BaseRenderer interface
+	// --------------------------------------------------------------------------------------------
+
+	void maxResolutionUpdated() noexcept override final;
+	void resolutionUpdated() noexcept override final;
 
 private:
 	// Private members
 	// --------------------------------------------------------------------------------------------
 	
-	Program mTempShader;
-	Framebuffer mResult, mResultVR[2];
+	Program mGBufferGenShader, mShadingShader;
+	Framebuffer mGBuffer, mResult, mResultVR[2];
 };
 
 } // namespace sfz

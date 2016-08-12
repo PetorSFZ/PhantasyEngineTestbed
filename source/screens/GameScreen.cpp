@@ -124,6 +124,11 @@ UpdateOp GameScreen::update(UpdateState& state)
 
 void GameScreen::render(UpdateState& state)
 {
+	if (state.window.drawableDimensions() != mRendererPtr->resolution()) {
+		mRendererPtr->setMaxResolution(state.window.drawableDimensions());
+		mRendererPtr->setResolution(state.window.drawableDimensions());
+	}
+
 	mDrawOps.clear();
 	mDrawOps.add(DrawOp(identityMatrix4<float>(), &mSnakeRenderable));
 	mDrawOps.add(DrawOp(yRotationMatrix4(1.0f), &mSnakeRenderable));
@@ -146,7 +151,8 @@ void GameScreen::onQuit()
 
 void GameScreen::onResize(vec2 dimensions, vec2 drawableDimensions)
 {
-
+	this->mRendererPtr->setMaxResolution(vec2i(drawableDimensions));
+	this->mRendererPtr->setResolution(vec2i(drawableDimensions));
 }
 
 // GameScreen: Private methods
