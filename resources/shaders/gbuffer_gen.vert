@@ -9,7 +9,6 @@ in vec3 inNormal;
 in vec2 inUV;
 
 // Output
-out vec3 pos;
 out vec3 normal;
 out vec2 uv;
 
@@ -24,9 +23,7 @@ uniform mat4 uNormalMatrix; // inverse(transpose(modelViewMatrix)) for non-unifo
 
 void main()
 {
-	mat4 modelViewMatrix = uViewMatrix * uModelMatrix;
-	pos = (modelViewMatrix * vec4(inPosition, 1.0)).xyz;
-	normal = normalize((uNormalMatrix * vec4(inNormal, 0.0)).xyz);
+	gl_Position = uProjMatrix * uViewMatrix * uModelMatrix * vec4(inPosition, 1.0);
+	normal = (uNormalMatrix * vec4(inNormal, 0.0)).xyz;
 	uv = inUV;
-	gl_Position = uProjMatrix * modelViewMatrix * vec4(inPosition, 1.0);
 }

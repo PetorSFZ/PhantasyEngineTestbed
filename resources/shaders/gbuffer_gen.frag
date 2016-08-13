@@ -4,7 +4,6 @@
 // ------------------------------------------------------------------------------------------------
 
 // Input
-in vec3 pos;
 in vec3 normal;
 in vec2 uv;
 
@@ -16,6 +15,5 @@ layout(location = 0) out vec4 outFragNormal;
 
 void main()
 {
-	//outFragLinearDepth = vec4(-pos.z / uFarPlaneDist, 0.0, 0.0, 1.0);
-	outFragNormal = vec4(normal, 1.0);
+	outFragNormal = vec4(normalize(normal), 1.0);
 }

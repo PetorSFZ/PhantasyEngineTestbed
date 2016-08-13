@@ -11,7 +11,7 @@ namespace sfz {
 // Statics
 // ------------------------------------------------------------------------------------------------
 
-static const size_t GBUFFER_NORMALS = 0;
+static const uint32_t GBUFFER_NORMALS = 0;
 
 // DeferredRenderer: Constructors & destructors
 // ------------------------------------------------------------------------------------------------
@@ -116,7 +116,7 @@ void DeferredRenderer::maxResolutionUpdated() noexcept
 	using gl::FramebufferBuilder;
 
 	mGBuffer = FramebufferBuilder(mMaxResolution)
-	          .addDepthTexture(FBDepthFormat::F32)
+	          .addDepthTexture(FBDepthFormat::F32, FBTextureFiltering::NEAREST)
 	          .addTexture(GBUFFER_NORMALS, FBTextureFormat::RGB_S8, FBTextureFiltering::LINEAR)
 	          .build();
 }
