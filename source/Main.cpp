@@ -7,6 +7,11 @@
 
 #include "Screens.hpp"
 
+#ifdef _WIN32
+#include <sfz/util/IO.hpp>
+#include <direct.h>
+#endif
+
 using namespace sfz;
 using namespace sfz::gl;
 using namespace sfz::sdl;
@@ -36,9 +41,13 @@ static Context createGLContext(const Window& window, int major, int minor) noexc
 
 int main(int, char**)
 {
-	// Enable hi-dpi awareness on Windows.
+	// Windwows specific hacks
 #ifdef _WIN32
+	// Enable hi-dpi awareness
 	SetProcessDPIAware();
+
+	// Set current working directory to SDL_BasePath()
+	_chdir(sfz::basePath());
 #endif
 
 	// Start SDL session and create window
@@ -69,7 +78,7 @@ int main(int, char**)
 #endif
 
 	// Trap mouse
-	SDL_SetRelativeMouseMode(SDL_TRUE);
+	//SDL_SetRelativeMouseMode(SDL_TRUE);
 
 	// Run gameloop
 	sfz::runGameLoop(window, SharedPtr<BaseScreen>(sfz_new<GameScreen>()));
