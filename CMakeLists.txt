@@ -34,11 +34,15 @@ add_subdirectory(${EXTERNALS_DIR}/sfzCore)
 # tinyobjloader
 add_subdirectory(${EXTERNALS_DIR}/tinyobjloader)
 
+# Assimp
+add_subdirectory(${EXTERNALS_DIR}/assimp)
+
 # Include directories
 include_directories(
 	${INCLUDE_DIR}
 	${SFZ_CORE_INCLUDE_DIRS}
 	${TINYOBJLOADER_INCLUDE_DIRS}
+	${ASSIMP_INCLUDE_DIRS}
 )
 
 set(SOURCE_ROOT_FILES
@@ -88,6 +92,7 @@ target_link_libraries(
 
 	${SFZ_CORE_LIBRARIES}
 	${TINYOBJLOADER_LIBRARIES}
+	${ASSIMP_LIBRARIES}
 )
 
 # Windows specific file copying
