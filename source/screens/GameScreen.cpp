@@ -2,6 +2,8 @@
 
 #include "screens/GameScreen.hpp"
 
+#include <chrono>
+
 #include <sfz/gl/IncludeOpenGL.hpp>
 #include <sfz/util/IO.hpp>
 
@@ -25,9 +27,18 @@ GameScreen::GameScreen() noexcept
 
 	mRendererPtr = UniquePtr<BaseRenderer>(sfz_new<DeferredRenderer>());
 	mDrawOps.ensureCapacity(8192);
+	
 
+	using time_point = std::chrono::high_resolution_clock::time_point;
+	time_point before = std::chrono::high_resolution_clock::now();
+	
 	mSnakeRenderable = tinyObjLoadRenderable(modelsPath.str, "head_d2u_f2.obj");
 	mSponza = tinyObjLoadSponza(modelsPath.str, "sponza/sponza.obj");
+
+	time_point after = std::chrono::high_resolution_clock::now();
+	using FloatSecond = std::chrono::duration<float>;
+	float delta = std::chrono::duration_cast<FloatSecond>(after - before).count();
+	printf("Time spent loading models: %.3f seconds\n", delta);
 }
 
 // GameScreen: Overriden methods from sfz::BaseScreen
