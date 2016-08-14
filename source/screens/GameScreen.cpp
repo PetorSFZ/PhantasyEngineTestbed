@@ -71,10 +71,10 @@ UpdateOp GameScreen::update(UpdateState& state)
 
 	// Triggers
 	if (ctrl.leftTrigger > ctrl.triggerDeadzone) {
-
+		currentSpeed += (ctrl.leftTrigger * 12.0f);
 	}
 	if (ctrl.rightTrigger > ctrl.triggerDeadzone) {
-		currentSpeed += (ctrl.rightTrigger * 12.0f);
+		
 	}
 
 	// Analogue Sticks
@@ -143,7 +143,7 @@ void GameScreen::render(UpdateState& state)
 
 	mDrawOps.clear();
 	for (const Renderable& renderable : mSponza) {
-		mDrawOps.add(DrawOp(identityMatrix4<float>(), &renderable));
+		mDrawOps.add(DrawOp(scalingMatrix4<float>(0.05f), &renderable));
 	}
 	mDrawOps.add(DrawOp(identityMatrix4<float>(), &mSnakeRenderable));
 	mRendererPtr->render(mDrawOps);
@@ -321,7 +321,19 @@ void GameScreen::updateEmulatedController(const DynArray<SDL_Event>& events,
 	mEmulatedController.state.leftStick = leftStick;
 
 	// Set right stick
-	mEmulatedController.state.rightStick = rawMouse.motion * 60.0f;
+	mEmulatedController.state.rightStick = rawMouse.motion * 200.0f;
+
+	// Set triggers
+	if (rawMouse.leftButton == ButtonState::NOT_PRESSED) {
+		mEmulatedController.state.rightTrigger = 0.0f;
+	} else {
+		mEmulatedController.state.rightTrigger = 1.0f;
+	}
+	if (rawMouse.rightButton == ButtonState::NOT_PRESSED) {
+		mEmulatedController.state.leftTrigger = 0.0f;
+	} else {
+		mEmulatedController.state.leftTrigger = 1.0f;
+	}
 }
 
 } // namespace sfz

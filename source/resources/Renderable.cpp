@@ -81,40 +81,44 @@ DynArray<Renderable> tinyObjLoadSponza(const char* basePath, const char* fileNam
 		printErrorMessage("Model %s has no shapes", fileName);
 		return DynArray<Renderable>();
 	}
+	
+	DynArray<Renderable> renderables = DynArray<Renderable>(0, uint32_t(shapes.size()));
+	for (size_t i = 0; i < shapes.size(); i++) {
+		shape_t& shape = shapes[i];
+		Renderable tmp;
 
-	shape_t shape = shapes[0];
+		// Calculate number of vertices and create default vertices (all 0)
+		uint32_t numVertices = (uint32_t)std::max(shape.mesh.positions.size() / 3,
+		                                 std::max(shape.mesh.normals.size() / 3,
+		                                 shape.mesh.texcoords.size() / 2));
 
-	// Calculate number of vertices and create default vertices (all 0)
-	uint32_t numVertices = (uint32_t)std::max(shape.mesh.positions.size() / 3,
-		std::max(shape.mesh.normals.size() / 3,
-			shape.mesh.texcoords.size() / 2));
-	Renderable tmp;
-	tmp.geometry.vertices = DynArray<Vertex>(numVertices, numVertices);
+		tmp.geometry.vertices = DynArray<Vertex>(numVertices, numVertices);
 
-	// Fill vertices with positions
-	for (size_t i = 0; i < shape.mesh.positions.size() / 3; i++) {
-		tmp.geometry.vertices[uint32_t(i)].pos = vec3(&shape.mesh.positions[i * 3]);
+		// Fill vertices with positions
+		for (size_t i = 0; i < shape.mesh.positions.size() / 3; i++) {
+			tmp.geometry.vertices[uint32_t(i)].pos = vec3(&shape.mesh.positions[i * 3]);
+		}
+
+		// Fill vertices with normals
+		for (size_t i = 0; i < shape.mesh.normals.size() / 3; i++) {
+			tmp.geometry.vertices[uint32_t(i)].normal = vec3(&shape.mesh.normals[i * 3]);
+		}
+
+		// Fill vertices with uv coordinates
+		for (size_t i = 0; i < shape.mesh.texcoords.size() / 2; i++) {
+			tmp.geometry.vertices[uint32_t(i)].uv = vec2(&shape.mesh.texcoords[i * 2]);
+		}
+
+		// Create indices
+		tmp.geometry.indices.add(&shape.mesh.indices[0], (uint32_t)shape.mesh.indices.size());
+
+		// Load geometry into OpenGL
+		tmp.glModel.load(tmp.geometry);
+
+		renderables.add(std::move(tmp));
 	}
 
-	// Fill vertices with normals
-	for (size_t i = 0; i < shape.mesh.normals.size() / 3; i++) {
-		tmp.geometry.vertices[uint32_t(i)].normal = vec3(&shape.mesh.normals[i * 3]);
-	}
-
-	// Fill vertices with uv coordinates
-	for (size_t i = 0; i < shape.mesh.texcoords.size() / 2; i++) {
-		tmp.geometry.vertices[uint32_t(i)].uv = vec2(&shape.mesh.texcoords[i * 2]);
-	}
-
-	// Create indices
-	tmp.geometry.indices.add(&shape.mesh.indices[0], (uint32_t)shape.mesh.indices.size());
-
-	// Load geometry into OpenGL
-	tmp.glModel.load(tmp.geometry);
-
-	DynArray<Renderable> tmpDyn;
-	tmpDyn.add(std::move(tmp));
-	return std::move(tmpDyn);
+	return std::move(renderables);
 }
 
 } // namespace sfz

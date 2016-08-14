@@ -68,6 +68,9 @@ int main(int, char**)
 	gl::setupDebugMessages(gl::Severity::MEDIUM, gl::Severity::MEDIUM);
 #endif
 
+	// Trap mouse
+	SDL_SetRelativeMouseMode(SDL_TRUE);
+
 	// Run gameloop
 	sfz::runGameLoop(window, SharedPtr<BaseScreen>(sfz_new<GameScreen>()));
 
