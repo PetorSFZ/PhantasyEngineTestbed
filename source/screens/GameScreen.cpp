@@ -27,6 +27,7 @@ GameScreen::GameScreen() noexcept
 	mDrawOps.ensureCapacity(8192);
 
 	mSnakeRenderable = tinyObjLoadRenderable(modelsPath.str, "head_d2u_f2.obj");
+	mSponza = tinyObjLoadSponza(modelsPath.str, "sponza/sponza.obj");
 }
 
 // GameScreen: Overriden methods from sfz::BaseScreen
@@ -130,8 +131,10 @@ void GameScreen::render(UpdateState& state)
 	}
 
 	mDrawOps.clear();
+	for (const Renderable& renderable : mSponza) {
+		mDrawOps.add(DrawOp(identityMatrix4<float>(), &renderable));
+	}
 	mDrawOps.add(DrawOp(identityMatrix4<float>(), &mSnakeRenderable));
-	mDrawOps.add(DrawOp(yRotationMatrix4(1.0f), &mSnakeRenderable));
 	mRendererPtr->render(mDrawOps);
 
 	/*glBindFramebuffer(GL_FRAMEBUFFER, 0);
