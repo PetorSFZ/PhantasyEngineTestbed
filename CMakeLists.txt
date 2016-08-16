@@ -37,12 +37,16 @@ add_subdirectory(${EXTERNALS_DIR}/tinyobjloader)
 # Assimp
 add_subdirectory(${EXTERNALS_DIR}/assimp)
 
+# stb_image
+add_subdirectory(${EXTERNALS_DIR}/stb_image)
+
 # Include directories
 include_directories(
 	${INCLUDE_DIR}
 	${SFZ_CORE_INCLUDE_DIRS}
 	${TINYOBJLOADER_INCLUDE_DIRS}
 	${ASSIMP_INCLUDE_DIRS}
+	${STB_IMAGE_INCLUDE_DIRS}
 )
 
 set(SOURCE_ROOT_FILES
@@ -93,6 +97,7 @@ target_link_libraries(
 	${SFZ_CORE_LIBRARIES}
 	${TINYOBJLOADER_LIBRARIES}
 	${ASSIMP_LIBRARIES}
+	${STB_IMAGE_LIBRARIES}
 )
 
 # Windows specific file copying
