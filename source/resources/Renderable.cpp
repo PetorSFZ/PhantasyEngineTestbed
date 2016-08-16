@@ -2,7 +2,13 @@
 
 #include "resources/Renderable.hpp"
 
+#include <assimp/Importer.hpp>
+#include <assimp/scene.h>
+#include <assimp/postprocess.h>
+
 #include <tiny_obj_loader.h>
+
+#include <sfz/containers/DynString.hpp>
 
 namespace sfz {
 
@@ -190,6 +196,78 @@ DynArray<Renderable> tinyObjLoadSponza(const char* basePath, const char* fileNam
 		renderables.add(std::move(tmp));
 	}
 
+	return std::move(renderables);
+}
+
+static vec3 toSFZ(const aiVector3D& v)
+{
+	return vec3(v.x, v.y, v.z);
+}
+
+static void processNode(DynArray<Renderable>& renderables, const aiScene* scene, aiNode* node) noexcept
+{
+	// Process all meshes in current node
+	for (uint32_t meshIndex = 0; meshIndex < node->mNumMeshes; meshIndex++) {
+		const aiMesh* mesh = scene->mMeshes[node->mMeshes[meshIndex]];
+		Renderable tmp;
+
+		// Allocate memory for vertices
+		tmp.geometry.vertices = DynArray<Vertex>(mesh->mNumVertices, mesh->mNumVertices);// .setCapacity(mesh->mNumVertices);
+
+		// Fill vertices with positions, normals and uv coordinates
+		sfz_assert_debug(mesh->HasPositions());
+		sfz_assert_debug(mesh->HasNormals());
+		for (uint32_t i = 0; i < mesh->mNumVertices; i++) {
+			tmp.geometry.vertices[i].pos = toSFZ(mesh->mVertices[i]);
+			tmp.geometry.vertices[i].normal = toSFZ(mesh->mNormals[i]);
+			if (mesh->HasTextureCoords(i)) {
+				tmp.geometry.vertices[i].uv = toSFZ(mesh->mTextureCoords[0][i]).xy;
+			} else {
+				tmp.geometry.vertices[i].uv = vec2(0.0f);
+			}
+		}
+
+		// Fill geometry with indices
+		tmp.geometry.indices.setCapacity(mesh->mNumFaces * 3);
+		for (uint32_t i = 0; i < mesh->mNumFaces; i++) {
+			const aiFace& face = mesh->mFaces[i];
+			for (uint32_t j = 0; j < face.mNumIndices; j++) {
+				tmp.geometry.indices.add(face.mIndices[j]);
+			}
+		}
+
+		// Load geometry into OpenGL
+		tmp.glModel.load(tmp.geometry);
+
+		// Add Renderable to list of renderables
+		renderables.add(std::move(tmp));
+	}
+
+	// Process all children
+	for (uint32_t i = 0; i < node->mNumChildren; i++) {
+		processNode(renderables, scene, node->mChildren[i]);
+	}
+}
+
+DynArray<Renderable> assimpLoadSponza(const char* basePath, const char* fileName) noexcept
+{
+	// Create full path
+	size_t basePathLen = std::strlen(basePath);
+	size_t fileNameLen = std::strlen(fileName);
+	DynString path("", basePathLen + fileNameLen + 2);
+	path.printf("%s%s", basePath, fileName);
+
+	// Load model through Assimp
+	Assimp::Importer importer;
+	const aiScene* scene = importer.ReadFile(path.str(), aiProcessPreset_TargetRealtime_Quality | aiProcess_FlipUVs);
+	if (scene == nullptr || scene->mFlags == AI_SCENE_FLAGS_INCOMPLETE || scene->mRootNode == nullptr) {
+		printErrorMessage("Failed to load model \"%s\", error: %s", fileName, importer.GetErrorString());
+		return DynArray<Renderable>();
+	}
+	
+	// Process tree, creating renderables along the way
+	DynArray<Renderable> renderables;
+	processNode(renderables, scene, scene->mRootNode);
 	return std::move(renderables);
 }
 

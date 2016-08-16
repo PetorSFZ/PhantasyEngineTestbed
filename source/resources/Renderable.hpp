@@ -37,4 +37,6 @@ Renderable tinyObjLoadRenderable(const char* basePath, const char* fileName) noe
 /// Specialized function to load sponza (with pbr textures) using tinyObjLoader
 DynArray<Renderable> tinyObjLoadSponza(const char* basePath, const char* fileName) noexcept;
 
+DynArray<Renderable> assimpLoadSponza(const char* basePath, const char* fileName) noexcept;
+
 } // namespace sfz

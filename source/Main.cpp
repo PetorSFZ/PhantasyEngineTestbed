@@ -78,7 +78,7 @@ int main(int, char**)
 #endif
 
 	// Trap mouse
-	//SDL_SetRelativeMouseMode(SDL_TRUE);
+	SDL_SetRelativeMouseMode(SDL_TRUE);
 
 	// Run gameloop
 	sfz::runGameLoop(window, SharedPtr<BaseScreen>(sfz_new<GameScreen>()));
