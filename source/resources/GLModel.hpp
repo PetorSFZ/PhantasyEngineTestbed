@@ -30,7 +30,7 @@ public:
 	// Methods
 	// --------------------------------------------------------------------------------------------
 
-	
+	/// Loads this GLModel
 	void load(const RawGeometry& geometry) noexcept;
 
 	/// Destroys this GLModel
