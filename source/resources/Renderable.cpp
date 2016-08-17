@@ -204,7 +204,8 @@ static vec3 toSFZ(const aiVector3D& v)
 	return vec3(v.x, v.y, v.z);
 }
 
-static void processNode(DynArray<Renderable>& renderables, const aiScene* scene, aiNode* node) noexcept
+static void processNode(const char* basePath, DynArray<Renderable>& renderables,
+                        const aiScene* scene, aiNode* node) noexcept
 {
 	// Process all meshes in current node
 	for (uint32_t meshIndex = 0; meshIndex < node->mNumMeshes; meshIndex++) {
@@ -220,7 +221,7 @@ static void processNode(DynArray<Renderable>& renderables, const aiScene* scene,
 		for (uint32_t i = 0; i < mesh->mNumVertices; i++) {
 			tmp.geometry.vertices[i].pos = toSFZ(mesh->mVertices[i]);
 			tmp.geometry.vertices[i].normal = toSFZ(mesh->mNormals[i]);
-			if (mesh->HasTextureCoords(i)) {
+			if (mesh->mTextureCoords[0] != nullptr) {
 				tmp.geometry.vertices[i].uv = toSFZ(mesh->mTextureCoords[0][i]).xy;
 			} else {
 				tmp.geometry.vertices[i].uv = vec2(0.0f);
@@ -239,13 +240,36 @@ static void processNode(DynArray<Renderable>& renderables, const aiScene* scene,
 		// Load geometry into OpenGL
 		tmp.glModel.load(tmp.geometry);
 
+		
+
+
+		const aiMaterial* mat = scene->mMaterials[mesh->mMaterialIndex];
+
+
+		aiColor4D diffuseColor;
+		mat->Get(AI_MATKEY_COLOR_DIFFUSE, diffuseColor);
+		tmp.material.albedoValue = vec3(diffuseColor.r, diffuseColor.g, diffuseColor.b);
+
+		if (mat->GetTextureCount(aiTextureType_DIFFUSE) > 0) {
+			sfz_assert_debug(mat->GetTextureCount(aiTextureType_DIFFUSE) == 1);
+			aiString path;
+			mat->GetTexture(aiTextureType_DIFFUSE, 0, &path);
+			
+
+			printf("Diffuse texture: %s\n", path.C_Str());
+			tmp.material.albedoImage = loadImage(basePath, path.C_Str());
+
+			tmp.glMaterial.albedoTexture.load(tmp.material.albedoImage);
+		}
+
+
 		// Add Renderable to list of renderables
 		renderables.add(std::move(tmp));
 	}
 
 	// Process all children
 	for (uint32_t i = 0; i < node->mNumChildren; i++) {
-		processNode(renderables, scene, node->mChildren[i]);
+		processNode(basePath, renderables, scene, node->mChildren[i]);
 	}
 }
 
@@ -256,6 +280,26 @@ DynArray<Renderable> assimpLoadSponza(const char* basePath, const char* fileName
 	size_t fileNameLen = std::strlen(fileName);
 	DynString path("", basePathLen + fileNameLen + 2);
 	path.printf("%s%s", basePath, fileName);
+	if (path.size() < 1) {
+		printErrorMessage("Failed to load model, empty path");
+		return DynArray<Renderable>();
+	}
+
+	// Get the real base path from the path
+	DynString realBasePath(path.str());
+	DynArray<char>& internal = realBasePath.internalDynArray();
+	for (uint32_t i = internal.size() - 1; i > 0; i--) {
+		const char c = internal[i-1];
+		if (c == '\\' || c == '/') {
+			internal[i] = '\0';
+			internal.setSize(i + 1);
+			break;
+		}
+	}
+	if (realBasePath.size() == path.size()) {
+		printErrorMessage("Failed to find real base path, basePath=\"%s\", fileName=\"%s\"", basePath, fileName);
+		return DynArray<Renderable>();
+	}
 
 	// Load model through Assimp
 	Assimp::Importer importer;
@@ -267,7 +311,7 @@ DynArray<Renderable> assimpLoadSponza(const char* basePath, const char* fileName
 	
 	// Process tree, creating renderables along the way
 	DynArray<Renderable> renderables;
-	processNode(renderables, scene, scene->mRootNode);
+	processNode(realBasePath.str(), renderables, scene, scene->mRootNode);
 	return std::move(renderables);
 }
 

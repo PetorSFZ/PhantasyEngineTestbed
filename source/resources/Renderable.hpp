@@ -2,6 +2,8 @@
 
 #pragma once
 
+#include <sfz/containers/DynArray.hpp>
+
 #include "resources/GLMaterial.hpp"
 #include "resources/GLModel.hpp"
 #include "resources/RawGeometry.hpp"

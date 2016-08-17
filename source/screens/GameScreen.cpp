@@ -67,12 +67,12 @@ UpdateOp GameScreen::update(UpdateState& state)
 	const GameControllerState& ctrl = (controller != nullptr) ? controller->state() : mEmulatedController.state;
 	
 	
-	float currentSpeed = 3.0f;
-	float turningSpeed = PI();
+	float currentSpeed = 10.0f;
+	float turningSpeed = 1.25f * PI();
 
 	// Triggers
 	if (ctrl.leftTrigger > ctrl.triggerDeadzone) {
-		currentSpeed += (ctrl.leftTrigger * 12.0f);
+		currentSpeed += (ctrl.leftTrigger * 25.0f);
 	}
 	if (ctrl.rightTrigger > ctrl.triggerDeadzone) {
 		
