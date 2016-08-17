@@ -2,8 +2,10 @@
 
 #pragma once
 
+#include "resources/GLMaterial.hpp"
 #include "resources/GLModel.hpp"
 #include "resources/RawGeometry.hpp"
+#include "resources/RawMaterial.hpp"
 
 namespace sfz {
 
@@ -16,7 +18,9 @@ public:
 	// --------------------------------------------------------------------------------------------
 
 	RawGeometry geometry;
+	RawMaterial material;
 	GLModel glModel;
+	GLMaterial glMaterial;
 
 	// Constructors & destructors
 	// --------------------------------------------------------------------------------------------
