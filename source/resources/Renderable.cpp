@@ -256,21 +256,17 @@ static void processNode(const char* basePath, Renderable& renderable,
 			mat->GetTexture(aiTextureType_DIFFUSE, 0, &path);
 			//DynString pathDynStr(path.C_Str());
 			
-
 			uint32_t* indexPtr = texMapping.get(path.C_Str());
-			if (indexPtr != nullptr) {
-				tmp.material.albedoIndex = *indexPtr;
-			}
-			
-			else {
+			if (indexPtr == nullptr) {
 				printf("Diffuse texture: %s\n", path.C_Str());
 
 				texMapping.put(path.C_Str(), renderable.textures.size());
+				indexPtr = texMapping.get(path.C_Str());
 				renderable.images.add(loadImage(basePath, path.C_Str()));
 				renderable.textures.add(GLTexture(renderable.images[renderable.textures.size()]));
 			}
+			tmp.material.albedoIndex = *indexPtr;
 		}
-
 
 		// Add component to Renderable
 		renderable.components.add(std::move(tmp));
