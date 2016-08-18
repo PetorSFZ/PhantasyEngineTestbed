@@ -9,13 +9,14 @@
 #include <tiny_obj_loader.h>
 
 #include <sfz/containers/DynString.hpp>
+#include <sfz/containers/HashMap.hpp>
 
 namespace sfz {
 
 // Renderable creation functions
 // ------------------------------------------------------------------------------------------------
 
-Renderable tinyObjLoadRenderable(const char* basePath, const char* fileName) noexcept
+/*Renderable tinyObjLoadRenderable(const char* basePath, const char* fileName) noexcept
 {
 	using tinyobj::shape_t;
 	using tinyobj::material_t;
@@ -156,11 +157,11 @@ DynArray<Renderable> tinyObjLoadSponza(const char* basePath, const char* fileNam
 		}
 
 
-		/*printf("Shape: %u\n", uint32_t(i));
-		for (size_t j = 0; j < shape.mesh.material_ids.size(); j++) {
-			printf("Material %u, id = %i\n", uint32_t(j), shape.mesh.material_ids[j]);
-		}
-		printf("\n");*/
+		printf("Shape: %u\n", uint32_t(i));
+		//for (size_t j = 0; j < shape.mesh.material_ids.size(); j++) {
+		//	printf("Material %u, id = %i\n", uint32_t(j), shape.mesh.material_ids[j]);
+		//}
+		//printf("\n");
 
 		//materials[0].
 		//shape.mesh.
@@ -197,20 +198,21 @@ DynArray<Renderable> tinyObjLoadSponza(const char* basePath, const char* fileNam
 	}
 
 	return std::move(renderables);
-}
+}*/
 
 static vec3 toSFZ(const aiVector3D& v)
 {
 	return vec3(v.x, v.y, v.z);
 }
 
-static void processNode(const char* basePath, DynArray<Renderable>& renderables,
+static void processNode(const char* basePath, Renderable& renderable,
+                        HashMap<std::string,uint32_t>& texMapping,
                         const aiScene* scene, aiNode* node) noexcept
 {
 	// Process all meshes in current node
 	for (uint32_t meshIndex = 0; meshIndex < node->mNumMeshes; meshIndex++) {
 		const aiMesh* mesh = scene->mMeshes[node->mMeshes[meshIndex]];
-		Renderable tmp;
+		RenderableComponent tmp;
 
 		// Allocate memory for vertices
 		tmp.geometry.vertices = DynArray<Vertex>(mesh->mNumVertices, mesh->mNumVertices);// .setCapacity(mesh->mNumVertices);
@@ -240,9 +242,7 @@ static void processNode(const char* basePath, DynArray<Renderable>& renderables,
 		// Load geometry into OpenGL
 		tmp.glModel.load(tmp.geometry);
 
-		
-
-
+		// Retrieve mesh's material
 		const aiMaterial* mat = scene->mMaterials[mesh->mMaterialIndex];
 
 
@@ -254,26 +254,35 @@ static void processNode(const char* basePath, DynArray<Renderable>& renderables,
 			sfz_assert_debug(mat->GetTextureCount(aiTextureType_DIFFUSE) == 1);
 			aiString path;
 			mat->GetTexture(aiTextureType_DIFFUSE, 0, &path);
+			//DynString pathDynStr(path.C_Str());
 			
 
-			printf("Diffuse texture: %s\n", path.C_Str());
-			tmp.material.albedoImage = loadImage(basePath, path.C_Str());
+			uint32_t* indexPtr = texMapping.get(path.C_Str());
+			if (indexPtr != nullptr) {
+				tmp.material.albedoIndex = *indexPtr;
+			}
+			
+			else {
+				printf("Diffuse texture: %s\n", path.C_Str());
 
-			tmp.glMaterial.albedoTexture.load(tmp.material.albedoImage);
+				texMapping.put(path.C_Str(), renderable.textures.size());
+				renderable.images.add(loadImage(basePath, path.C_Str()));
+				renderable.textures.add(GLTexture(renderable.images[renderable.textures.size()]));
+			}
 		}
 
 
-		// Add Renderable to list of renderables
-		renderables.add(std::move(tmp));
+		// Add component to Renderable
+		renderable.components.add(std::move(tmp));
 	}
 
 	// Process all children
 	for (uint32_t i = 0; i < node->mNumChildren; i++) {
-		processNode(basePath, renderables, scene, node->mChildren[i]);
+		processNode(basePath, renderable, texMapping, scene, node->mChildren[i]);
 	}
 }
 
-DynArray<Renderable> assimpLoadSponza(const char* basePath, const char* fileName) noexcept
+Renderable assimpLoadSponza(const char* basePath, const char* fileName) noexcept
 {
 	// Create full path
 	size_t basePathLen = std::strlen(basePath);
@@ -282,7 +291,7 @@ DynArray<Renderable> assimpLoadSponza(const char* basePath, const char* fileName
 	path.printf("%s%s", basePath, fileName);
 	if (path.size() < 1) {
 		printErrorMessage("Failed to load model, empty path");
-		return DynArray<Renderable>();
+		return Renderable();
 	}
 
 	// Get the real base path from the path
@@ -298,7 +307,7 @@ DynArray<Renderable> assimpLoadSponza(const char* basePath, const char* fileName
 	}
 	if (realBasePath.size() == path.size()) {
 		printErrorMessage("Failed to find real base path, basePath=\"%s\", fileName=\"%s\"", basePath, fileName);
-		return DynArray<Renderable>();
+		return Renderable();
 	}
 
 	// Load model through Assimp
@@ -306,13 +315,14 @@ DynArray<Renderable> assimpLoadSponza(const char* basePath, const char* fileName
 	const aiScene* scene = importer.ReadFile(path.str(), aiProcessPreset_TargetRealtime_Quality | aiProcess_FlipUVs);
 	if (scene == nullptr || scene->mFlags == AI_SCENE_FLAGS_INCOMPLETE || scene->mRootNode == nullptr) {
 		printErrorMessage("Failed to load model \"%s\", error: %s", fileName, importer.GetErrorString());
-		return DynArray<Renderable>();
+		return Renderable();
 	}
 	
 	// Process tree, creating renderables along the way
-	DynArray<Renderable> renderables;
-	processNode(realBasePath.str(), renderables, scene, scene->mRootNode);
-	return std::move(renderables);
+	Renderable renderable;
+	HashMap<std::string,uint32_t> texMapping(uint32_t(scene->mNumTextures));
+	processNode(realBasePath.str(), renderable, texMapping, scene, scene->mRootNode);
+	return std::move(renderable);
 }
 
 } // namespace sfz

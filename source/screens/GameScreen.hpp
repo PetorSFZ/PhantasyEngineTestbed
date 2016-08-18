@@ -55,7 +55,7 @@ private:
 	DynArray<DrawOp> mDrawOps;
 
 	// Temp
-	DynArray<Renderable> mSponza;
+	Renderable mSponza;
 	Renderable mSnakeRenderable;
 };
 

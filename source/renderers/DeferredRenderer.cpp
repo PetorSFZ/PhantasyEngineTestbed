@@ -79,53 +79,61 @@ void DeferredRenderer::render(const DynArray<DrawOp>& operations) noexcept
 
 	for (const DrawOp& op : operations) {
 		sfz_assert_debug(op.renderablePtr != nullptr);
+		const Renderable& renderable = *op.renderablePtr;
 
 		// Set model & normal matrix (= inverse(tranpose(modelViewMatrix)))
 		gl::setUniform(modelMatrixLoc, op.transform);
 		gl::setUniform(normalMatrixLoc, inverse(transpose(viewMatrix * op.transform)));
 
-		// Set albedo
-		if (op.renderablePtr->glMaterial.albedoTexture.isValid()) {
-			gl::setUniform(hasAlbedoTextureLoc, 1);
-			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, op.renderablePtr->glMaterial.albedoTexture.handle());
-		} else {
-			gl::setUniform(hasAlbedoTextureLoc, 0);
-			gl::setUniform(albedoValueLoc, op.renderablePtr->material.albedoValue);
-		}
+		for (const RenderableComponent& comp : renderable.components) {
 
-		// Set roughness
-		if (op.renderablePtr->glMaterial.roughnessTexture.isValid()) {
-			gl::setUniform(hasRoughnessTextureLoc, 1);
-			glActiveTexture(GL_TEXTURE1);
-			glBindTexture(GL_TEXTURE_2D, op.renderablePtr->glMaterial.roughnessTexture.handle());
-		} else {
-			gl::setUniform(hasRoughnessTextureLoc, 0);
-			gl::setUniform(rougnessValueLoc, op.renderablePtr->material.roughnessValue);
-		}
+			// Set albedo
+			if (comp.material.albedoIndex != uint32_t(~0)) {
+				gl::setUniform(hasAlbedoTextureLoc, 1);
+				glActiveTexture(GL_TEXTURE0);
+				sfz_assert_debug(comp.material.albedoIndex < renderable.textures.size());
+				glBindTexture(GL_TEXTURE_2D, renderable.textures[comp.material.albedoIndex].handle());
+			} else {
+				gl::setUniform(hasAlbedoTextureLoc, 0);
+				gl::setUniform(albedoValueLoc, comp.material.albedoValue);
+			}
 
-		// Set metallic
-		if (op.renderablePtr->glMaterial.metallicTexture.isValid()) {
-			gl::setUniform(hasMetallicTextureLoc, 1);
-			glActiveTexture(GL_TEXTURE2);
-			glBindTexture(GL_TEXTURE_2D, op.renderablePtr->glMaterial.metallicTexture.handle());
-		} else {
-			gl::setUniform(hasMetallicTextureLoc, 0);
-			gl::setUniform(metallicValueLoc, op.renderablePtr->material.metallicValue);
-		}
+			// Set roughness
+			if (comp.material.roughnessIndex != uint32_t(~0)) {
+				gl::setUniform(hasRoughnessTextureLoc, 1);
+				glActiveTexture(GL_TEXTURE1);
+				sfz_assert_debug(comp.material.roughnessIndex < renderable.textures.size());
+				glBindTexture(GL_TEXTURE_2D, renderable.textures[comp.material.roughnessIndex].handle());
+			} else {
+				gl::setUniform(hasRoughnessTextureLoc, 0);
+				gl::setUniform(rougnessValueLoc, comp.material.roughnessValue);
+			}
 
-		// Set specular
-		if (op.renderablePtr->glMaterial.specularTexture.isValid()) {
-			gl::setUniform(hasSpecularTextureLoc, 1);
-			glActiveTexture(GL_TEXTURE3);
-			glBindTexture(GL_TEXTURE_2D, op.renderablePtr->glMaterial.specularTexture.handle());
-		} else {
-			gl::setUniform(hasSpecularTextureLoc, 0);
-			gl::setUniform(specularValueLoc, op.renderablePtr->material.specularValue);
-		}
+			// Set metallic
+			if (comp.material.metallicIndex != uint32_t(~0)) {
+				gl::setUniform(hasMetallicTextureLoc, 1);
+				glActiveTexture(GL_TEXTURE2);
+				sfz_assert_debug(comp.material.metallicIndex < renderable.textures.size());
+				glBindTexture(GL_TEXTURE_2D, renderable.textures[comp.material.metallicIndex].handle());
+			} else {
+				gl::setUniform(hasMetallicTextureLoc, 0);
+				gl::setUniform(metallicValueLoc, comp.material.metallicValue);
+			}
 
-		// Render model
-		op.renderablePtr->glModel.draw();
+			// Set specular
+			if (comp.material.specularIndex != uint32_t(~0)) {
+				gl::setUniform(hasSpecularTextureLoc, 1);
+				glActiveTexture(GL_TEXTURE3);
+				sfz_assert_debug(comp.material.specularIndex < renderable.textures.size());
+				glBindTexture(GL_TEXTURE_2D, renderable.textures[comp.material.specularIndex].handle());
+			} else {
+				gl::setUniform(hasSpecularTextureLoc, 0);
+				gl::setUniform(specularValueLoc, comp.material.specularValue);
+			}
+
+			// Render model
+			comp.glModel.draw();
+		}
 	}
 
 	// Shading

@@ -62,7 +62,6 @@ source_group(renderers FILES ${SOURCE_RENDERERS_FILES})
 
 set(SOURCE_RESOURCES_FILES
 	${INCLUDE_DIR}/Resources.hpp
-	${INCLUDE_DIR}/resources/GLMaterial.hpp
 	${INCLUDE_DIR}/resources/GLModel.hpp
 	 ${SOURCE_DIR}/resources/GLModel.cpp
 	${INCLUDE_DIR}/resources/GLTexture.hpp
@@ -70,7 +69,6 @@ set(SOURCE_RESOURCES_FILES
 	${INCLUDE_DIR}/resources/RawGeometry.hpp
 	${INCLUDE_DIR}/resources/RawImage.hpp
 	 ${SOURCE_DIR}/resources/RawImage.cpp
-	${INCLUDE_DIR}/resources/RawMaterial.hpp
 	${INCLUDE_DIR}/resources/Renderable.hpp
 	 ${SOURCE_DIR}/resources/Renderable.cpp)
 source_group(resources FILES ${SOURCE_RESOURCES_FILES})
