@@ -209,6 +209,8 @@ static void processNode(const char* basePath, Renderable& renderable,
                         HashMap<std::string,uint32_t>& texMapping,
                         const aiScene* scene, aiNode* node) noexcept
 {
+	aiString tmpPath;
+
 	// Process all meshes in current node
 	for (uint32_t meshIndex = 0; meshIndex < node->mNumMeshes; meshIndex++) {
 		const aiMesh* mesh = scene->mMeshes[node->mMeshes[meshIndex]];
@@ -221,12 +223,13 @@ static void processNode(const char* basePath, Renderable& renderable,
 		sfz_assert_debug(mesh->HasPositions());
 		sfz_assert_debug(mesh->HasNormals());
 		for (uint32_t i = 0; i < mesh->mNumVertices; i++) {
-			tmp.geometry.vertices[i].pos = toSFZ(mesh->mVertices[i]);
-			tmp.geometry.vertices[i].normal = toSFZ(mesh->mNormals[i]);
+			Vertex& v = tmp.geometry.vertices[i];
+			v.pos = toSFZ(mesh->mVertices[i]);
+			v.normal = toSFZ(mesh->mNormals[i]);
 			if (mesh->mTextureCoords[0] != nullptr) {
-				tmp.geometry.vertices[i].uv = toSFZ(mesh->mTextureCoords[0][i]).xy;
+				v.uv = toSFZ(mesh->mTextureCoords[0][i]).xy;
 			} else {
-				tmp.geometry.vertices[i].uv = vec2(0.0f);
+				v.uv = vec2(0.0f);
 			}
 		}
 
@@ -234,9 +237,7 @@ static void processNode(const char* basePath, Renderable& renderable,
 		tmp.geometry.indices.setCapacity(mesh->mNumFaces * 3);
 		for (uint32_t i = 0; i < mesh->mNumFaces; i++) {
 			const aiFace& face = mesh->mFaces[i];
-			for (uint32_t j = 0; j < face.mNumIndices; j++) {
-				tmp.geometry.indices.add(face.mIndices[j]);
-			}
+			tmp.geometry.indices.add(face.mIndices, face.mNumIndices);
 		}
 
 		// Load geometry into OpenGL
@@ -245,28 +246,76 @@ static void processNode(const char* basePath, Renderable& renderable,
 		// Retrieve mesh's material
 		const aiMaterial* mat = scene->mMaterials[mesh->mMaterialIndex];
 
-
-		aiColor4D diffuseColor;
-		mat->Get(AI_MATKEY_COLOR_DIFFUSE, diffuseColor);
-		tmp.material.albedoValue = vec3(diffuseColor.r, diffuseColor.g, diffuseColor.b);
+		// Albedo (stored in diffuse for sponza pbr)
+		//aiColor4D albedoValue;
+		//mat->Get(AI_MATKEY_COLOR_DIFFUSE, albedoValue);
+		//tmp.material.albedoValue = vec3(albedoValue.r, albedoValue.g, albedoValue.b);
 
 		if (mat->GetTextureCount(aiTextureType_DIFFUSE) > 0) {
 			sfz_assert_debug(mat->GetTextureCount(aiTextureType_DIFFUSE) == 1);
-			aiString path;
-			mat->GetTexture(aiTextureType_DIFFUSE, 0, &path);
-			//DynString pathDynStr(path.C_Str());
 			
-			uint32_t* indexPtr = texMapping.get(path.C_Str());
+			tmpPath.Clear();
+			mat->GetTexture(aiTextureType_DIFFUSE, 0, &tmpPath);
+			
+			const uint32_t* indexPtr = texMapping.get(tmpPath.C_Str());
 			if (indexPtr == nullptr) {
-				printf("Diffuse texture: %s\n", path.C_Str());
+				printf("Albedo texture: %s\n", tmpPath.C_Str());
 
-				texMapping.put(path.C_Str(), renderable.textures.size());
-				indexPtr = texMapping.get(path.C_Str());
-				renderable.images.add(loadImage(basePath, path.C_Str()));
-				renderable.textures.add(GLTexture(renderable.images[renderable.textures.size()]));
+				const uint32_t nextIndex = renderable.textures.size();
+				sfz_assert_debug(nextIndex == renderable.textures.size());
+				sfz_assert_debug(nextIndex == renderable.images.size());
+
+				texMapping.put(tmpPath.C_Str(), nextIndex);
+				indexPtr = texMapping.get(tmpPath.C_Str());
+				sfz_assert_debug(indexPtr != nullptr);
+				sfz_assert_debug(*indexPtr == nextIndex);
+
+				renderable.images.add(loadImage(basePath, tmpPath.C_Str()));
+				renderable.textures.add(GLTexture(renderable.images[nextIndex]));
+				sfz_assert_debug(renderable.textures.last().isValid());
+				sfz_assert_debug(renderable.images.size() == (nextIndex + 1));
+				sfz_assert_debug(renderable.textures.size() == (nextIndex + 1));
+				sfz_assert_debug(*indexPtr == nextIndex);
 			}
 			tmp.material.albedoIndex = *indexPtr;
+			sfz_assert_debug(tmp.material.albedoIndex == uint32_t(~0) || tmp.material.albedoIndex < renderable.textures.size());
 		}
+
+		// Roughness (stored in map_Ns, specular highlight component)
+		if (mat->GetTextureCount(aiTextureType_SHININESS) > 0) {
+			sfz_assert_debug(mat->GetTextureCount(aiTextureType_SHININESS) == 1);
+
+			tmpPath.Clear();
+			mat->GetTexture(aiTextureType_SHININESS, 0, &tmpPath);
+
+			const uint32_t* indexPtr = texMapping.get(tmpPath.C_Str());
+			if (indexPtr == nullptr) {
+				printf("Rougness texture: %s\n", tmpPath.C_Str());
+
+				const uint32_t nextIndex = renderable.textures.size();
+				sfz_assert_debug(nextIndex == renderable.textures.size());
+				sfz_assert_debug(nextIndex == renderable.images.size());
+
+				texMapping.put(tmpPath.C_Str(), nextIndex);
+				indexPtr = texMapping.get(tmpPath.C_Str());
+				sfz_assert_debug(indexPtr != nullptr);
+				sfz_assert_debug(*indexPtr == nextIndex);
+
+				renderable.images.add(loadImage(basePath, tmpPath.C_Str()));
+				renderable.textures.add(GLTexture(renderable.images[nextIndex]));
+				sfz_assert_debug(renderable.textures.last().isValid());
+				sfz_assert_debug(renderable.images.size() == (nextIndex + 1));
+				sfz_assert_debug(renderable.textures.size() == (nextIndex + 1));
+				sfz_assert_debug(*indexPtr == nextIndex);
+			}
+			tmp.material.roughnessIndex = *indexPtr;
+			sfz_assert_debug(tmp.material.roughnessIndex == uint32_t(~0) || tmp.material.roughnessIndex < renderable.textures.size());
+		}
+
+//		for (auto pair : texMapping) {
+	//		printf("%s : %u\n", pair.key.c_str(), pair.value);
+		//}
+		//printf("\n\n");
 
 		// Add component to Renderable
 		renderable.components.add(std::move(tmp));

@@ -39,7 +39,12 @@ void main()
 
 	vec3 albedo = uAlbedoValue;
 	if (uHasAlbedoTexture != 0) {
-		albedo = texture(uAlbedoTexture, uv).rgb;
+		vec4 albedoTmp = texture(uAlbedoTexture, uv);
+		if (albedoTmp.a < 0.1) {
+			discard;
+			return;
+		}
+		albedo = albedoTmp.rgb;
 	}
 	outFragAlbedo = vec4(albedo, 1.0);
 
