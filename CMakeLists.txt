@@ -31,9 +31,6 @@ set(RUNTIME_DIR ${CMAKE_CURRENT_SOURCE_DIR}/runtime)
 set(SFZ_CORE_OPENGL TRUE)
 add_subdirectory(${EXTERNALS_DIR}/sfzCore)
 
-# tinyobjloader
-add_subdirectory(${EXTERNALS_DIR}/tinyobjloader)
-
 # Assimp
 add_subdirectory(${EXTERNALS_DIR}/assimp)
 
@@ -44,7 +41,6 @@ add_subdirectory(${EXTERNALS_DIR}/stb_image)
 include_directories(
 	${INCLUDE_DIR}
 	${SFZ_CORE_INCLUDE_DIRS}
-	${TINYOBJLOADER_INCLUDE_DIRS}
 	${ASSIMP_INCLUDE_DIRS}
 	${STB_IMAGE_INCLUDE_DIRS}
 )
@@ -95,7 +91,6 @@ target_link_libraries(
 	PhantasyEngineTestbed
 
 	${SFZ_CORE_LIBRARIES}
-	${TINYOBJLOADER_LIBRARIES}
 	${ASSIMP_LIBRARIES}
 	${STB_IMAGE_LIBRARIES}
 )

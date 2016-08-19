@@ -43,11 +43,6 @@ struct Renderable final {
 // Renderable creation functions
 // ------------------------------------------------------------------------------------------------
 
-//Renderable tinyObjLoadRenderable(const char* basePath, const char* fileName) noexcept;
-
-/// Specialized function to load sponza (with pbr textures) using tinyObjLoader
-//DynArray<Renderable> tinyObjLoadSponza(const char* basePath, const char* fileName) noexcept;
-
 Renderable assimpLoadSponza(const char* basePath, const char* fileName) noexcept;
 
 } // namespace sfz

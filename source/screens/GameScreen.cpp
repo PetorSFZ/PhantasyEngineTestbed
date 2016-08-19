@@ -32,8 +32,6 @@ GameScreen::GameScreen() noexcept
 	using time_point = std::chrono::high_resolution_clock::time_point;
 	time_point before = std::chrono::high_resolution_clock::now();
 	
-	//mSnakeRenderable = tinyObjLoadRenderable(modelsPath.str, "head_d2u_f2.obj");
-	//mSponza = tinyObjLoadSponza(modelsPath.str, "sponza/sponza.obj");
 	mSponza = assimpLoadSponza(modelsPath.str, "sponzaPBR/sponzaPBR.obj");
 
 	time_point after = std::chrono::high_resolution_clock::now();
