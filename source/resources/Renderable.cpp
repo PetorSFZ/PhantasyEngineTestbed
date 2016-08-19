@@ -247,10 +247,6 @@ static void processNode(const char* basePath, Renderable& renderable,
 		const aiMaterial* mat = scene->mMaterials[mesh->mMaterialIndex];
 
 		// Albedo (stored in diffuse for sponza pbr)
-		//aiColor4D albedoValue;
-		//mat->Get(AI_MATKEY_COLOR_DIFFUSE, albedoValue);
-		//tmp.material.albedoValue = vec3(albedoValue.r, albedoValue.g, albedoValue.b);
-
 		if (mat->GetTextureCount(aiTextureType_DIFFUSE) > 0) {
 			sfz_assert_debug(mat->GetTextureCount(aiTextureType_DIFFUSE) == 1);
 			
@@ -259,26 +255,17 @@ static void processNode(const char* basePath, Renderable& renderable,
 			
 			const uint32_t* indexPtr = texMapping.get(tmpPath.C_Str());
 			if (indexPtr == nullptr) {
-				printf("Albedo texture: %s\n", tmpPath.C_Str());
+				//printf("Loaded albedo texture: %s\n", tmpPath.C_Str());
 
 				const uint32_t nextIndex = renderable.textures.size();
-				sfz_assert_debug(nextIndex == renderable.textures.size());
-				sfz_assert_debug(nextIndex == renderable.images.size());
-
 				texMapping.put(tmpPath.C_Str(), nextIndex);
 				indexPtr = texMapping.get(tmpPath.C_Str());
-				sfz_assert_debug(indexPtr != nullptr);
-				sfz_assert_debug(*indexPtr == nextIndex);
 
 				renderable.images.add(loadImage(basePath, tmpPath.C_Str()));
 				renderable.textures.add(GLTexture(renderable.images[nextIndex]));
 				sfz_assert_debug(renderable.textures.last().isValid());
-				sfz_assert_debug(renderable.images.size() == (nextIndex + 1));
-				sfz_assert_debug(renderable.textures.size() == (nextIndex + 1));
-				sfz_assert_debug(*indexPtr == nextIndex);
 			}
 			tmp.material.albedoIndex = *indexPtr;
-			sfz_assert_debug(tmp.material.albedoIndex == uint32_t(~0) || tmp.material.albedoIndex < renderable.textures.size());
 		}
 
 		// Roughness (stored in map_Ns, specular highlight component)
@@ -290,32 +277,40 @@ static void processNode(const char* basePath, Renderable& renderable,
 
 			const uint32_t* indexPtr = texMapping.get(tmpPath.C_Str());
 			if (indexPtr == nullptr) {
-				printf("Rougness texture: %s\n", tmpPath.C_Str());
+				//printf("Loaded roughness texture: %s\n", tmpPath.C_Str());
 
 				const uint32_t nextIndex = renderable.textures.size();
-				sfz_assert_debug(nextIndex == renderable.textures.size());
-				sfz_assert_debug(nextIndex == renderable.images.size());
-
 				texMapping.put(tmpPath.C_Str(), nextIndex);
 				indexPtr = texMapping.get(tmpPath.C_Str());
-				sfz_assert_debug(indexPtr != nullptr);
-				sfz_assert_debug(*indexPtr == nextIndex);
 
 				renderable.images.add(loadImage(basePath, tmpPath.C_Str()));
 				renderable.textures.add(GLTexture(renderable.images[nextIndex]));
 				sfz_assert_debug(renderable.textures.last().isValid());
-				sfz_assert_debug(renderable.images.size() == (nextIndex + 1));
-				sfz_assert_debug(renderable.textures.size() == (nextIndex + 1));
-				sfz_assert_debug(*indexPtr == nextIndex);
 			}
 			tmp.material.roughnessIndex = *indexPtr;
-			sfz_assert_debug(tmp.material.roughnessIndex == uint32_t(~0) || tmp.material.roughnessIndex < renderable.textures.size());
 		}
 
-//		for (auto pair : texMapping) {
-	//		printf("%s : %u\n", pair.key.c_str(), pair.value);
-		//}
-		//printf("\n\n");
+		// Metallic (stored in map_Ka, ambient texture map)
+		if (mat->GetTextureCount(aiTextureType_AMBIENT) > 0) {
+			sfz_assert_debug(mat->GetTextureCount(aiTextureType_AMBIENT) == 1);
+
+			tmpPath.Clear();
+			mat->GetTexture(aiTextureType_AMBIENT, 0, &tmpPath);
+
+			const uint32_t* indexPtr = texMapping.get(tmpPath.C_Str());
+			if (indexPtr == nullptr) {
+				//printf("Loaded metallic texture: %s\n", tmpPath.C_Str());
+
+				const uint32_t nextIndex = renderable.textures.size();
+				texMapping.put(tmpPath.C_Str(), nextIndex);
+				indexPtr = texMapping.get(tmpPath.C_Str());
+
+				renderable.images.add(loadImage(basePath, tmpPath.C_Str()));
+				renderable.textures.add(GLTexture(renderable.images[nextIndex]));
+				sfz_assert_debug(renderable.textures.last().isValid());
+			}
+			tmp.material.metallicIndex = *indexPtr;
+		}
 
 		// Add component to Renderable
 		renderable.components.add(std::move(tmp));

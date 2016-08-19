@@ -44,6 +44,8 @@ void main()
 	float specular = material.b; // Should be 0.5 for 99% of materials in UE4
 
 	//outFragColor = vec4(pos, 1.0);
-	outFragColor = vec4(normal, 1.0);
-	//outFragColor = vec4(albedo, 1.0);
+	//outFragColor = vec4(normal, 1.0);
+	outFragColor = vec4(albedo, 1.0);
+	//outFragColor = vec4(vec3(roughness), 1.0);
+	//outFragColor = vec4(vec3(metallic), 1.0);
 }
