@@ -1,4 +1,4 @@
-#version 330
+#version 450
 
 // Input, output and uniforms
 // ------------------------------------------------------------------------------------------------
@@ -36,85 +36,43 @@ vec3 getPosition(vec2 coord)
 	return posTmp.xyz;
 }
 
-/*vec3 fspec(vec3 l, vec3 v)
-{
+// PBR shading functions
+// ------------------------------------------------------------------------------------------------
 
-}
-
-vec3 fdiff(vec3 l, vec3 v, float albedo)
-{
-	const float PI_INV = 1.0 / 3.14159265359;
-	return albedo * PI_INV;
-}
-
-/// l = to light dir
-/// v = to view dir
-vec3 f(vec3 l, vec3 v, )
-{
-	return fspec(l, v) + fdiff(l, v);
-}*/
-
-//float F()
-
-// Geometric attenuation sub-term
-/*float G1(vec3 v, vec3 n, float k)
-{
-	float nDotV = dot(n, v);
-	return nDotV / (nDotV * (1.0 - k) + k);
-}
-
-// Geometric shadowing (Schlick model)
-// (Not appropriate for image-based lighting, only analytical light sources)
-float G(vec3 l, vec3 v, vec3 h, vec3 n, float roughness)
-{
-	float k = pow(roughness + 1.0, 2) / 8.0;
-	return G1(l, n, k) * G1(v, n, k);
-}
+// References used:
+// https://de45xmedrsdbp.cloudfront.net/Resources/files/2013SiggraphPresentationsNotes-26915738.pdf
+// http://blog.selfshadow.com/publications/s2016-shading-course/
+// http://www.codinglabs.net/article_physically_based_rendering_cook_torrance.aspx
+// http://graphicrants.blogspot.se/2013/08/specular-brdf-reference.html
 
 // Normal distribution function, GGX/Trowbridge-Reitz
-// a = roughness^2
-float D(vec3 h, vec3 n, float a)
+// a = roughness^2, UE4 parameterization
+// dot(n,h) term should be clamped to 0 if negative
+float ggx(float nDotH, float a)
 {
 	float a2 = a * a;
-	float nDotH = dot(n, h);
 	float div = PI * pow(nDotH * nDotH * (a2 - 1.0) + 1.0, 2);
 	return a2 / div;
-}*/
+}
+
+// Schlick's model adjusted to fit Smith's method
+// k = a/2, where a = roughness^2, however, for analytical light sources (non image based)
+// roughness is first remapped to roughness = (roughnessOrg + 1) / 2.
+// Essentially, for analytical light sources:
+// k = (roughness + 1)^2 / 8
+// For image based lighting:
+// k = roughness^2 / 2
+float geometricSchlick(float nDotL, float nDotV, float k)
+{
+	float g1 = nDotL / (nDotL * (1.0 - k) + k);
+	float g2 = nDotV / (nDotV * (1.0 - k) + k);
+	return g1 * g2;
+}
 
 // Schlick's approximation. F0 should typically be 0.04 for dielectrics
-float FSchlick(float f0, vec3 l, vec3 n)
+vec3 fresnelSchlick(float nDotL, vec3 f0)
 {
-	// TODO: Need clamping
-	return f0 + (1.0 - f0) * pow(1 - dot(l, n), 5);
-}
-
-float D()
-{
-	return 0.0;
-}
-
-float F()
-{
-	return 0.0;
-}
-
-float G()
-{
-	return 0.0;
-}
-
-// l = to light dir
-// v = to view dir
-// n = normal of surface
-float cookTorrance(vec3 l, vec3 v, vec3 n, float roughness)
-{
-	vec3 h = normalize(l + v); 
-	return D() * F() * G() / (4.0 * dot(n, l) * dot(n, v));
-}
-
-float lambertDiffuse()
-{
-	return 0.0;
+	return f0 + (vec3(1.0) - f0) * clamp(pow(1.0 - nDotL, 5), 0.0, 1.0);
 }
 
 // Main
@@ -122,19 +80,16 @@ float lambertDiffuse()
 
 void main()
 {
-	// Retrieve information from GBuffer
-	vec3 pos = getPosition(uvCoord);
-	vec3 normal = texture(uNormalTexture, uvCoord).rgb;
-	vec3 albedo = texture(uAlbedoTexture, uvCoord).rgb;
-	vec3 material = texture(uMaterialTexture, uvCoord).rgb;
-	float roughness = material.r;
-	float metallic = material.g;
+	// Retrieve position and normal from GBuffer
+	vec3 p = getPosition(uvCoord);
+	vec3 n = texture(uNormalTexture, uvCoord).rgb;
 
 	// Shading parameters
-	vec3 l = normalize(uLightPos - pos); // to light
-	vec3 v = normalize(-pos); // to view
+	vec3 toLight = uLightPos - p;
+	float toLightDist = length(toLight);
+	vec3 l = toLight / toLightDist; // to light
+	vec3 v = normalize(-p); // to view
 	vec3 h = normalize(l + v); // half vector (normal of microfacet)
-	vec3 n = normal;
 
 	// If nDotL is <= 0 then the light source is not in the hemisphere of the surface, i.e.
 	// no shading needs to be performed
@@ -144,14 +99,43 @@ void main()
 		return;
 	}
 
+	// Retrieve material information from GBuffer
+	vec3 albedo = texture(uAlbedoTexture, uvCoord).rgb;
+	vec3 material = texture(uMaterialTexture, uvCoord).rgb;
+	float roughness = material.r;
+	float metallic = material.g;
+
 	// Lambert diffuse
 	vec3 diffuse = albedo / PI;
 
-	// TODO: Cook-Torrance specular
-	vec3 specular = vec3(0.0);
+	// Cook-Torrance specular
+	// Normal distribution function
+	float nDotH = max(dot(n, h), 0.0); // ggx() becomes 0 if dot(n,h) < 0.0
+	float ctD = ggx(nDotH, roughness * roughness);
+
+	// Geometric self-shadowing term
+	float nDotV = max(dot(n, v), 0.0); // TODO: Not 100% sure if clamp is correct here
+	float k = pow(roughness + 1.0, 2) / 8.0;
+	float ctG = geometricSchlick(nDotL, nDotV, k);
+
+	// Fresnel function
+	// Assume all dielectrics have a f0 of 0.04, for metals we assume f0 == albedo
+	vec3 f0 = mix(vec3(0.04), albedo, metallic);
+	vec3 ctF = fresnelSchlick(nDotL, f0);
+
+	// Calculate final Cook-Torrance specular value
+	vec3 specular = ctD * ctF * ctG / (4.0 * nDotL * nDotV);
+
+	// Calculates light strength
+	const float uLightRadius = 500.0;
+	const float uLightStrength = 500.0;
+	float fallofNumerator = pow(clamp(1.0 - pow(toLightDist / uLightRadius, 4), 0.0, 1.0), 2);
+	float fallofDenominator = (toLightDist * toLightDist + 1.0);
+	float falloff = fallofNumerator / fallofDenominator;
+	float light = falloff * uLightStrength;
 
 	// "Solves" reflectance equation under the assumption that the light source is a point light
 	// and that there is no global illumination.
-	vec3 res = (diffuse + specular) * nDotL;
+	vec3 res = (diffuse + specular) * light * nDotL;
 	outFragColor = vec4(res, 1.0);
 }

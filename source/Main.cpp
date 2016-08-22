@@ -57,7 +57,7 @@ int main(int, char**)
 	              WindowFlags::RESIZABLE, WindowFlags::ALLOW_HIGHDPI});
 
 	// OpenGL context
-	Context glContext = createGLContext(window, 4, 1);
+	Context glContext = createGLContext(window, 4, 5);
 
 	// Initializes GLEW, must happen after GL context is created.
 	glewExperimental = GL_TRUE;
