@@ -25,10 +25,6 @@ uniform int uHasMetallicTexture = 0;
 uniform sampler2D uMetallicTexture;
 uniform float uMetallicValue = 0.0;
 
-uniform int uHasSpecularTexture = 0;
-uniform sampler2D uSpecularTexture;
-uniform float uSpecularValue = 0.5; // Should be 0.5 for 99% of materials, according to UE4 docs
-
 // Main
 // ------------------------------------------------------------------------------------------------
 
@@ -58,10 +54,5 @@ void main()
 		metallic = texture(uMetallicTexture, uv).r;
 	}
 
-	float specular = uSpecularValue;
-	if (uHasSpecularTexture != 0) {
-		specular = texture(uSpecularTexture, uv).r;
-	}
-
-	outFragMaterial = vec4(roughness, metallic, specular, 1.0);
+	outFragMaterial = vec4(roughness, metallic, 0.0, 1.0);
 }

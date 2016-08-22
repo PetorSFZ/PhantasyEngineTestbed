@@ -21,8 +21,6 @@ struct Material final {
 	uint32_t roughnessIndex = uint32_t(~0);
 	float metallicValue = 0.0f; // Should be 0 or 1 for most materials
 	uint32_t metallicIndex = uint32_t(~0);
-	float specularValue = 0.5f; // Should be 0.5 for 99% of materials according to UE4 docs
-	uint32_t specularIndex = uint32_t(~0);
 };
 
 // Renderable class

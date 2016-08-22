@@ -74,9 +74,6 @@ void DeferredRenderer::render(const DynArray<DrawOp>& operations) noexcept
 	const int hasMetallicTextureLoc = glGetUniformLocation(mGBufferGenShader.handle(), "uHasMetallicTexture");
 	const int metallicValueLoc = glGetUniformLocation(mGBufferGenShader.handle(), "uMetallicValue");
 
-	const int hasSpecularTextureLoc = glGetUniformLocation(mGBufferGenShader.handle(), "uHasSpecularTexture");
-	const int specularValueLoc = glGetUniformLocation(mGBufferGenShader.handle(), "uSpecularValue");
-
 	for (const DrawOp& op : operations) {
 		sfz_assert_debug(op.renderablePtr != nullptr);
 		const Renderable& renderable = *op.renderablePtr;
@@ -125,18 +122,6 @@ void DeferredRenderer::render(const DynArray<DrawOp>& operations) noexcept
 				gl::setUniform(metallicValueLoc, m.metallicValue);
 			}
 
-			// Set specular
-			if (m.specularIndex != uint32_t(~0)) {
-				gl::setUniform(hasSpecularTextureLoc, 1);
-				glActiveTexture(GL_TEXTURE3);
-				sfz_assert_debug(m.specularIndex < renderable.textures.size());
-				sfz_assert_debug(renderable.textures[m.specularIndex].isValid());
-				glBindTexture(GL_TEXTURE_2D, renderable.textures[m.specularIndex].handle());
-			} else {
-				gl::setUniform(hasSpecularTextureLoc, 0);
-				gl::setUniform(specularValueLoc, m.specularValue);
-			}
-
 			// Render model
 			comp.glModel.draw();
 		}
@@ -175,6 +160,10 @@ void DeferredRenderer::render(const DynArray<DrawOp>& operations) noexcept
 	glBindTexture(GL_TEXTURE_2D, mGBuffer.texture(GBUFFER_MATERIAL));
 	gl::setUniform(mShadingShader, "uMaterialTexture", 3);
 
+	const vec3 lightPosWS = vec3(-30.0f, 5.0f, 0.0f);
+	const vec3 lightPosVS = transformPoint(viewMatrix, lightPosWS);
+	gl::setUniform(mShadingShader, "uLightPos", lightPosVS);
+
 	mFullscreenQuad.render();
 }
 
@@ -203,7 +192,7 @@ void DeferredRenderer::maxResolutionUpdated() noexcept
 	          .addDepthTexture(FBDepthFormat::F32, FBTextureFiltering::NEAREST)
 	          .addTexture(GBUFFER_NORMAL, FBTextureFormat::RGB_S8, FBTextureFiltering::LINEAR)
 	          .addTexture(GBUFFER_ALBEDO, FBTextureFormat::RGB_U8, FBTextureFiltering::LINEAR)
-	          .addTexture(GBUFFER_MATERIAL, FBTextureFormat::RGB_U8, FBTextureFiltering::LINEAR) // Roughness, metallic, specular
+	          .addTexture(GBUFFER_MATERIAL, FBTextureFormat::RG_U8, FBTextureFiltering::LINEAR) // Roughness, metallic
 	          .build();
 }
 
