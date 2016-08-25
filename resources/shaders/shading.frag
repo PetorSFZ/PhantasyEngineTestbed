@@ -94,7 +94,8 @@ void main()
 	// If nDotL is <= 0 then the light source is not in the hemisphere of the surface, i.e.
 	// no shading needs to be performed
 	float nDotL = dot(n, l);
-	if (nDotL <= 0.0) {
+	float nDotV = dot(n, v);
+	if (nDotL <= 0.0 || nDotV <= 0.0) {
 		outFragColor = vec4(0.0, 0.0, 0.0, 1.0);
 		return;
 	}
@@ -110,11 +111,10 @@ void main()
 
 	// Cook-Torrance specular
 	// Normal distribution function
-	float nDotH = max(dot(n, h), 0.0); // ggx() becomes 0 if dot(n,h) < 0.0
+	float nDotH = max(dot(n, h), 0.0); // max() should be superfluous here
 	float ctD = ggx(nDotH, roughness * roughness);
 
 	// Geometric self-shadowing term
-	float nDotV = max(dot(n, v), 0.0); // TODO: Not 100% sure if clamp is correct here
 	float k = pow(roughness + 1.0, 2) / 8.0;
 	float ctG = geometricSchlick(nDotL, nDotV, k);
 
