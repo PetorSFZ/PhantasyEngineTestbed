@@ -46,8 +46,16 @@ include_directories(
 )
 
 set(SOURCE_ROOT_FILES
-	${SOURCE_DIR}/Main.cpp)
+	 ${SOURCE_DIR}/Main.cpp)
 source_group(root FILES ${SOURCE_ROOT_FILES})
+
+set(SOURCE_CONFIG_FILES
+	${INCLUDE_DIR}/Config.hpp
+	${INCLUDE_DIR}/config/GlobalConfig.hpp
+	 ${SOURCE_DIR}/config/GlobalConfig.cpp
+	${INCLUDE_DIR}/config/Setting.hpp
+	 ${SOURCE_DIR}/config/Setting.cpp)
+source_group(config FILES ${SOURCE_CONFIG_FILES})
 
 set(SOURCE_RENDERERS_FILES
 	${INCLUDE_DIR}/Renderers.hpp
@@ -79,6 +87,7 @@ source_group(screens FILES ${SOURCE_SCREENS_FILES})
 
 set(SOURCE_ALL_FILES
 	${SOURCE_ROOT_FILES}
+	${SOURCE_CONFIG_FILES}
 	${SOURCE_RENDERERS_FILES}
 	${SOURCE_RESOURCES_FILES}
 	${SOURCE_SCREENS_FILES})

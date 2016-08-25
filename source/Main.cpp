@@ -5,6 +5,7 @@
 #include <sfz/Screens.hpp>
 #include <sfz/SDL.hpp>
 
+#include "Config.hpp"
 #include "Screens.hpp"
 
 #ifdef _WIN32
@@ -50,6 +51,10 @@ int main(int, char**)
 	_chdir(sfz::basePath());
 #endif
 
+	// Load global settings
+	GlobalConfig& cfg = GlobalConfig::instance();
+	cfg.load("Config.ini");
+
 	// Start SDL session and create window
 	Session sdlSession({SDLInitFlags::EVENTS, SDLInitFlags::VIDEO, SDLInitFlags::AUDIO,
 	                    SDLInitFlags::GAMECONTROLLER}, {});
@@ -82,6 +87,9 @@ int main(int, char**)
 
 	// Run gameloop
 	sfz::runGameLoop(window, SharedPtr<BaseScreen>(sfz_new<GameScreen>()));
+
+	// Store global settings
+	cfg.save("Config.ini");
 
 	return 0;
 }
