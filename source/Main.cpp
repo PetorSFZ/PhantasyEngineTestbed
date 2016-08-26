@@ -53,7 +53,8 @@ int main(int, char**)
 
 	// Load global settings
 	GlobalConfig& cfg = GlobalConfig::instance();
-	cfg.load("Config.ini");
+	cfg.init(sfz::basePath(), "Config.ini");
+	cfg.load();
 
 	// Start SDL session and create window
 	Session sdlSession({SDLInitFlags::EVENTS, SDLInitFlags::VIDEO, SDLInitFlags::AUDIO,
@@ -89,7 +90,8 @@ int main(int, char**)
 	sfz::runGameLoop(window, SharedPtr<BaseScreen>(sfz_new<GameScreen>()));
 
 	// Store global settings
-	cfg.save("Config.ini");
+	cfg.save();
+	cfg.destroy();
 
 	return 0;
 }

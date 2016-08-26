@@ -2,6 +2,8 @@
 
 #include "config/Setting.hpp"
 
+#include <cmath>
+
 #include <sfz/Assert.hpp>
 
 namespace sfz {
@@ -9,37 +11,34 @@ namespace sfz {
 // Setting: Constructors & destructors
 // ------------------------------------------------------------------------------------------------
 
-Setting::Setting() noexcept
+Setting::Setting(const char* section, const char* key) noexcept
 :
-	mIdent("INVALID")
+	mSection(section),
+	mKey(key)
 {
 	setInt(0);
 }
 
-Setting::Setting(const char* identifier) noexcept
+Setting::Setting(const char* section, const char* key, int32_t value) noexcept
 :
-	mIdent(identifier)
-{
-	setBool(false);
-}
-
-Setting::Setting(const char* identifier, int32_t value) noexcept
-:
-	mIdent(identifier)
+	mSection(section),
+	mKey(key)
 {
 	setInt(value);
 }
 
-Setting::Setting(const char* identifier, float value) noexcept
+Setting::Setting(const char* section, const char* key, float value) noexcept
 :
-	mIdent(identifier)
+	mSection(section),
+	mKey(key)
 {
 	setFloat(value);
 }
 
-Setting::Setting(const char* identifier, bool value) noexcept
+Setting::Setting(const char* section, const char* key, bool value) noexcept
 :
-	mIdent(identifier)
+	mSection(section),
+	mKey(key)
 {
 	setBool(value);
 }
@@ -53,7 +52,7 @@ int32_t Setting::intValue() const noexcept
 	if (mType == SettingType::INT) {
 		return i;
 	}
-	return int32_t(f);
+	return int32_t(std::round(f));
 }
 
 float Setting::floatValue() const noexcept
@@ -68,6 +67,9 @@ float Setting::floatValue() const noexcept
 bool Setting::boolValue() const noexcept
 {
 	sfz_assert_debug(mType == SettingType::BOOL);
+	if (mType == SettingType::INT) {
+		return i != 0;
+	}
 	return b;
 }
 

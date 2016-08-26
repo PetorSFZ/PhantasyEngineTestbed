@@ -4,10 +4,140 @@
 
 #include <cstring>
 
+#include <sfz/containers/DynArray.hpp>
 #include <sfz/util/IniParser.hpp>
 #include <sfz/math/MathHelpers.hpp>
+#include <sfz/memory/SmartPointers.hpp>
 
 namespace sfz {
+
+// GlobalConfig: Statics
+// ------------------------------------------------------------------------------------------------
+
+static Setting* sanitizeInt(const char* section, const char* key,
+                            int32_t defaultValue = 0,
+                            int32_t minValue = numeric_limits<int32_t>::min(),
+                            int32_t maxValue = numeric_limits<int32_t>::max()) noexcept
+{
+	GlobalConfig& globalCfg = GlobalConfig::instance();
+	bool created = false;
+	Setting* setting = globalCfg.getCreateSetting(section, key, &created);
+
+	// Set default value if created
+	if (created) {
+		setting->setInt(defaultValue);
+		return setting;
+	}
+	
+	// Make sure setting is of correct type
+	if (setting->type() != SettingType::INT) {
+		if (setting->type() == SettingType::FLOAT) {
+			setting->setInt(setting->intValue());
+		} else {
+			setting->setInt(defaultValue);
+			return setting;
+		}
+	}
+
+	// Ensure value is in range
+	int32_t val = setting->intValue();
+	val = std::min(std::max(val, minValue), maxValue);
+	setting->setInt(val);
+
+	return setting;
+}
+
+static Setting* sanitizeFloat(const char* section, const char* key,
+                              float defaultValue = 0.0f,
+                              float minValue = numeric_limits<float>::min(),
+                              float maxValue = numeric_limits<float>::max()) noexcept
+{
+	GlobalConfig& globalCfg = GlobalConfig::instance();
+	bool created = false;
+	Setting* setting = globalCfg.getCreateSetting(section, key, &created);
+
+	// Set default value if created
+	if (created) {
+		setting->setFloat(defaultValue);
+		return setting;
+	}
+	
+	// Make sure setting is of correct type
+	if (setting->type() != SettingType::FLOAT) {
+		if (setting->type() == SettingType::INT) {
+			setting->setFloat(setting->floatValue());
+		} else {
+			setting->setFloat(defaultValue);
+			return setting;
+		}
+	}
+
+	// Ensure value is in range
+	float val = setting->floatValue();
+	val = std::min(std::max(val, minValue), maxValue);
+	setting->setFloat(val);
+
+	return setting;
+}
+
+static Setting* sanitizeBool(const char* section, const char* key,
+                             bool defaultValue = false) noexcept
+{
+	GlobalConfig& globalCfg = GlobalConfig::instance();
+	bool created = false;
+	Setting* setting = globalCfg.getCreateSetting(section, key, &created);
+
+	// Set default value if created
+	if (created) {
+		setting->setFloat(defaultValue);
+		return setting;
+	}
+	
+	// Make sure setting is of correct type
+	if (setting->type() != SettingType::BOOL) {
+		if (setting->type() == SettingType::INT) {
+			setting->setBool(setting->boolValue());
+		} else {
+			setting->setBool(defaultValue);
+		}
+	}
+	return setting;
+}
+
+static void setWindowCfg(WindowConfig& cfg) noexcept
+{
+	cfg.displayIndex = sanitizeInt("Window", "displayIndex", 0, 0, 32);
+	cfg.fullscreenMode = sanitizeInt("Window", "fullscreenMode", 0, 0, 2); // 0 = off, 1 = windowed, 2 = exclusive
+}
+
+static void setGraphicsCfg(GraphicsConfig& cfg) noexcept
+{
+}
+
+// GlobalConfigImpl
+// ------------------------------------------------------------------------------------------------
+
+class GlobalConfigImpl final {
+public:
+	// Members
+	// --------------------------------------------------------------------------------------------
+
+	IniParser mIni;
+	DynArray<UniquePtr<Setting>> mSettings;
+	WindowConfig mWindowCfg;
+	GraphicsConfig mGraphicsCfg;
+	bool mLoaded = false; // Can only be loaded once... for now
+
+	// Constructors & destructors
+	// --------------------------------------------------------------------------------------------
+
+	GlobalConfigImpl() noexcept = default;
+	GlobalConfigImpl(const GlobalConfigImpl&) = delete;
+	GlobalConfigImpl& operator= (const GlobalConfigImpl&) = delete;
+	GlobalConfigImpl(GlobalConfigImpl&&) = delete;
+	GlobalConfigImpl& operator= (GlobalConfigImpl&&) = delete;
+	~GlobalConfigImpl() noexcept = default;
+};
 
 // GlobalConfig: Singleton instance
 // ------------------------------------------------------------------------------------------------
@@ -21,29 +151,42 @@ GlobalConfig& GlobalConfig::instance() noexcept
 // GlobalConfig: Methods
 // ------------------------------------------------------------------------------------------------
 
-bool GlobalConfig::load(const char* path) noexcept
+void GlobalConfig::init(const char* basePath, const char* fileName) noexcept
 {
-	// Clear previous settings
-	mSettings.clear();
+	if (mImpl != nullptr) this->destroy();
+	mImpl = sfz_new<GlobalConfigImpl>();
+
+	// Initialize IniParser with path
+	StackString256 tmpPath;
+	tmpPath.printf("%s%s", basePath, fileName);
+	mImpl->mIni = IniParser(tmpPath.str);
+}
+
+void GlobalConfig::destroy() noexcept
+{
+	if (mImpl == nullptr) return;
+	sfz_delete<GlobalConfigImpl>(mImpl);
+	mImpl = nullptr;
+}
+
+bool GlobalConfig::load() noexcept
+{
+	sfz_assert_debug(mImpl != nullptr);
+	sfz_assert_debug(!mImpl->mLoaded); // TODO: Make it possible to reload settings from file
 
 	// Load ini file
-	IniParser ini(path);
+	IniParser& ini = mImpl->mIni;
 	if (!ini.load()) {
 		return false;
 	}
 
 	// Create setting items of all ini items
-	StackString256 tmpStr;
 	for (auto item : ini) {
-		size_t sectionLen = std::strlen(item.getSection());
-		if (sectionLen == 0) {
-			tmpStr.printf("%s", item.getKey());
-		}
-		else {
-			tmpStr.printf("%s.%s", item.getSection(), item.getKey());
-		}
-		Setting setting(tmpStr.str);
 		
+		// Create new setting
+		mImpl->mSettings.add(makeUnique<Setting>(item.getSection(), item.getKey()));
+		Setting& setting = *mImpl->mSettings.last();
+
 		// Get value of setting
 		if (item.getFloat() != nullptr) {
 			float floatVal = *item.getFloat();
@@ -59,62 +202,32 @@ bool GlobalConfig::load(const char* path) noexcept
 			bool b = *item.getBool();
 			setting.setBool(b);
 		}
-
-		// Add setting to global list of settings
-		mSettings.add(makeShared<Setting>(setting));
 	}
 
-	// TODO: Shortcuts to common settings
+	// Fill specific setting structs
+	setWindowCfg(mImpl->mWindowCfg);
+	setGraphicsCfg(mImpl->mGraphicsCfg);
 
+	mImpl->mLoaded = true;
 	return true;
 }
 
-bool GlobalConfig::save(const char* path) noexcept
+bool GlobalConfig::save() noexcept
 {
-	IniParser ini(path);
-	StackString64 sectionStr;
-	StackString192 keyStr;
+	sfz_assert_debug(mImpl != nullptr);
+	IniParser& ini = mImpl->mIni;
 	
-	// Add settings to temporary IniParser
-	for (auto& setting : mSettings) {
-
-		// Find separator between section and key (if it exists)
-		const char* ident = setting->identifier();
-		size_t identLen = std::strlen(ident);
-		size_t separatorIndex = size_t(~0);
-		for (size_t i = 0; i < 64 && i < identLen; i++) {
-			if (ident[i] == '.') {
-				separatorIndex = i;
-				break;
-			}
-		}
-
-		// Separate section and key
-		if (separatorIndex == size_t(~0)) {
-			sectionStr.printf("");
-			sfz_assert_debug(identLen < size_t(192));
-			keyStr.printf("%s", ident);
-		}
-		else {
-			sfz_assert_debug(separatorIndex < size_t(64));
-			sfz_assert_debug((identLen - separatorIndex) < size_t(192));
-			std::memcpy(sectionStr.str, ident, separatorIndex);
-			sectionStr.str[separatorIndex] = '\0';
-			size_t keyLen = (identLen - separatorIndex - 1);
-			std::memcpy(keyStr.str, ident + separatorIndex + 1, keyLen);
-			keyStr.str[keyLen] = '\0';
-		}
-
-		// Set ini item
+	// Update internal ini with the current values of the setting
+	for (auto& setting : mImpl->mSettings) {
 		switch (setting->type()) {
 		case SettingType::INT:
-			ini.setInt(sectionStr.str, keyStr.str, setting->intValue());
+			ini.setInt(setting->section().str, setting->key().str, setting->intValue());
 			break;
 		case SettingType::FLOAT:
-			ini.setFloat(sectionStr.str, keyStr.str, setting->floatValue());
+			ini.setFloat(setting->section().str, setting->key().str, setting->floatValue());
 			break;
 		case SettingType::BOOL:
-			ini.setBool(sectionStr.str, keyStr.str, setting->boolValue());
+			ini.setBool(setting->section().str, setting->key().str, setting->boolValue());
 			break;
 		}
 	}
@@ -127,14 +240,57 @@ bool GlobalConfig::save(const char* path) noexcept
 	return false;
 }
 
-SharedPtr<Setting> GlobalConfig::setting(const char* identifier) const noexcept
+Setting* GlobalConfig::getCreateSetting(const char* section, const char* key, bool* created) noexcept
 {
-	for (auto& setting : mSettings) {
-		if (std::strcmp(setting->identifier(), identifier) == 0) {
-			return setting;
+	Setting* setting = this->getSetting(section, key);
+	
+	if (setting != nullptr) {
+		if (created != nullptr) *created = false;
+		return setting;
+	}
+
+	mImpl->mSettings.add(makeUnique<Setting>(section, key));
+	if (created != nullptr) *created = true;
+	return mImpl->mSettings.last().get();
+}
+
+// GlobalConfig: Getters
+// ------------------------------------------------------------------------------------------------
+
+Setting* GlobalConfig::getSetting(const char* section, const char* key) noexcept
+{
+	sfz_assert_debug(mImpl != nullptr);
+	for (auto& setting : mImpl->mSettings) {
+		if (setting->section() == section && setting->key() == key) {
+			return setting.get();
 		}
 	}
-	return SharedPtr<Setting>();
+	return nullptr;
+}
+
+Setting* GlobalConfig::getSetting(const char* key) noexcept
+{
+	return this->getSetting("", key);
+}
+
+const WindowConfig& GlobalConfig::windowCfg() const noexcept
+{
+	sfz_assert_debug(mImpl != nullptr);
+	return mImpl->mWindowCfg;
+}
+
+const GraphicsConfig& GlobalConfig::graphcisCfg() const noexcept
+{
+	sfz_assert_debug(mImpl != nullptr);
+	return mImpl->mGraphicsCfg;
+}
+
+// GlobalConfig: Private constructors & destructors
+// ------------------------------------------------------------------------------------------------
+
+GlobalConfig::~GlobalConfig() noexcept
+{
+	this->destroy();
 }
 
 } // namespace sfz

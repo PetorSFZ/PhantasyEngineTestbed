@@ -24,20 +24,23 @@ public:
 	// Constructors & destructors
 	// --------------------------------------------------------------------------------------------
 
-	Setting(const Setting&) noexcept = default;
-	Setting& operator= (const Setting&) noexcept = default;
+	Setting() = delete;
+	Setting(const Setting&) = delete;
+	Setting& operator= (const Setting&) = delete;
+	Setting(Setting&&) = delete;
+	Setting& operator= (Setting&&) = delete;
 	~Setting() noexcept = default;
 
-	Setting() noexcept;
-	Setting(const char* identifier) noexcept;
-	Setting(const char* identifier, int32_t value) noexcept;
-	Setting(const char* identifier, float value) noexcept;
-	Setting(const char* identifier, bool value) noexcept;
+	Setting(const char* section, const char* key) noexcept;
+	Setting(const char* section, const char* key, int32_t value) noexcept;
+	Setting(const char* section, const char* key, float value) noexcept;
+	Setting(const char* section, const char* key, bool value) noexcept;
 
 	// Methods
 	// --------------------------------------------------------------------------------------------
 
-	inline const char* identifier() const noexcept { return mIdent.str; }
+	inline const StackString64& section() const noexcept { return mSection; }
+	inline const StackString192& key() const noexcept { return mKey; }
 	inline SettingType type() const noexcept { return mType; }
 
 	int32_t intValue() const noexcept;
@@ -52,7 +55,8 @@ private:
 	// Private members
 	// --------------------------------------------------------------------------------------------
 
-	StackString256 mIdent;
+	StackString64 mSection;
+	StackString192 mKey;
 	SettingType mType;
 	union {
 		int32_t i;

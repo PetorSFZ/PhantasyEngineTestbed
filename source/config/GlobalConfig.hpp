@@ -2,16 +2,43 @@
 
 #pragma once
 
-#include <sfz/containers/DynArray.hpp>
-#include <sfz/memory/SmartPointers.hpp>
-
 #include "config/Setting.hpp"
 
 namespace sfz {
 
+// Config structs
+// ------------------------------------------------------------------------------------------------
+
+struct WindowConfig final {
+	Setting* displayIndex = nullptr;
+	Setting* fullscreenMode = nullptr; // 0 = off, 1 = windowed, 2 = exclusive
+};
+
+struct GraphicsConfig final {
+
+};
+
 // GlobalConfig
 // ------------------------------------------------------------------------------------------------
 
+class GlobalConfigImpl; // Pimpl pattern
+
+/// The global config singleton
+///
+/// Setting invariants:
+/// 1, All settings are owned by the singleton instance, no one else may delete the memory.
+/// 2, A setting, once created, can never be destroyed or removed during runtime.
+/// 3, A setting will occupy the same place in memory for the duration of the program's runtime.
+/// 4, A setting can not change section or key identifiers once created.
+///
+/// These invariants mean that it is safe (and expected) to store direct pointers to settings and
+/// read/write to them when needed. However, settings may change type during runtime. So it is
+/// recommended to store a pointer to the setting itself and not its internal int value for
+/// example.
+///
+/// Settings are expected to stay relatively static during the runtime of a program. They are not
+/// meant for communication and should not be changed unless the user specifically requests for
+/// them to be changed.
 class GlobalConfig final {
 public:
 	// Singleton instance
@@ -22,10 +49,25 @@ public:
 	// Methods
 	// --------------------------------------------------------------------------------------------
 
-	bool load(const char* path) noexcept;
-	bool save(const char* path) noexcept;
+	void init(const char* basePath, const char* fileName) noexcept;
+	void destroy() noexcept;
 
-	SharedPtr<Setting> setting(const char* identifier) const noexcept;
+	bool load() noexcept;
+	bool save() noexcept;
+
+	/// Gets the specified Setting. If it does not exist it will be created (type int with value 0).
+	/// The optional parameter "created" returns whether the Setting was created or already existed.
+	Setting* getCreateSetting(const char* section, const char* key, bool* created = nullptr) noexcept;
+
+	// Getters
+	// --------------------------------------------------------------------------------------------
+
+	/// Gets the specified Setting. Returns nullptr if it does not exist.
+	Setting* getSetting(const char* section, const char* key) noexcept;
+	Setting* getSetting(const char* key) noexcept;
+
+	const WindowConfig& windowCfg() const noexcept;
+	const GraphicsConfig& graphcisCfg() const noexcept;
 
 private:
 	// Private constructors & destructors
@@ -37,10 +79,12 @@ private:
 	GlobalConfig(GlobalConfig&&) = delete;
 	GlobalConfig& operator= (GlobalConfig&&) = delete;
 
+	~GlobalConfig() noexcept;
+
 	// Private members
 	// --------------------------------------------------------------------------------------------
 
-	DynArray<SharedPtr<Setting>> mSettings;
+	GlobalConfigImpl* mImpl = nullptr;
 };
 
 } // namespace sfz
