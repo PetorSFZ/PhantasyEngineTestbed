@@ -109,6 +109,8 @@ static void setWindowCfg(WindowConfig& cfg) noexcept
 	cfg.displayIndex = sanitizeInt("Window", "displayIndex", 0, 0, 32);
 	cfg.fullscreenMode = sanitizeInt("Window", "fullscreenMode", 0, 0, 2); // 0 = off, 1 = windowed, 2 = exclusive
 	cfg.vsync = sanitizeInt("Window", "vsync", 1, 0, 2); // 0 = off, 1 = on, 2 = swap control tear
+	cfg.width = sanitizeInt("Window", "width", 1280, 320, 3840);
+	cfg.height = sanitizeInt("Window", "height", 720, 240, 2160);
 }
 
 static void setGraphicsCfg(GraphicsConfig& cfg) noexcept

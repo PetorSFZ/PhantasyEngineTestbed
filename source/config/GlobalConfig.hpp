@@ -13,6 +13,8 @@ struct WindowConfig final {
 	Setting* displayIndex = nullptr;
 	Setting* fullscreenMode = nullptr; // 0 = off, 1 = windowed, 2 = exclusive
 	Setting* vsync = nullptr; // 0 = off, 1 = on, 2 = swap control tear
+	Setting* width = nullptr;
+	Setting* height = nullptr;
 };
 
 struct GraphicsConfig final {

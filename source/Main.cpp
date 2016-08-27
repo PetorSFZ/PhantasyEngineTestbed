@@ -60,8 +60,8 @@ int main(int, char**)
 	// Start SDL session and create window
 	Session sdlSession({SDLInitFlags::EVENTS, SDLInitFlags::VIDEO, SDLInitFlags::AUDIO,
 	                    SDLInitFlags::GAMECONTROLLER}, {});
-	Window window("Phantasy Engine - Testbed", 1280, 720, {WindowFlags::OPENGL,
-	              WindowFlags::RESIZABLE, WindowFlags::ALLOW_HIGHDPI});
+	Window window("Phantasy Engine - Testbed", wCfg.width->intValue(), wCfg.height->intValue(),
+	              {WindowFlags::OPENGL, WindowFlags::RESIZABLE, WindowFlags::ALLOW_HIGHDPI});
 
 	// OpenGL context
 	Context glContext = createGLContext(window, 4, 5);
