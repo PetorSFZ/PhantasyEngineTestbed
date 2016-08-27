@@ -179,9 +179,7 @@ bool GlobalConfig::load() noexcept
 
 	// Load ini file
 	IniParser& ini = mImpl->mIni;
-	if (!ini.load()) {
-		return false;
-	}
+	ini.load();
 
 	// Create setting items of all ini items
 	for (auto item : ini) {
@@ -274,6 +272,15 @@ Setting* GlobalConfig::getSetting(const char* section, const char* key) noexcept
 Setting* GlobalConfig::getSetting(const char* key) noexcept
 {
 	return this->getSetting("", key);
+}
+
+void GlobalConfig::getSettings(DynArray<Setting*>& settings) noexcept
+{
+	sfz_assert_debug(mImpl != nullptr);
+	settings.ensureCapacity(mImpl->mSettings.size());
+	for (auto& setting : mImpl->mSettings) {
+		settings.add(setting.get());
+	}
 }
 
 const WindowConfig& GlobalConfig::windowCfg() const noexcept

@@ -57,6 +57,25 @@ int main(int, char**)
 	cfg.load();
 	const WindowConfig& wCfg = cfg.windowCfg();
 
+	// Print all available settings and their values
+	DynArray<Setting*> settings;
+	cfg.getSettings(settings);
+	printf("Available settings:\n");
+	for (Setting* setting : settings) {
+		switch (setting->type()) {
+		case SettingType::INT:
+			printf("%s.%s = %i\n", setting->section(), setting->key(), setting->intValue());
+			break;
+		case SettingType::FLOAT:
+			printf("%s.%s = %f\n", setting->section(), setting->key(), setting->floatValue());
+			break;
+		case SettingType::BOOL:
+			printf("%s.%s = %s\n", setting->section(), setting->key(), setting->boolValue() ? "true" : "false");
+			break;
+		}
+	}
+	printf("\n");
+
 	// Start SDL session and create window
 	Session sdlSession({SDLInitFlags::EVENTS, SDLInitFlags::VIDEO, SDLInitFlags::AUDIO,
 	                    SDLInitFlags::GAMECONTROLLER}, {});

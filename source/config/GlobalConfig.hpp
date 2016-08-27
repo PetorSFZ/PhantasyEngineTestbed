@@ -2,6 +2,8 @@
 
 #pragma once
 
+#include <sfz/containers/DynArray.hpp>
+
 #include "config/Setting.hpp"
 
 namespace sfz {
@@ -68,6 +70,9 @@ public:
 	/// Gets the specified Setting. Returns nullptr if it does not exist.
 	Setting* getSetting(const char* section, const char* key) noexcept;
 	Setting* getSetting(const char* key) noexcept;
+
+	/// Returns pointers to all available settings
+	void getSettings(DynArray<Setting*>& settings) noexcept;
 
 	const WindowConfig& windowCfg() const noexcept;
 	const GraphicsConfig& graphcisCfg() const noexcept;
