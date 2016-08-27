@@ -62,15 +62,17 @@ int main(int, char**)
 	cfg.getSettings(settings);
 	printf("Available settings:\n");
 	for (Setting* setting : settings) {
+		if (setting->section() != "") printf("%s.", setting->section().str);
+		printf("%s = ", setting->key().str);
 		switch (setting->type()) {
 		case SettingType::INT:
-			printf("%s.%s = %i\n", setting->section(), setting->key(), setting->intValue());
+			printf("%i\n", setting->intValue());
 			break;
 		case SettingType::FLOAT:
-			printf("%s.%s = %f\n", setting->section(), setting->key(), setting->floatValue());
+			printf("%f\n", setting->floatValue());
 			break;
 		case SettingType::BOOL:
-			printf("%s.%s = %s\n", setting->section(), setting->key(), setting->boolValue() ? "true" : "false");
+			printf("%s\n", setting->boolValue() ? "true" : "false");
 			break;
 		}
 	}
