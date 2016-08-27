@@ -55,11 +55,12 @@ int main(int, char**)
 	GlobalConfig& cfg = GlobalConfig::instance();
 	cfg.init(sfz::basePath(), "Config.ini");
 	cfg.load();
+	const WindowConfig& wCfg = cfg.windowCfg();
 
 	// Start SDL session and create window
 	Session sdlSession({SDLInitFlags::EVENTS, SDLInitFlags::VIDEO, SDLInitFlags::AUDIO,
 	                    SDLInitFlags::GAMECONTROLLER}, {});
-	Window window("Phantasy Engine - Testbed", 1600, 900, {WindowFlags::OPENGL,
+	Window window("Phantasy Engine - Testbed", 1280, 720, {WindowFlags::OPENGL,
 	              WindowFlags::RESIZABLE, WindowFlags::ALLOW_HIGHDPI});
 
 	// OpenGL context
@@ -74,9 +75,18 @@ int main(int, char**)
 
 	gl::printSystemGLInfo();
 
+	// Make sure selected display index is valid
+	const int numDisplays = SDL_GetNumVideoDisplays();
+	if (numDisplays < 0) sfz::printErrorMessage("SDL_GetNumVideoDisplays() failed: %s", SDL_GetError());
+	if (wCfg.displayIndex->intValue() >= numDisplays) {
+		sfz::printErrorMessage("Display index %i is invalid, number of displays is %i. Resetting to 0.",
+		                       wCfg.displayIndex->intValue(), numDisplays);
+		wCfg.displayIndex->setInt(0);
+	}
+
 	// Fullscreen & VSync
-	window.setVSync(VSync::OFF);
-	//window.setFullscreen(Fullscreen::WINDOWED, 0);
+	window.setVSync(static_cast<VSync>(wCfg.vsync->intValue()));
+	window.setFullscreen(static_cast<Fullscreen>(wCfg.fullscreenMode->intValue()), wCfg.displayIndex->intValue());
 
 	// Enable OpenGL debug message if in debug mode
 #if !defined(SFZ_NO_DEBUG)
