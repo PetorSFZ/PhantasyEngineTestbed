@@ -14,6 +14,31 @@ namespace sfz {
 using sdl::ButtonState;
 using sdl::GameControllerState;
 
+static mat4 vkPerspectiveProjectionMatrix(float left, float bottom, float right, float top, float zNear, float zFar) noexcept
+{
+	float l = left;
+	float b = bottom;
+	float r = right;
+	float t = top;
+	float n = zNear;
+	float f = zFar;
+	return mat4{
+		{(2.0f * n) / (r - l), 0.0f,                 -(r + l) / (r - l), 0.0f},
+		{0.0f,                 (2.0f * n) / (t - b), -(t + b) / (t - b), 0.0f},
+		{0.0f,                 0.0f,                 f / (n - f),        n * f / (n - f)},
+		{0.0f,                 0.0f,                 -1.0f,              0.0f}
+	};
+}
+
+static mat4 vkPerspectiveProjectionMatrix(float yFovDeg, float aspectRatio, float zNear, float zFar) noexcept
+{
+	sfz_assert_debug(0 < zNear);
+	sfz_assert_debug(zNear < zFar);
+	float yMax = zNear * std::tan(yFovDeg * (PI() / 360.f));
+	float xMax = yMax * aspectRatio;
+	return vkPerspectiveProjectionMatrix(-xMax, -yMax, xMax, yMax, zNear, zFar);
+}
+
 // GameScreen: Constructors & destructors
 // ------------------------------------------------------------------------------------------------
 
@@ -127,7 +152,7 @@ UpdateOp GameScreen::update(UpdateState& state)
 
 	// Update renderer matrices
 	mMatrices.headMatrix = mCam.viewMatrix();
-	mMatrices.projMatrix = mCam.projMatrix();
+	mMatrices.projMatrix = vkPerspectiveProjectionMatrix(mCam.verticalFov(), mCam.aspectRatio(), mCam.near(), mCam.far());
 	mRendererPtr->updateMatrices(mMatrices);
 
 	return SCREEN_NO_OP;
@@ -164,6 +189,7 @@ void GameScreen::onResize(vec2 dimensions, vec2 drawableDimensions)
 {
 	this->mRendererPtr->setMaxResolution(vec2i(drawableDimensions));
 	this->mRendererPtr->setResolution(vec2i(drawableDimensions));
+	mCam.setAspectRatio(drawableDimensions.x / drawableDimensions.y);
 }
 
 // GameScreen: Private methods

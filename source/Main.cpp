@@ -96,6 +96,12 @@ int main(int, char**)
 
 	gl::printSystemGLInfo();
 
+	// Change OpenGL clip space to match Direct3D/Vulkan
+	if (!GLEW_ARB_clip_control) {
+		sfz::error("OpenGL error: ARB_clip_control not available");
+	}
+	glClipControl(GL_UPPER_LEFT, GL_ZERO_TO_ONE);
+
 	// Make sure selected display index is valid
 	const int numDisplays = SDL_GetNumVideoDisplays();
 	if (numDisplays < 0) sfz::printErrorMessage("SDL_GetNumVideoDisplays() failed: %s", SDL_GetError());
