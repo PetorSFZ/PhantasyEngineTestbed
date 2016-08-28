@@ -48,9 +48,9 @@ void DeferredRenderer::render(const DynArray<DrawOp>& operations) noexcept
 	glDisable(GL_BLEND);
 	glEnable(GL_CULL_FACE);
 	glEnable(GL_DEPTH_TEST);
-	glDepthFunc(GL_LESS);
+	glDepthFunc(GL_GREATER); // reversed-z
 
-	mGBuffer.bindViewportClearColorDepth(vec2i(0), mResolution);
+	mGBuffer.bindViewportClearColorDepth(vec2i(0), mResolution, vec4(0.0f), 0.0f);
 	mGBufferGenShader.useProgram();
 
 	const mat4 modelMatrix = identityMatrix4<float>();

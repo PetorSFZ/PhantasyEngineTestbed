@@ -14,7 +14,7 @@ namespace sfz {
 using sdl::ButtonState;
 using sdl::GameControllerState;
 
-static mat4 vkPerspectiveProjectionMatrix(float left, float bottom, float right, float top, float zNear, float zFar) noexcept
+static mat4 perspectiveProjectionVkD3d(float left, float bottom, float right, float top, float zNear, float zFar) noexcept
 {
 	float l = left;
 	float b = bottom;
@@ -30,13 +30,16 @@ static mat4 vkPerspectiveProjectionMatrix(float left, float bottom, float right,
 	};
 }
 
-static mat4 vkPerspectiveProjectionMatrix(float yFovDeg, float aspectRatio, float zNear, float zFar) noexcept
+static mat4 perspectiveProjectionVkD3d(float yFovDeg, float aspectRatio, float zNear, float zFar) noexcept
 {
-	sfz_assert_debug(0 < zNear);
-	sfz_assert_debug(zNear < zFar);
 	float yMax = zNear * std::tan(yFovDeg * (PI() / 360.f));
 	float xMax = yMax * aspectRatio;
-	return vkPerspectiveProjectionMatrix(-xMax, -yMax, xMax, yMax, zNear, zFar);
+	return perspectiveProjectionVkD3d(-xMax, -yMax, xMax, yMax, zNear, zFar);
+}
+
+static mat4 reversePerspectiveProjectionVkD3d(float yFovDeg, float aspectRatio, float zNear, float zFar) noexcept
+{
+	return perspectiveProjectionVkD3d(yFovDeg, aspectRatio, zFar, zNear);
 }
 
 // GameScreen: Constructors & destructors
@@ -152,7 +155,7 @@ UpdateOp GameScreen::update(UpdateState& state)
 
 	// Update renderer matrices
 	mMatrices.headMatrix = mCam.viewMatrix();
-	mMatrices.projMatrix = vkPerspectiveProjectionMatrix(mCam.verticalFov(), mCam.aspectRatio(), mCam.near(), mCam.far());
+	mMatrices.projMatrix = reversePerspectiveProjectionVkD3d(mCam.verticalFov(), mCam.aspectRatio(), mCam.near(), mCam.far());
 	mRendererPtr->updateMatrices(mMatrices);
 
 	return SCREEN_NO_OP;
