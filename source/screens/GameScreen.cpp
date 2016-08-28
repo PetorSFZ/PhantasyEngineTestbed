@@ -138,6 +138,7 @@ void GameScreen::render(UpdateState& state)
 	if (state.window.drawableDimensions() != mRendererPtr->resolution()) {
 		mRendererPtr->setMaxResolution(state.window.drawableDimensions());
 		mRendererPtr->setResolution(state.window.drawableDimensions());
+		mCam.setAspectRatio(state.window.drawableWidth() / state.window.drawableHeight());
 	}
 
 	mDrawOps.clear();
