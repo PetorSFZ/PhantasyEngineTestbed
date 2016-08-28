@@ -14,34 +14,6 @@ namespace sfz {
 using sdl::ButtonState;
 using sdl::GameControllerState;
 
-static mat4 perspectiveProjectionVkD3d(float left, float bottom, float right, float top, float zNear, float zFar) noexcept
-{
-	float l = left;
-	float b = bottom;
-	float r = right;
-	float t = top;
-	float n = zNear;
-	float f = zFar;
-	return mat4{
-		{(2.0f * n) / (r - l), 0.0f,                 -(r + l) / (r - l), 0.0f},
-		{0.0f,                 (2.0f * n) / (t - b), -(t + b) / (t - b), 0.0f},
-		{0.0f,                 0.0f,                 f / (n - f),        n * f / (n - f)},
-		{0.0f,                 0.0f,                 -1.0f,              0.0f}
-	};
-}
-
-static mat4 perspectiveProjectionVkD3d(float yFovDeg, float aspectRatio, float zNear, float zFar) noexcept
-{
-	float yMax = zNear * std::tan(yFovDeg * (PI() / 360.f));
-	float xMax = yMax * aspectRatio;
-	return perspectiveProjectionVkD3d(-xMax, -yMax, xMax, yMax, zNear, zFar);
-}
-
-static mat4 reversePerspectiveProjectionVkD3d(float yFovDeg, float aspectRatio, float zNear, float zFar) noexcept
-{
-	return perspectiveProjectionVkD3d(yFovDeg, aspectRatio, zFar, zNear);
-}
-
 // GameScreen: Constructors & destructors
 // ------------------------------------------------------------------------------------------------
 
@@ -50,8 +22,8 @@ GameScreen::GameScreen() noexcept
 	StackString128 modelsPath;
 	modelsPath.printf("%sresources/models/", basePath());
 
-	mCam = sfz::ViewFrustum(vec3(0.0f, 3.0f, -6.0f), normalize(vec3(0.0f, -0.25f, 1.0f)),
-	                        normalize(vec3(0.0f, 1.0f, 0.0)), 60.0f, 1.0f, 0.01f, 100.0f);
+	mCam = ViewFrustum(vec3(0.0f, 3.0f, -6.0f), normalize(vec3(0.0f, -0.25f, 1.0f)),
+	                   normalize(vec3(0.0f, 1.0f, 0.0)), 60.0f, 1.0f, 0.01f, 10000.0f);
 
 	mRendererPtr = UniquePtr<BaseRenderer>(sfz_new<DeferredRenderer>());
 	mDrawOps.ensureCapacity(8192);
@@ -155,7 +127,7 @@ UpdateOp GameScreen::update(UpdateState& state)
 
 	// Update renderer matrices
 	mMatrices.headMatrix = mCam.viewMatrix();
-	mMatrices.projMatrix = reversePerspectiveProjectionVkD3d(mCam.verticalFov(), mCam.aspectRatio(), mCam.near(), mCam.far());
+	mMatrices.projMatrix = mCam.projMatrix();
 	mRendererPtr->updateMatrices(mMatrices);
 
 	return SCREEN_NO_OP;

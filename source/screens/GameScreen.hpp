@@ -2,10 +2,10 @@
 
 #pragma once
 
-#include <sfz/geometry/ViewFrustum.hpp>
 #include <sfz/screens/BaseScreen.hpp>
 
 #include "renderers/BaseRenderer.hpp"
+#include "renderers/ViewFrustum.hpp"
 #include "resources/Renderable.hpp"
 
 namespace sfz {

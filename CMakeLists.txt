@@ -61,7 +61,9 @@ set(SOURCE_RENDERERS_FILES
 	${INCLUDE_DIR}/Renderers.hpp
 	${INCLUDE_DIR}/renderers/BaseRenderer.hpp
 	${INCLUDE_DIR}/renderers/DeferredRenderer.hpp
-	 ${SOURCE_DIR}/renderers/DeferredRenderer.cpp)
+	 ${SOURCE_DIR}/renderers/DeferredRenderer.cpp
+	${INCLUDE_DIR}/renderers/ViewFrustum.hpp
+	 ${SOURCE_DIR}/renderers/ViewFrustum.cpp)
 source_group(renderers FILES ${SOURCE_RENDERERS_FILES})
 
 set(SOURCE_RESOURCES_FILES
