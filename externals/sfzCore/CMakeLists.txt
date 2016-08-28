@@ -107,9 +107,7 @@ set(SOURCE_GEOMETRY_FILES
 	${INCLUDE_DIR}/sfz/geometry/Plane.hpp
 	${INCLUDE_DIR}/sfz/geometry/Plane.inl
 	${INCLUDE_DIR}/sfz/geometry/Sphere.hpp
-	${INCLUDE_DIR}/sfz/geometry/Sphere.inl
-	${INCLUDE_DIR}/sfz/geometry/ViewFrustum.hpp
-	 ${SOURCE_DIR}/sfz/geometry/ViewFrustum.cpp)
+	${INCLUDE_DIR}/sfz/geometry/Sphere.inl)
 source_group(sfz_geometry FILES ${SOURCE_GEOMETRY_FILES})
 
 if(SFZ_CORE_OPENGL)
@@ -138,6 +136,8 @@ set(SOURCE_MATH_FILES
 	${INCLUDE_DIR}/sfz/math/Matrix.inl
 	${INCLUDE_DIR}/sfz/math/MatrixSupport.hpp
 	${INCLUDE_DIR}/sfz/math/MatrixSupport.inl
+	${INCLUDE_DIR}/sfz/math/ProjectionMatrices.hpp
+	 ${SOURCE_DIR}/sfz/math/ProjectionMatrices.cpp
 	${INCLUDE_DIR}/sfz/math/Vector.hpp
 	${INCLUDE_DIR}/sfz/math/Vector.inl)
 source_group(sfz_math FILES ${SOURCE_MATH_FILES})
