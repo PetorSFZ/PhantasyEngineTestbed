@@ -134,12 +134,7 @@ void DeferredRenderer::render(const DynArray<DrawOp>& operations) noexcept
 	glEnable(GL_CULL_FACE);
 	glDisable(GL_DEPTH_TEST);
 
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	glViewport(0, 0, mResolution.x, mResolution.y);
-	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-	glClearDepth(1.0f);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
+	mResult.bindViewportClearColorDepth(vec2i(0.0), mResolution, vec4(0.0f), 0.0f);
 	mShadingShader.useProgram();
 
 	gl::setUniform(mShadingShader, "uInvProjMatrix", invProjMatrix);
@@ -193,6 +188,10 @@ void DeferredRenderer::maxResolutionUpdated() noexcept
 	          .addTexture(GBUFFER_NORMAL, FBTextureFormat::RGB_F16, FBTextureFiltering::LINEAR)
 	          .addTexture(GBUFFER_ALBEDO, FBTextureFormat::RGB_U8, FBTextureFiltering::LINEAR)
 	          .addTexture(GBUFFER_MATERIAL, FBTextureFormat::RG_U8, FBTextureFiltering::LINEAR) // Roughness, metallic
+	          .build();
+
+	mResult = FramebufferBuilder(mMaxResolution)
+	          .addTexture(0, FBTextureFormat::RGB_U8, FBTextureFiltering::LINEAR)
 	          .build();
 }
 

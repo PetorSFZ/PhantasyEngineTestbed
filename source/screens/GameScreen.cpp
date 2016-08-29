@@ -19,15 +19,24 @@ using sdl::GameControllerState;
 
 GameScreen::GameScreen() noexcept
 {
-	StackString128 modelsPath;
-	modelsPath.printf("%sresources/models/", basePath());
-
+	
 	mCam = ViewFrustum(vec3(0.0f, 3.0f, -6.0f), normalize(vec3(0.0f, -0.25f, 1.0f)),
 	                   normalize(vec3(0.0f, 1.0f, 0.0)), 60.0f, 1.0f, 0.01f, 10000.0f);
 
 	mRendererPtr = UniquePtr<BaseRenderer>(sfz_new<DeferredRenderer>());
 	mDrawOps.ensureCapacity(8192);
 	
+	// Load shaders
+	StackString192 shadersPath;
+	shadersPath.printf("%sresources/shaders/", basePath());
+
+	mScalingShader = Program::postProcessFromFile(shadersPath.str, "scaling.frag");
+	glUseProgram(mScalingShader.handle());
+	gl::setUniform(mScalingShader, "uSrcTexture", 0);
+
+	// Load models
+	StackString192 modelsPath;
+	modelsPath.printf("%sresources/models/", basePath());
 
 	using time_point = std::chrono::high_resolution_clock::time_point;
 	time_point before = std::chrono::high_resolution_clock::now();
@@ -135,13 +144,15 @@ UpdateOp GameScreen::update(UpdateState& state)
 
 void GameScreen::render(UpdateState& state)
 {
-	if (state.window.drawableWidth() > 0 && state.window.drawableHeight() > 0) {
-		mCam.setAspectRatio(float(state.window.drawableWidth()) / float(state.window.drawableHeight()) );
+	vec2i drawableDim = state.window.drawableDimensions();
+
+	if (drawableDim.x > 0 && drawableDim.y > 0) {
+		mCam.setAspectRatio(float(drawableDim.x) / float(drawableDim.y));
 	}
 
-	if (state.window.drawableDimensions() != mRendererPtr->resolution()) {
-		mRendererPtr->setMaxResolution(state.window.drawableDimensions());
-		mRendererPtr->setResolution(state.window.drawableDimensions());
+	if (drawableDim != mRendererPtr->resolution()) {
+		mRendererPtr->setMaxResolution(drawableDim);
+		mRendererPtr->setResolution(drawableDim);
 	}
 
 	mDrawOps.clear();
@@ -149,12 +160,24 @@ void GameScreen::render(UpdateState& state)
 	mDrawOps.add(DrawOp(identityMatrix4<float>(), &mSnakeRenderable));
 	mRendererPtr->render(mDrawOps);
 
-	/*glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	// Scale result to screen
+	glDisable(GL_BLEND);
+	glEnable(GL_CULL_FACE);
+	glDisable(GL_DEPTH_TEST);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glViewport(0, 0, drawableDim.x, drawableDim.y);
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-	glClearDepth(1.0f);
+	glClearDepth(0.0f); // Reverse depth buffer
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	// Run scaler here*/
+	glUseProgram(mScalingShader.handle());
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, mRendererPtr->getResult().texture(0));
+	gl::setUniform(mScalingShader, "uViewportRes", vec2(mRendererPtr->resolution()));
+	gl::setUniform(mScalingShader, "uDstRes", vec2(drawableDim));
+
+	mFullscreenQuad.render();
 
 	SDL_GL_SwapWindow(state.window.ptr());
 }
@@ -166,12 +189,21 @@ void GameScreen::onQuit()
 
 void GameScreen::onResize(vec2 dimensions, vec2 drawableDimensions)
 {
-	this->mRendererPtr->setMaxResolution(vec2i(drawableDimensions));
-	this->mRendererPtr->setResolution(vec2i(drawableDimensions));
+	//this->mRendererPtr->setMaxResolution(vec2i(drawableDimensions));
+	//this->mRendererPtr->setResolution(vec2i(drawableDimensions));
 }
 
 // GameScreen: Private methods
 // ------------------------------------------------------------------------------------------------
+
+void GameScreen::reloadShaders() noexcept
+{
+	mScalingShader.reload();
+	if (mScalingShader.isValid()) {
+		glUseProgram(mScalingShader.handle());
+		gl::setUniform(mScalingShader, "uSrcTexture", 0);
+	}
+}
 
 void GameScreen::updateEmulatedController(const DynArray<SDL_Event>& events,
                                           const sdl::Mouse& rawMouse) noexcept

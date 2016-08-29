@@ -2,6 +2,8 @@
 
 #pragma once
 
+#include <sfz/gl/FullscreenQuad.hpp>
+#include <sfz/gl/Program.hpp>
 #include <sfz/screens/BaseScreen.hpp>
 
 #include "renderers/BaseRenderer.hpp"
@@ -10,6 +12,7 @@
 
 namespace sfz {
 
+using gl::Program;
 using sdl::ButtonState;
 
 class GameScreen : public sfz::BaseScreen {
@@ -33,16 +36,17 @@ private:
 
 	struct EmulatedGameController {
 		sdl::GameControllerState state;
-		sdl::ButtonState leftStickUp = ButtonState::NOT_PRESSED;
-		sdl::ButtonState leftStickDown = ButtonState::NOT_PRESSED;
-		sdl::ButtonState leftStickLeft = ButtonState::NOT_PRESSED;
-		sdl::ButtonState leftStickRight = ButtonState::NOT_PRESSED;
-		sdl::ButtonState shiftPressed = ButtonState::NOT_PRESSED;
+		ButtonState leftStickUp = ButtonState::NOT_PRESSED;
+		ButtonState leftStickDown = ButtonState::NOT_PRESSED;
+		ButtonState leftStickLeft = ButtonState::NOT_PRESSED;
+		ButtonState leftStickRight = ButtonState::NOT_PRESSED;
+		ButtonState shiftPressed = ButtonState::NOT_PRESSED;
 	};
 	
 	// Private methods
 	// --------------------------------------------------------------------------------------------
 
+	void reloadShaders() noexcept;
 	void updateEmulatedController(const DynArray<SDL_Event>& events, const sdl::Mouse& rawMouse) noexcept;
 
 	// Private members
@@ -53,6 +57,8 @@ private:
 	ViewFrustum mCam;
 	CameraMatrices mMatrices;
 	DynArray<DrawOp> mDrawOps;
+	Program mScalingShader;
+	gl::FullscreenQuad mFullscreenQuad;
 
 	// Temp
 	Renderable mSponza;
