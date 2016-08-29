@@ -135,10 +135,13 @@ UpdateOp GameScreen::update(UpdateState& state)
 
 void GameScreen::render(UpdateState& state)
 {
+	if (state.window.drawableWidth() > 0 && state.window.drawableHeight() > 0) {
+		mCam.setAspectRatio(float(state.window.drawableWidth()) / float(state.window.drawableHeight()) );
+	}
+
 	if (state.window.drawableDimensions() != mRendererPtr->resolution()) {
 		mRendererPtr->setMaxResolution(state.window.drawableDimensions());
 		mRendererPtr->setResolution(state.window.drawableDimensions());
-		mCam.setAspectRatio(state.window.drawableWidth() / state.window.drawableHeight());
 	}
 
 	mDrawOps.clear();
@@ -165,7 +168,6 @@ void GameScreen::onResize(vec2 dimensions, vec2 drawableDimensions)
 {
 	this->mRendererPtr->setMaxResolution(vec2i(drawableDimensions));
 	this->mRendererPtr->setResolution(vec2i(drawableDimensions));
-	mCam.setAspectRatio(drawableDimensions.x / drawableDimensions.y);
 }
 
 // GameScreen: Private methods
