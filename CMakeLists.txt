@@ -47,7 +47,6 @@ include_directories(
 
 set(SOURCE_ROOT_FILES
 	 ${SOURCE_DIR}/Main.cpp)
-source_group(root FILES ${SOURCE_ROOT_FILES})
 
 set(SOURCE_CONFIG_FILES
 	${INCLUDE_DIR}/Config.hpp
@@ -55,7 +54,6 @@ set(SOURCE_CONFIG_FILES
 	 ${SOURCE_DIR}/config/GlobalConfig.cpp
 	${INCLUDE_DIR}/config/Setting.hpp
 	 ${SOURCE_DIR}/config/Setting.cpp)
-source_group(config FILES ${SOURCE_CONFIG_FILES})
 
 set(SOURCE_RENDERERS_FILES
 	${INCLUDE_DIR}/Renderers.hpp
@@ -64,7 +62,6 @@ set(SOURCE_RENDERERS_FILES
 	 ${SOURCE_DIR}/renderers/DeferredRenderer.cpp
 	${INCLUDE_DIR}/renderers/ViewFrustum.hpp
 	 ${SOURCE_DIR}/renderers/ViewFrustum.cpp)
-source_group(renderers FILES ${SOURCE_RENDERERS_FILES})
 
 set(SOURCE_RESOURCES_FILES
 	${INCLUDE_DIR}/Resources.hpp
@@ -77,7 +74,6 @@ set(SOURCE_RESOURCES_FILES
 	 ${SOURCE_DIR}/resources/RawImage.cpp
 	${INCLUDE_DIR}/resources/Renderable.hpp
 	 ${SOURCE_DIR}/resources/Renderable.cpp)
-source_group(resources FILES ${SOURCE_RESOURCES_FILES})
 
 set(SOURCE_SCREENS_FILES
 	${INCLUDE_DIR}/Screens.hpp
@@ -85,7 +81,6 @@ set(SOURCE_SCREENS_FILES
 	 ${SOURCE_DIR}/screens/GameScreen.cpp
 	${INCLUDE_DIR}/screens/LevelSelectScreen.hpp
 	 ${SOURCE_DIR}/screens/LevelSelectScreen.cpp)
-source_group(screens FILES ${SOURCE_SCREENS_FILES})
 
 set(SOURCE_ALL_FILES
 	${SOURCE_ROOT_FILES}
@@ -93,6 +88,24 @@ set(SOURCE_ALL_FILES
 	${SOURCE_RENDERERS_FILES}
 	${SOURCE_RESOURCES_FILES}
 	${SOURCE_SCREENS_FILES})
+
+# Automatically set source group to correspond to directory structure.
+# From Stack Overflow post by Florian:
+# http://stackoverflow.com/a/31423421
+function(set_directory_source_group)
+	foreach(_source IN ITEMS ${ARGN})
+		if (IS_ABSOLUTE "${_source}")
+			file(RELATIVE_PATH _source_rel "${CMAKE_CURRENT_SOURCE_DIR}" "${_source}")
+		else()
+			set(source_rel "${_source}")
+		endif()
+		get_filename_component(_source_path "${_source_rel}" PATH)
+		string(REPLACE "/" "\\" _source_path_msvc "${_source_path}")
+		source_group("${_source_path_msvc}" FILES "${_source}")
+	endforeach()
+endfunction(set_directory_source_group)
+
+set_directory_source_group(${SOURCE_ALL_FILES})
 
 # Main executable
 add_executable(PhantasyEngineTestbed ${SOURCE_ALL_FILES})
