@@ -160,12 +160,15 @@ void DeferredRenderer::render(const DynArray<DrawOp>& operations, const DynArray
 	glBindTexture(GL_TEXTURE_2D, mGBuffer.texture(GBUFFER_MATERIAL));
 	gl::setUniform(mShadingShader, "uMaterialTexture", 3);
 
+	const int lightPosLoc = glGetUniformLocation(mShadingShader.handle(), "uLightPos");
+	const int lightStrengthLoc = glGetUniformLocation(mShadingShader.handle(), "uLightStrength");
+	const int lightRangeLoc = glGetUniformLocation(mShadingShader.handle(), "uLightRange");
+
 	for (const PointLight& pointLight : pointLights) {
 		const vec3 lightPosVS = transformPoint(viewMatrix, pointLight.pos);
-		gl::setUniform(mShadingShader, "uLightPos", lightPosVS);
-
-		gl::setUniform(mShadingShader, "uLightStrength", vec3{ pointLight.strength });
-		gl::setUniform(mShadingShader, "uLightRadius", pointLight.radius);
+		gl::setUniform(lightPosLoc, lightPosVS);
+		gl::setUniform(lightStrengthLoc, pointLight.strength);
+		gl::setUniform(lightRangeLoc, pointLight.range);
 
 		mFullscreenTriangle.render();
 	}

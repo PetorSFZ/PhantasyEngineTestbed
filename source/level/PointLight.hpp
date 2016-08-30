@@ -5,9 +5,9 @@
 namespace sfz {
 
 struct PointLight {
-	vec3 pos{ 0, 0, 0 };
-	vec3 strength{ 0, 0, 0 };
-	float radius{ 0 };
+	vec3 pos{ 0.0f, 0.0f, 0.0f };
+	vec3 strength{ 0.0f, 0.0f, 0.0f };
+	float range{ 0.0f };
 	bool shadows{ false };
 };
 

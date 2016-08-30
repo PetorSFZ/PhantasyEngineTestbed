@@ -19,7 +19,7 @@ uniform sampler2D uMaterialTexture;
 
 uniform vec3 uLightPos;
 uniform vec3 uLightStrength;
-uniform float uLightRadius;
+uniform float uLightRange;
 
 // Constants
 // ------------------------------------------------------------------------------------------------
@@ -130,7 +130,7 @@ void main()
 	vec3 specular = ctD * ctF * ctG / (4.0 * nDotL * nDotV);
 
 	// Calculates light strength
-	float fallofNumerator = pow(clamp(1.0 - pow(toLightDist / uLightRadius, 4), 0.0, 1.0), 2);
+	float fallofNumerator = pow(clamp(1.0 - pow(toLightDist / uLightRange, 4), 0.0, 1.0), 2);
 	float fallofDenominator = (toLightDist * toLightDist + 1.0);
 	float falloff = fallofNumerator / fallofDenominator;
 	vec3 light = falloff * uLightStrength;
