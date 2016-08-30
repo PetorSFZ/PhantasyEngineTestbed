@@ -1,6 +1,7 @@
 // Copyright (c) Peter Hillerström (skipifzero.com, peter@hstroem.se)
 
 #include "renderers/DeferredRenderer.hpp"
+#include "level/PointLight.hpp"
 
 #include <sfz/containers/StackString.hpp>
 #include <sfz/gl/IncludeOpenGL.hpp>
@@ -36,7 +37,7 @@ DeferredRenderer::DeferredRenderer() noexcept
 // DeferredRenderer: Virtual methods from BaseRenderer interface
 // ------------------------------------------------------------------------------------------------
 
-void DeferredRenderer::render(const DynArray<DrawOp>& operations) noexcept
+void DeferredRenderer::render(const DynArray<DrawOp>& operations, const DynArray<PointLight>& pointLights) noexcept
 {
 	const mat4 viewMatrix = mMatrices.headMatrix * mMatrices.originMatrix;
 	const mat4 projMatrix = mMatrices.projMatrix;
@@ -134,6 +135,10 @@ void DeferredRenderer::render(const DynArray<DrawOp>& operations) noexcept
 	glEnable(GL_CULL_FACE);
 	glDisable(GL_DEPTH_TEST);
 
+	glEnable(GL_BLEND);
+	glBlendEquation(GL_FUNC_ADD);
+	glBlendFunc(GL_ONE, GL_ONE);
+
 	mResult.bindViewportClearColorDepth(vec2i(0.0), mResolution, vec4(0.0f), 0.0f);
 	mShadingShader.useProgram();
 
@@ -155,14 +160,15 @@ void DeferredRenderer::render(const DynArray<DrawOp>& operations) noexcept
 	glBindTexture(GL_TEXTURE_2D, mGBuffer.texture(GBUFFER_MATERIAL));
 	gl::setUniform(mShadingShader, "uMaterialTexture", 3);
 
-	const vec3 lightPosWS = vec3(-30.0f, 5.0f, 0.0f);
-	const vec3 lightPosVS = transformPoint(viewMatrix, lightPosWS);
-	gl::setUniform(mShadingShader, "uLightPos", lightPosVS);
+	for (const PointLight& pointLight : pointLights) {
+		const vec3 lightPosVS = transformPoint(viewMatrix, pointLight.pos);
+		gl::setUniform(mShadingShader, "uLightPos", lightPosVS);
 
-	gl::setUniform(mShadingShader, "uLightStrength", vec3{ 500.0f });
-	gl::setUniform(mShadingShader, "uLightRadius", 500.0f );
+		gl::setUniform(mShadingShader, "uLightStrength", vec3{ pointLight.strength });
+		gl::setUniform(mShadingShader, "uLightRadius", pointLight.radius);
 
-	mFullscreenQuad.render();
+		mFullscreenQuad.render();
+	}
 }
 
 const Framebuffer& DeferredRenderer::getResult() const noexcept

@@ -30,7 +30,7 @@ public:
 	// Virtual methods from BaseRenderer interface
 	// --------------------------------------------------------------------------------------------
 
-	void render(const DynArray<DrawOp>& operations) noexcept override final;
+	void render(const DynArray<DrawOp>& operations, const DynArray<PointLight>& pointLights) noexcept override final;
 	const Framebuffer& getResult() const noexcept override final;
 	const Framebuffer& getResultVR(uint32_t eye) const noexcept override final;
 

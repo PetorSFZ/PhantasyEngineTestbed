@@ -6,6 +6,7 @@
 
 #include <sfz/gl/IncludeOpenGL.hpp>
 #include <sfz/util/IO.hpp>
+#include <sfz/math/Vector.hpp>
 
 #include "config/GlobalConfig.hpp"
 #include "renderers/cuda_ray_tracer/CudaRayTracerRenderer.hpp"
@@ -58,6 +59,22 @@ GameScreen::GameScreen() noexcept
 
 	// Add the sponza model to the scene
 	scene.staticRenderables.add(std::move(mSponza));
+
+	// Add lights to the scene
+	vec3 colours[]{
+		vec3{ 1.0f, 0.0f, 0.0f },
+		vec3{ 1.0f, 0.0f, 1.0f },
+		vec3{ 0.0f, 1.0f, 1.0f },
+		vec3{ 1.0f, 1.0f, 0.0f },
+		vec3{ 0.0f, 1.0f, 0.0f }
+	};
+	for (int i = 0; i < 5; i++) {
+		PointLight pointLight;
+		pointLight.pos = vec3{ -50.0f + 25.0f * i , 5.0f, 0.0f };
+		pointLight.radius = 50.0f;
+		pointLight.strength = 100.0f * colours[i];
+		scene.staticPointLights.add(pointLight);
+	}	
 }
 
 // GameScreen: Overriden methods from sfz::BaseScreen
@@ -173,7 +190,7 @@ void GameScreen::render(UpdateState& state)
 		mDrawOps.add(DrawOp(scalingMatrix4<float>(0.05f), &renderable));
 	}
 	mDrawOps.add(DrawOp(identityMatrix4<float>(), &mSnakeRenderable));
-	mRendererPtr->render(mDrawOps);
+	mRendererPtr->render(mDrawOps, scene.staticPointLights);
 
 	// Scale result to screen
 	glDisable(GL_BLEND);

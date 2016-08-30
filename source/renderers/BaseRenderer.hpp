@@ -6,6 +6,7 @@
 #include <sfz/gl/Framebuffer.hpp>
 #include <sfz/math/Matrix.hpp>
 
+#include "level/PointLight.hpp"
 #include "resources/Renderable.hpp"
 
 namespace sfz {
@@ -61,7 +62,7 @@ public:
 	// Virtual methods
 	// --------------------------------------------------------------------------------------------
 	
-	virtual void render(const DynArray<DrawOp>& operations) noexcept = 0;
+	virtual void render(const DynArray<DrawOp>& operations, const DynArray<PointLight>& pointLights) noexcept = 0;
 
 	/// The resulting framebuffer after rendering
 	virtual const Framebuffer& getResult() const noexcept = 0;
