@@ -9,8 +9,11 @@
 #include <sfz/math/Vector.hpp>
 
 #include "config/GlobalConfig.hpp"
-#include "renderers/cuda_ray_tracer/CudaRayTracerRenderer.hpp"
 #include "renderers/DeferredRenderer.hpp"
+
+#ifdef CUDA_TRACER_AVAILABLE
+#include "renderers/cuda_ray_tracer/CudaRayTracerRenderer.hpp"
+#endif
 
 namespace sfz {
 
@@ -30,7 +33,12 @@ GameScreen::GameScreen() noexcept
 	if (cfg.graphcisCfg().renderingBackend->intValue() == 0) {
 		mRendererPtr = UniquePtr<BaseRenderer>(sfz_new<DeferredRenderer>());
 	} else {
+#ifdef CUDA_TRACER_AVAILABLE
 		mRendererPtr = UniquePtr<BaseRenderer>(sfz_new<CUDARayTracerRenderer>());
+#else
+		printf("%s\n", "CUDA not available in this build, using deferred renderer instead.");
+		mRendererPtr = UniquePtr<BaseRenderer>(sfz_new<DeferredRenderer>());
+#endif
 	}
 
 	mDrawOps.ensureCapacity(8192);

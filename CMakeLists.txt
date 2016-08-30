@@ -37,6 +37,12 @@ add_subdirectory(${EXTERNALS_DIR}/assimp)
 # stb_image
 add_subdirectory(${EXTERNALS_DIR}/stb_image)
 
+# Cuda
+if(CUDA_TRACER)
+	find_package(CUDA REQUIRED)
+	add_definitions(-DCUDA_TRACER_AVAILABLE)
+endif()
+
 # Include directories
 include_directories(
 	${INCLUDE_DIR}
@@ -63,10 +69,6 @@ set(SOURCE_ALL_FILES
 	${INCLUDE_DIR}/renderers/FullscreenTriangle.hpp
 	 ${SOURCE_DIR}/renderers/FullscreenTriangle.cpp
 
-	${INCLUDE_DIR}/renderers/CUDARayTracer.hpp
-	${INCLUDE_DIR}/renderers/cuda_ray_tracer/CUDARayTracerRenderer.hpp
-	 ${SOURCE_DIR}/renderers/cuda_ray_tracer/CUDARayTracerRenderer.cpp
-
 	${INCLUDE_DIR}/Resources.hpp
 	${INCLUDE_DIR}/resources/GLModel.hpp
 	 ${SOURCE_DIR}/resources/GLModel.cpp
@@ -86,6 +88,15 @@ set(SOURCE_ALL_FILES
 
 	${INCLUDE_DIR}/level/PointLight.hpp
 	${INCLUDE_DIR}/level/Scene.hpp)
+
+if(CUDA_TRACER)
+set(SOURCE_ALL_FILES
+	${SOURCE_ALL_FILES}
+		
+	${INCLUDE_DIR}/renderers/CUDARayTracer.hpp
+	${INCLUDE_DIR}/renderers/cuda_ray_tracer/CUDARayTracerRenderer.hpp
+	 ${SOURCE_DIR}/renderers/cuda_ray_tracer/CUDARayTracerRenderer.cpp)
+endif()
 
 # Automatically set source group to correspond to directory structure.
 # From Stack Overflow post by Florian:
