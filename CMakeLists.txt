@@ -45,25 +45,26 @@ include_directories(
 	${STB_IMAGE_INCLUDE_DIRS}
 )
 
-set(SOURCE_ROOT_FILES
-	 ${SOURCE_DIR}/Main.cpp)
-
-set(SOURCE_CONFIG_FILES
+set(SOURCE_ALL_FILES
+	${SOURCE_DIR}/Main.cpp
+	
 	${INCLUDE_DIR}/Config.hpp
 	${INCLUDE_DIR}/config/GlobalConfig.hpp
 	 ${SOURCE_DIR}/config/GlobalConfig.cpp
 	${INCLUDE_DIR}/config/Setting.hpp
-	 ${SOURCE_DIR}/config/Setting.cpp)
+	 ${SOURCE_DIR}/config/Setting.cpp
 
-set(SOURCE_RENDERERS_FILES
 	${INCLUDE_DIR}/Renderers.hpp
 	${INCLUDE_DIR}/renderers/BaseRenderer.hpp
 	${INCLUDE_DIR}/renderers/DeferredRenderer.hpp
 	 ${SOURCE_DIR}/renderers/DeferredRenderer.cpp
 	${INCLUDE_DIR}/renderers/ViewFrustum.hpp
-	 ${SOURCE_DIR}/renderers/ViewFrustum.cpp)
+	 ${SOURCE_DIR}/renderers/ViewFrustum.cpp
 
-set(SOURCE_RESOURCES_FILES
+	${INCLUDE_DIR}/renderers/CUDARayTracer.hpp
+	${INCLUDE_DIR}/renderers/cuda_ray_tracer/CUDARayTracerRenderer.hpp
+	 ${SOURCE_DIR}/renderers/cuda_ray_tracer/CUDARayTracerRenderer.cpp
+
 	${INCLUDE_DIR}/Resources.hpp
 	${INCLUDE_DIR}/resources/GLModel.hpp
 	 ${SOURCE_DIR}/resources/GLModel.cpp
@@ -73,21 +74,13 @@ set(SOURCE_RESOURCES_FILES
 	${INCLUDE_DIR}/resources/RawImage.hpp
 	 ${SOURCE_DIR}/resources/RawImage.cpp
 	${INCLUDE_DIR}/resources/Renderable.hpp
-	 ${SOURCE_DIR}/resources/Renderable.cpp)
+	 ${SOURCE_DIR}/resources/Renderable.cpp
 
-set(SOURCE_SCREENS_FILES
 	${INCLUDE_DIR}/Screens.hpp
 	${INCLUDE_DIR}/screens/GameScreen.hpp
 	 ${SOURCE_DIR}/screens/GameScreen.cpp
 	${INCLUDE_DIR}/screens/LevelSelectScreen.hpp
 	 ${SOURCE_DIR}/screens/LevelSelectScreen.cpp)
-
-set(SOURCE_ALL_FILES
-	${SOURCE_ROOT_FILES}
-	${SOURCE_CONFIG_FILES}
-	${SOURCE_RENDERERS_FILES}
-	${SOURCE_RESOURCES_FILES}
-	${SOURCE_SCREENS_FILES})
 
 # Automatically set source group to correspond to directory structure.
 # From Stack Overflow post by Florian:
