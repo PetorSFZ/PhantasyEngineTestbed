@@ -2,10 +2,10 @@
 
 #pragma once
 
-#include <sfz/gl/FullscreenQuad.hpp>
 #include <sfz/gl/Program.hpp>
 
 #include "renderers/BaseRenderer.hpp"
+#include "renderers/FullscreenTriangle.hpp"
 
 namespace sfz {
 
@@ -47,7 +47,7 @@ private:
 	
 	Program mGBufferGenShader, mShadingShader;
 	Framebuffer mGBuffer, mResult, mResultVR[2];
-	gl::FullscreenQuad mFullscreenQuad;
+	FullscreenTriangle mFullscreenTriangle;
 };
 
 } // namespace sfz

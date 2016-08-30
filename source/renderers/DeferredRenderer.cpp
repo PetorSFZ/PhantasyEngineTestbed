@@ -167,7 +167,7 @@ void DeferredRenderer::render(const DynArray<DrawOp>& operations, const DynArray
 		gl::setUniform(mShadingShader, "uLightStrength", vec3{ pointLight.strength });
 		gl::setUniform(mShadingShader, "uLightRadius", pointLight.radius);
 
-		mFullscreenQuad.render();
+		mFullscreenTriangle.render();
 	}
 }
 

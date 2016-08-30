@@ -2,12 +2,12 @@
 
 #pragma once
 
-#include <sfz/gl/FullscreenQuad.hpp>
 #include <sfz/gl/Program.hpp>
 #include <sfz/screens/BaseScreen.hpp>
 
 #include "renderers/BaseRenderer.hpp"
 #include "renderers/ViewFrustum.hpp"
+#include "renderers/FullscreenTriangle.hpp"
 #include "resources/Renderable.hpp"
 
 #include "level/Scene.hpp"
@@ -60,7 +60,7 @@ private:
 	CameraMatrices mMatrices;
 	DynArray<DrawOp> mDrawOps;
 	Program mScalingShader;
-	gl::FullscreenQuad mFullscreenQuad;
+	FullscreenTriangle mFullscreenTriangle;
 
 	// Temp
 	Renderable mSponza;

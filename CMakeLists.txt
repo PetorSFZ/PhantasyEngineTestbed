@@ -60,6 +60,8 @@ set(SOURCE_ALL_FILES
 	 ${SOURCE_DIR}/renderers/DeferredRenderer.cpp
 	${INCLUDE_DIR}/renderers/ViewFrustum.hpp
 	 ${SOURCE_DIR}/renderers/ViewFrustum.cpp
+	${INCLUDE_DIR}/renderers/FullscreenTriangle.hpp
+	 ${SOURCE_DIR}/renderers/FullscreenTriangle.cpp
 
 	${INCLUDE_DIR}/renderers/CUDARayTracer.hpp
 	${INCLUDE_DIR}/renderers/cuda_ray_tracer/CUDARayTracerRenderer.hpp

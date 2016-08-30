@@ -209,7 +209,7 @@ void GameScreen::render(UpdateState& state)
 	gl::setUniform(mScalingShader, "uViewportRes", vec2(mRendererPtr->resolution()));
 	gl::setUniform(mScalingShader, "uDstRes", vec2(drawableDim));
 
-	mFullscreenQuad.render();
+	mFullscreenTriangle.render();
 
 	SDL_GL_SwapWindow(state.window.ptr());
 }
