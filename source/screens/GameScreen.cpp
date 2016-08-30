@@ -7,6 +7,8 @@
 #include <sfz/gl/IncludeOpenGL.hpp>
 #include <sfz/util/IO.hpp>
 
+#include "config/GlobalConfig.hpp"
+#include "renderers/cuda_ray_tracer/CudaRayTracerRenderer.hpp"
 #include "renderers/DeferredRenderer.hpp"
 
 namespace sfz {
@@ -19,11 +21,17 @@ using sdl::GameControllerState;
 
 GameScreen::GameScreen() noexcept
 {
-	
+	auto& cfg = GlobalConfig::instance();
+
 	mCam = ViewFrustum(vec3(0.0f, 3.0f, -6.0f), normalize(vec3(0.0f, -0.25f, 1.0f)),
 	                   normalize(vec3(0.0f, 1.0f, 0.0)), 60.0f, 1.0f, 0.01f, 10000.0f);
 
-	mRendererPtr = UniquePtr<BaseRenderer>(sfz_new<DeferredRenderer>());
+	if (cfg.graphcisCfg().renderingBackend->intValue() == 0) {
+		mRendererPtr = UniquePtr<BaseRenderer>(sfz_new<DeferredRenderer>());
+	} else {
+		mRendererPtr = UniquePtr<BaseRenderer>(sfz_new<CUDARayTracerRenderer>());
+	}
+
 	mDrawOps.ensureCapacity(8192);
 	
 	// Load shaders

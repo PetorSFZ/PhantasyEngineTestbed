@@ -20,7 +20,7 @@ struct WindowConfig final {
 };
 
 struct GraphicsConfig final {
-
+	Setting* renderingBackend; // 0 = Deferred, 1 = CUDARayTracing
 };
 
 // GlobalConfig

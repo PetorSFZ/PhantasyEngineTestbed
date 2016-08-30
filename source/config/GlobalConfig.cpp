@@ -115,6 +115,7 @@ static void setWindowCfg(WindowConfig& cfg) noexcept
 
 static void setGraphicsCfg(GraphicsConfig& cfg) noexcept
 {
+	cfg.renderingBackend = sanitizeInt("Graphics", "renderingBackend", 0, 0, 1);
 }
 
 // GlobalConfigImpl
