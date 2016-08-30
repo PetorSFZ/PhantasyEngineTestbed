@@ -55,6 +55,9 @@ GameScreen::GameScreen() noexcept
 	using FloatSecond = std::chrono::duration<float>;
 	float delta = std::chrono::duration_cast<FloatSecond>(after - before).count();
 	printf("Time spent loading models: %.3f seconds\n", delta);
+
+	// Add the sponza model to the scene
+	scene.staticRenderables.add(std::move(mSponza));
 }
 
 // GameScreen: Overriden methods from sfz::BaseScreen
@@ -164,7 +167,11 @@ void GameScreen::render(UpdateState& state)
 	}
 
 	mDrawOps.clear();
-	mDrawOps.add(DrawOp(scalingMatrix4<float>(0.05f), &mSponza));
+
+	// Render all static objects in the scene, scaled down to 5% of their sizes
+	for (Renderable& renderable : scene.staticRenderables) {
+		mDrawOps.add(DrawOp(scalingMatrix4<float>(0.05f), &renderable));
+	}
 	mDrawOps.add(DrawOp(identityMatrix4<float>(), &mSnakeRenderable));
 	mRendererPtr->render(mDrawOps);
 

@@ -10,6 +10,8 @@
 #include "renderers/ViewFrustum.hpp"
 #include "resources/Renderable.hpp"
 
+#include "level/Scene.hpp"
+
 namespace sfz {
 
 using gl::Program;
@@ -63,6 +65,8 @@ private:
 	// Temp
 	Renderable mSponza;
 	Renderable mSnakeRenderable;
+
+	Scene scene;
 };
 
 } // namespace sfz
