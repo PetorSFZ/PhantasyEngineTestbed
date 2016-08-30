@@ -13,7 +13,7 @@ CUDARayTracerRenderer::CUDARayTracerRenderer() noexcept
 // CUDARayTracerRenderer: Virtual methods from BaseRenderer interface
 // ------------------------------------------------------------------------------------------------
 
-void CUDARayTracerRenderer::render(const DynArray<DrawOp>& operations) noexcept
+void CUDARayTracerRenderer::render(const DynArray<DrawOp>& operations, const DynArray<PointLight>& pointLights) noexcept
 {
 	mResult.bindViewportClearColorDepth(vec4(0.0f, 1.0f, 0.0f, 1.0f), 0.0f);
 }
