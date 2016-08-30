@@ -159,6 +159,9 @@ void DeferredRenderer::render(const DynArray<DrawOp>& operations) noexcept
 	const vec3 lightPosVS = transformPoint(viewMatrix, lightPosWS);
 	gl::setUniform(mShadingShader, "uLightPos", lightPosVS);
 
+	gl::setUniform(mShadingShader, "uLightStrength", vec3{ 500.0f });
+	gl::setUniform(mShadingShader, "uLightRadius", 500.0f );
+
 	mFullscreenQuad.render();
 }
 

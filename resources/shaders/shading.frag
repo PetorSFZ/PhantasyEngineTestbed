@@ -18,6 +18,8 @@ uniform sampler2D uAlbedoTexture;
 uniform sampler2D uMaterialTexture;
 
 uniform vec3 uLightPos;
+uniform vec3 uLightStrength;
+uniform float uLightRadius;
 
 // Constants
 // ------------------------------------------------------------------------------------------------
@@ -128,12 +130,10 @@ void main()
 	vec3 specular = ctD * ctF * ctG / (4.0 * nDotL * nDotV);
 
 	// Calculates light strength
-	const float uLightRadius = 500.0;
-	const float uLightStrength = 500.0;
 	float fallofNumerator = pow(clamp(1.0 - pow(toLightDist / uLightRadius, 4), 0.0, 1.0), 2);
 	float fallofDenominator = (toLightDist * toLightDist + 1.0);
 	float falloff = fallofNumerator / fallofDenominator;
-	float light = falloff * uLightStrength;
+	vec3 light = falloff * uLightStrength;
 
 	// "Solves" reflectance equation under the assumption that the light source is a point light
 	// and that there is no global illumination.
