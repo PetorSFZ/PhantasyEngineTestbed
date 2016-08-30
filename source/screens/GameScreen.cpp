@@ -356,6 +356,10 @@ void GameScreen::updateEmulatedController(const DynArray<SDL_Event>& events,
 	// Set right stick
 	mEmulatedController.state.rightStick = rawMouse.motion * 200.0f;
 
+	const uint8_t* keys = SDL_GetKeyboardState(nullptr);
+	vec2 arrowKeyVector(keys[SDL_SCANCODE_RIGHT] - keys[SDL_SCANCODE_LEFT], keys[SDL_SCANCODE_UP] - keys[SDL_SCANCODE_DOWN]);
+	mEmulatedController.state.rightStick += 0.7f * arrowKeyVector;
+
 	// Set triggers
 	if (rawMouse.leftButton == ButtonState::NOT_PRESSED) {
 		mEmulatedController.state.rightTrigger = 0.0f;
