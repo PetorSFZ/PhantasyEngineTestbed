@@ -9,7 +9,7 @@ endif()
 # Compiler flags
 if(MSVC)
 	# MSVC flags
-	set(CMAKE_CXX_FLAGS "/Wall /Zi /EHsc /wd4201 /wd4350 /wd4514 /wd4571 /wd4647 /wd4668 /wd4710 /wd4711 /wd4820 /D_CRT_SECURE_NO_WARNINGS")
+	set(CMAKE_CXX_FLAGS "/Wall /Zi /EHsc /wd4201 /wd4350 /wd4514 /wd4571 /wd4647 /wd4668 /wd4710 /wd4711 /wd4820 /D_CRT_SECURE_NO_WARNINGS /MD")
 	set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "/O2 /fp:fast /DEBUG /DSFZ_NO_DEBUG")
 	set(CMAKE_CXX_FLAGS_RELEASE "/O2 /fp:fast /DSFZ_NO_DEBUG")
 	set(CMAKE_CXX_FLAGS_DEBUG "/Od /DEBUG")
@@ -41,6 +41,10 @@ add_subdirectory(${EXTERNALS_DIR}/stb_image)
 if(CUDA_TRACER)
 	find_package(CUDA REQUIRED)
 	add_definitions(-DCUDA_TRACER_AVAILABLE)
+
+	set(CUDA_NVCC_FLAGS
+		${CUDA_NVCC_FLAGS}
+		-O3)
 endif()
 
 # Include directories
@@ -117,7 +121,11 @@ endfunction(set_directory_source_group)
 set_directory_source_group(${SOURCE_ALL_FILES})
 
 # Main executable
-add_executable(PhantasyEngineTestbed ${SOURCE_ALL_FILES})
+if(CUDA_TRACER)
+	cuda_add_executable(PhantasyEngineTestbed ${SOURCE_ALL_FILES})
+else()
+	add_executable(PhantasyEngineTestbed ${SOURCE_ALL_FILES})
+endif()
 
 # Linking libraries to main executable
 target_link_libraries(
