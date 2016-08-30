@@ -80,7 +80,10 @@ set(SOURCE_ALL_FILES
 	${INCLUDE_DIR}/screens/GameScreen.hpp
 	 ${SOURCE_DIR}/screens/GameScreen.cpp
 	${INCLUDE_DIR}/screens/LevelSelectScreen.hpp
-	 ${SOURCE_DIR}/screens/LevelSelectScreen.cpp)
+	 ${SOURCE_DIR}/screens/LevelSelectScreen.cpp
+
+	${INCLUDE_DIR}/level/PointLight.hpp
+	${INCLUDE_DIR}/level/Scene.hpp)
 
 # Automatically set source group to correspond to directory structure.
 # From Stack Overflow post by Florian:
