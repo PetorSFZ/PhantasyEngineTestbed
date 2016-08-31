@@ -33,6 +33,7 @@ GameScreen::GameScreen() noexcept
 
 	switch (cfg.graphcisCfg().renderingBackend->intValue()) {
 	default:
+		printf("%s\n", "Something is wrong with the config. Falling back to deferred rendering.");
 	case 0:
 		mRendererPtr = UniquePtr<BaseRenderer>(sfz_new<DeferredRenderer>());
 		break;
