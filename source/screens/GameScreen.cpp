@@ -10,6 +10,7 @@
 
 #include "config/GlobalConfig.hpp"
 #include "renderers/DeferredRenderer.hpp"
+#include "renderers/cpu_ray_tracer/CPURayTracerRenderer.hpp"
 
 #ifdef CUDA_TRACER_AVAILABLE
 #include "renderers/cuda_ray_tracer/CudaRayTracerRenderer.hpp"
@@ -30,15 +31,22 @@ GameScreen::GameScreen() noexcept
 	mCam = ViewFrustum(vec3(0.0f, 3.0f, -6.0f), normalize(vec3(0.0f, -0.25f, 1.0f)),
 	                   normalize(vec3(0.0f, 1.0f, 0.0)), 60.0f, 1.0f, 0.01f, 10000.0f);
 
-	if (cfg.graphcisCfg().renderingBackend->intValue() == 0) {
+	switch (cfg.graphcisCfg().renderingBackend->intValue()) {
+	default:
+	case 0:
 		mRendererPtr = UniquePtr<BaseRenderer>(sfz_new<DeferredRenderer>());
-	} else {
+		break;
+	case 1:
 #ifdef CUDA_TRACER_AVAILABLE
 		mRendererPtr = UniquePtr<BaseRenderer>(sfz_new<CUDARayTracerRenderer>());
 #else
 		printf("%s\n", "CUDA not available in this build, using deferred renderer instead.");
 		mRendererPtr = UniquePtr<BaseRenderer>(sfz_new<DeferredRenderer>());
 #endif
+		break;
+	case 2:
+		mRendererPtr = UniquePtr<BaseRenderer>(sfz_new<CPURayTracerRenderer>());
+		break;
 	}
 
 	mDrawOps.ensureCapacity(8192);
