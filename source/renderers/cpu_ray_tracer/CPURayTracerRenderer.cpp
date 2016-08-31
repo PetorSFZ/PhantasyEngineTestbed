@@ -3,6 +3,7 @@
 #include <sfz/gl/IncludeOpenGL.hpp>
 #include <sfz/math/Matrix.hpp>
 #include <sfz/math/MatrixSupport.hpp>
+#include <sfz/math/MathHelpers.hpp>
 
 namespace sfz {
 
@@ -77,19 +78,36 @@ RenderResult CPURayTracerRenderer::render(const DynArray<DrawOp>& operations, co
 		vec3{ 0.0f, 2.5f, -2.0f }
 	};
 
+	// Clip space corners
+	vec4 min{ -1.0f, -1.0f, 0.0f, 1.0f };
+	vec4 max{ +1.0f, +1.0f, 0.0f, 1.0f };
+
+	// Calculate ray directions of the top left and bottom right corner of the screen respectively
+	vec4 topLeftDir = invViewProjectionMatrix * min;
+	topLeftDir /= topLeftDir.w;
+	vec4 bottomRightDir = invViewProjectionMatrix * max;
+	bottomRightDir /= bottomRightDir.w;
+
+	// Get view frustum vectors in world space
+	vec3 down = -mMatrices.up;
+	vec3 forward = mMatrices.forward;
+	vec3 right = normalize(cross(down, forward));
+
+	// Project the lerp step size projected onto the screen's X and Y axes
+	vec3 dirDifference = bottomRightDir.xyz - topLeftDir.xyz;
+	vec3 projOnX = dot(dirDifference, right) * right;
+	vec3 projOnY = dot(dirDifference, down) * down;
+
+	vec3 dX = projOnX / float(mResolution.x);
+	vec3 dY = projOnY / float(mResolution.y);
+
+	// Lerp the ray direction and trace the rays
 	for (int y = 0; y < mResolution.y; y++) {
+		vec3 yLerped = topLeftDir.xyz + dY * float(y);
 		for (int x = 0; x < mResolution.x; x++) {
-
-			// Calculate the position of the pixel in [0,1]
-			vec2 texCoord{ float(x) / mResolution.x, 1.0f - float(y) / mResolution.y };
-
-			// Calculate ray direction
-			texCoord.y = 1.0f - texCoord.y; // Need to convert coord from GL to D3D clip space
-			vec4 clipSpacePos = vec4(2.0f * texCoord - vec2(1.0f), 0.0f, 1.0f);
-			vec4 posTmp = invViewProjectionMatrix * clipSpacePos;
-			posTmp.xyz /= posTmp.w;
-
-			mTexture[x + mResolution.x * y] = tracePrimaryRays(tri, mMatrices.position, posTmp.xyz);
+			vec3 rayDir{ dX * float(x) + yLerped };
+			// rayDir is not normalized
+			mTexture[x + mResolution.x * y] = tracePrimaryRays(tri, mMatrices.position, rayDir);
 		}
 	}
 

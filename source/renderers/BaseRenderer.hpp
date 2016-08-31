@@ -42,6 +42,8 @@ struct CameraMatrices final {
 	mat4 projMatrixVR[2] = { identityMatrix4<float>(), identityMatrix4<float>() };
 
 	vec3 position{ 0.0f };
+	vec3 forward{ 0.0f };
+	vec3 up{ 0.0f };
 };
 
 struct DrawOp final {

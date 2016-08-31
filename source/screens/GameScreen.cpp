@@ -183,6 +183,8 @@ UpdateOp GameScreen::update(UpdateState& state)
 	mMatrices.headMatrix = mCam.viewMatrix();
 	mMatrices.projMatrix = mCam.projMatrix();
 	mMatrices.position = mCam.pos();
+	mMatrices.forward = mCam.dir();
+	mMatrices.up = mCam.up();
 	mRendererPtr->updateMatrices(mMatrices);
 
 	return SCREEN_NO_OP;
