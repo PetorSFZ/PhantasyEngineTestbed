@@ -68,7 +68,7 @@ GameScreen::GameScreen() noexcept
 	time_point before = std::chrono::high_resolution_clock::now();
 	
 	mSponza = assimpLoadSponza(modelsPath.str, "sponzaPBR/sponzaPBR.obj");
-
+	
 	time_point after = std::chrono::high_resolution_clock::now();
 	using FloatSecond = std::chrono::duration<float>;
 	float delta = std::chrono::duration_cast<FloatSecond>(after - before).count();
@@ -182,6 +182,7 @@ UpdateOp GameScreen::update(UpdateState& state)
 	// Update renderer matrices
 	mMatrices.headMatrix = mCam.viewMatrix();
 	mMatrices.projMatrix = mCam.projMatrix();
+	mMatrices.position = mCam.pos();
 	mRendererPtr->updateMatrices(mMatrices);
 
 	return SCREEN_NO_OP;

@@ -2,6 +2,9 @@
 
 #include "renderers/BaseRenderer.hpp"
 
+#include <memory>
+#include <sfz/math/Vector.hpp>
+
 namespace sfz {
 
 // CUDARayTracerRenderer
@@ -38,6 +41,7 @@ private:
 	// --------------------------------------------------------------------------------------------
 	
 	Framebuffer mResult;
+	std::unique_ptr<vec4[]> mTexture;
 };
 
 } // namespace sfz
