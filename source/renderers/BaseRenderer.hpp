@@ -54,6 +54,12 @@ struct DrawOp final {
 	{ }
 };
 
+struct RenderResult final {
+	uint32_t colorTex = 0;
+	vec2i colorTexRes = vec2i(0);
+	vec2i colorTexRenderedRes = vec2i(0);
+};
+
 // BaseRenderer
 // ------------------------------------------------------------------------------------------------
 
@@ -62,13 +68,8 @@ public:
 	// Virtual methods
 	// --------------------------------------------------------------------------------------------
 	
-	virtual void render(const DynArray<DrawOp>& operations, const DynArray<PointLight>& pointLights) noexcept = 0;
-
-	/// The resulting framebuffer after rendering
-	virtual const Framebuffer& getResult() const noexcept = 0;
-	
-	/// The resulting framebuffer after rendering for a given eye
-	virtual const Framebuffer& getResultVR(uint32_t eye) const noexcept = 0;
+	virtual RenderResult render(const DynArray<DrawOp>& operations,
+	                            const DynArray<PointLight>& pointLights) noexcept = 0;
 
 	// Non-virtual methods
 	// --------------------------------------------------------------------------------------------

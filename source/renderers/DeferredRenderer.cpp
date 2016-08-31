@@ -37,7 +37,8 @@ DeferredRenderer::DeferredRenderer() noexcept
 // DeferredRenderer: Virtual methods from BaseRenderer interface
 // ------------------------------------------------------------------------------------------------
 
-void DeferredRenderer::render(const DynArray<DrawOp>& operations, const DynArray<PointLight>& pointLights) noexcept
+RenderResult DeferredRenderer::render(const DynArray<DrawOp>& operations,
+                                      const DynArray<PointLight>& pointLights) noexcept
 {
 	const mat4 viewMatrix = mMatrices.headMatrix * mMatrices.originMatrix;
 	const mat4 projMatrix = mMatrices.projMatrix;
@@ -172,17 +173,12 @@ void DeferredRenderer::render(const DynArray<DrawOp>& operations, const DynArray
 
 		mFullscreenTriangle.render();
 	}
-}
 
-const Framebuffer& DeferredRenderer::getResult() const noexcept
-{
-	return mResult;
-}
-
-const Framebuffer& DeferredRenderer::getResultVR(uint32_t eye) const noexcept
-{
-	sfz_assert_debug(eye <= 1);
-	return mResultVR[eye];
+	RenderResult tmp;
+	tmp.colorTex = mResult.texture(0);
+	tmp.colorTexRes = mResult.dimensions();
+	tmp.colorTexRenderedRes = mResolution;
+	return tmp;
 }
 
 // DeferredRenderer: Protected virtual methods from BaseRenderer interface

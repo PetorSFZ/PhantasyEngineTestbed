@@ -30,9 +30,8 @@ public:
 	// Virtual methods from BaseRenderer interface
 	// --------------------------------------------------------------------------------------------
 
-	void render(const DynArray<DrawOp>& operations, const DynArray<PointLight>& pointLights) noexcept override final;
-	const Framebuffer& getResult() const noexcept override final;
-	const Framebuffer& getResultVR(uint32_t eye) const noexcept override final;
+	virtual RenderResult render(const DynArray<DrawOp>& operations,
+	                            const DynArray<PointLight>& pointLights) noexcept override final;
 
 protected:
 	// Protected virtual methods from BaseRenderer interface
@@ -46,7 +45,7 @@ private:
 	// --------------------------------------------------------------------------------------------
 	
 	Program mGBufferGenShader, mShadingShader;
-	Framebuffer mGBuffer, mResult, mResultVR[2];
+	Framebuffer mGBuffer, mResult;
 	FullscreenTriangle mFullscreenTriangle;
 };
 

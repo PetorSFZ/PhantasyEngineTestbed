@@ -198,7 +198,7 @@ void GameScreen::render(UpdateState& state)
 		mDrawOps.add(DrawOp(scalingMatrix4<float>(0.05f), &renderable));
 	}
 	mDrawOps.add(DrawOp(identityMatrix4<float>(), &mSnakeRenderable));
-	mRendererPtr->render(mDrawOps, scene.staticPointLights);
+	RenderResult res = mRendererPtr->render(mDrawOps, scene.staticPointLights);
 
 	// Scale result to screen
 	glDisable(GL_BLEND);
@@ -213,8 +213,8 @@ void GameScreen::render(UpdateState& state)
 
 	glUseProgram(mScalingShader.handle());
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, mRendererPtr->getResult().texture(0));
-	gl::setUniform(mScalingShader, "uViewportRes", vec2(mRendererPtr->resolution()));
+	glBindTexture(GL_TEXTURE_2D, res.colorTex);
+	gl::setUniform(mScalingShader, "uViewportRes", vec2(res.colorTexRenderedRes));
 	gl::setUniform(mScalingShader, "uDstRes", vec2(drawableDim));
 
 	mFullscreenTriangle.render();

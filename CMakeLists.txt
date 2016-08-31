@@ -103,7 +103,9 @@ if(CUDA_TRACER)
 set(SOURCE_ALL_FILES ${SOURCE_ALL_FILES}
 	${INCLUDE_DIR}/renderers/CUDARayTracer.hpp
 	${INCLUDE_DIR}/renderers/cuda_ray_tracer/CUDARayTracerRenderer.hpp
-	 ${SOURCE_DIR}/renderers/cuda_ray_tracer/CUDARayTracerRenderer.cpp)
+	 ${SOURCE_DIR}/renderers/cuda_ray_tracer/CUDARayTracerRenderer.cpp
+	${INCLUDE_DIR}/renderers/cuda_ray_tracer/CUDATest.cuh
+	 ${SOURCE_DIR}/renderers/cuda_ray_tracer/CUDATest.cu)
 endif()
 
 # Automatically set source group to correspond to directory structure.
