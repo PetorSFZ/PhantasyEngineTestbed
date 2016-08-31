@@ -13,20 +13,15 @@ namespace sfz {
 // CUDARayTracerRenderer: Virtual methods from BaseRenderer interface
 // ------------------------------------------------------------------------------------------------
 
-void CPURayTracerRenderer::render(const DynArray<DrawOp>& operations, const DynArray<PointLight>& pointLights) noexcept
+RenderResult CPURayTracerRenderer::render(const DynArray<DrawOp>& operations, const DynArray<PointLight>& pointLights) noexcept
 {
 	mResult.bindViewportClearColorDepth(vec4(0.0f, 1.0f, 0.0f, 1.0f), 0.0f);
-}
 
-const Framebuffer& CPURayTracerRenderer::getResult() const noexcept
-{
-	return mResult;
-}
-
-const Framebuffer& CPURayTracerRenderer::getResultVR(uint32_t eye) const noexcept
-{
-	sfz_assert_debug(eye <= 1);
-	return mResultVR[eye];
+	RenderResult tmp;
+	tmp.colorTex = mResult.texture(0);
+	tmp.colorTexRes = mResult.dimensions();
+	tmp.colorTexRenderedRes = mResolution;
+	return tmp;
 }
 
 // CUDARayTracerRenderer: Protected virtual methods from BaseRenderer interface
