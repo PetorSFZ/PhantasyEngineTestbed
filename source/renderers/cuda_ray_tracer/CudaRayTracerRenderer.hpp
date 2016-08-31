@@ -7,6 +7,8 @@ namespace sfz {
 // CUDARayTracerRenderer
 // ------------------------------------------------------------------------------------------------
 
+class CUDARayTracerRendererImpl; // Pimpl pattern
+
 class CUDARayTracerRenderer final : public BaseRenderer {
 public:
 
@@ -15,10 +17,11 @@ public:
 
 	CUDARayTracerRenderer(const CUDARayTracerRenderer&) = delete;
 	CUDARayTracerRenderer& operator= (const CUDARayTracerRenderer&) = delete;
-	CUDARayTracerRenderer(CUDARayTracerRenderer&&) noexcept = default;
-	CUDARayTracerRenderer& operator= (CUDARayTracerRenderer&&) noexcept = default;
-
+	CUDARayTracerRenderer(CUDARayTracerRenderer&&) = delete;
+	CUDARayTracerRenderer& operator= (CUDARayTracerRenderer&&) = delete;
+	
 	CUDARayTracerRenderer() noexcept;
+	~CUDARayTracerRenderer() noexcept;
 
 	// Virtual methods from BaseRenderer interface
 	// --------------------------------------------------------------------------------------------
@@ -37,7 +40,7 @@ private:
 	// Private members
 	// --------------------------------------------------------------------------------------------
 	
-	Framebuffer mResult;
+	CUDARayTracerRendererImpl* mImpl = nullptr;
 };
 
 } // namespace sfz
