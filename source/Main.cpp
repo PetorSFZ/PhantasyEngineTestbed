@@ -4,12 +4,12 @@
 #include <sfz/gl/IncludeOpenGL.hpp>
 #include <sfz/Screens.hpp>
 #include <sfz/SDL.hpp>
+#include <sfz/util/IO.hpp>
 
 #include "Config.hpp"
 #include "Screens.hpp"
 
 #ifdef _WIN32
-#include <sfz/util/IO.hpp>
 #include <direct.h>
 #endif
 

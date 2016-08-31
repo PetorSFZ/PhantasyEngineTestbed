@@ -57,7 +57,7 @@ include_directories(
 
 set(SOURCE_ALL_FILES
 	${SOURCE_DIR}/Main.cpp
-	
+
 	${INCLUDE_DIR}/Config.hpp
 	${INCLUDE_DIR}/config/GlobalConfig.hpp
 	 ${SOURCE_DIR}/config/GlobalConfig.cpp
@@ -94,12 +94,13 @@ set(SOURCE_ALL_FILES
 	 ${SOURCE_DIR}/screens/LevelSelectScreen.cpp
 
 	${INCLUDE_DIR}/level/PointLight.hpp
-	${INCLUDE_DIR}/level/Scene.hpp)
+	${INCLUDE_DIR}/level/Scene.hpp
+
+	${INCLUDE_DIR}/util/IOUtil.hpp
+	 ${SOURCE_DIR}/util/IOUtil.cpp)
 
 if(CUDA_TRACER)
-set(SOURCE_ALL_FILES
-	${SOURCE_ALL_FILES}
-		
+set(SOURCE_ALL_FILES ${SOURCE_ALL_FILES}
 	${INCLUDE_DIR}/renderers/CUDARayTracer.hpp
 	${INCLUDE_DIR}/renderers/cuda_ray_tracer/CUDARayTracerRenderer.hpp
 	 ${SOURCE_DIR}/renderers/cuda_ray_tracer/CUDARayTracerRenderer.cpp)

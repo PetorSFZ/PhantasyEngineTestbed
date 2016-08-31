@@ -9,6 +9,8 @@
 #include <sfz/containers/DynString.hpp>
 #include <sfz/containers/HashMap.hpp>
 
+#include "util/IOUtil.hpp"
+
 namespace sfz {
 
 // Renderable creation functions
@@ -75,7 +77,7 @@ static void processNode(const char* basePath, Renderable& renderable,
 				texMapping.put(tmpPath.C_Str(), nextIndex);
 				indexPtr = texMapping.get(tmpPath.C_Str());
 
-				renderable.images.add(loadImage(basePath, tmpPath.C_Str()));
+				renderable.images.add(loadImage(basePath, convertToOSPath(tmpPath.C_Str()).str()));
 				renderable.textures.add(GLTexture(renderable.images[nextIndex]));
 				sfz_assert_debug(renderable.textures.last().isValid());
 			}
@@ -97,7 +99,7 @@ static void processNode(const char* basePath, Renderable& renderable,
 				texMapping.put(tmpPath.C_Str(), nextIndex);
 				indexPtr = texMapping.get(tmpPath.C_Str());
 
-				renderable.images.add(loadImage(basePath, tmpPath.C_Str()));
+				renderable.images.add(loadImage(basePath, convertToOSPath(tmpPath.C_Str()).str()));
 				renderable.textures.add(GLTexture(renderable.images[nextIndex]));
 				sfz_assert_debug(renderable.textures.last().isValid());
 			}
@@ -119,7 +121,7 @@ static void processNode(const char* basePath, Renderable& renderable,
 				texMapping.put(tmpPath.C_Str(), nextIndex);
 				indexPtr = texMapping.get(tmpPath.C_Str());
 
-				renderable.images.add(loadImage(basePath, tmpPath.C_Str()));
+				renderable.images.add(loadImage(basePath, convertToOSPath(tmpPath.C_Str()).str()));
 				renderable.textures.add(GLTexture(renderable.images[nextIndex]));
 				sfz_assert_debug(renderable.textures.last().isValid());
 			}
