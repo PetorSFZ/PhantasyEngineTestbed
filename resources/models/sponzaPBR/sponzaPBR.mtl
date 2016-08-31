@@ -69,7 +69,7 @@ newmtl Material__298
 	map_Kd textures_pbr\Background_Albedo.tga
 	map_bump textures_pbr\Background_Normal.tga
 	bump textures_pbr\Background_Normal.tga
-	map_NS textures_pbr\Background_roughness.tga
+	map_NS textures_pbr\Background_Roughness.tga
 
 newmtl 16___Default
 	Ns 10.0000
