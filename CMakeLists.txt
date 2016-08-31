@@ -153,3 +153,10 @@ if(MSVC)
 	file(COPY ${RUNTIME_DIR}/windows/SDL2_mixer.dll DESTINATION ${CMAKE_BINARY_DIR}/RelWithDebInfo)
 	file(COPY ${RUNTIME_DIR}/windows/SDL2_mixer.dll DESTINATION ${CMAKE_BINARY_DIR}/Release)
 endif()
+
+if(UNIX)
+	add_custom_command(TARGET PhantasyEngineTestbed PRE_BUILD
+			COMMAND ${CMAKE_COMMAND} -E create_symlink
+			\"${PROJECT_SOURCE_DIR}/resources\"
+			\"$<TARGET_FILE_DIR:PhantasyEngineTestbed>/resources\")
+endif()
