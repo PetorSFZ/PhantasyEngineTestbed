@@ -11,13 +11,14 @@ in vec3 nonNormRayDir;
 out vec4 outFragColor;
 
 // Uniforms
-uniform sampler2D uCudaResultTex;
+uniform sampler2D uFloatTexture;
 
 // Main
 // ------------------------------------------------------------------------------------------------
 
 void main()
 {
-	vec4 floooaats = texture(uCudaResultTex, uvCoord);
-	outFragColor = clamp(floooaats, vec4(0.0), vec4(1.0));
+	vec3 floats = texture(uFloatTexture, uvCoord).rgb;
+	vec3 clampedFloats = clamp(floats, vec3(0.0), vec3(1.0));
+	outFragColor = vec4(clampedFloats, 1.0);
 }
