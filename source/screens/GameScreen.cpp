@@ -16,6 +16,8 @@
 #include "renderers/cuda_ray_tracer/CudaRayTracerRenderer.hpp"
 #endif
 
+//#define DEV_NOT_USING_SPONZA
+
 namespace sfz {
 
 using sdl::ButtonState;
@@ -67,6 +69,7 @@ GameScreen::GameScreen() noexcept
 	using time_point = std::chrono::high_resolution_clock::time_point;
 	time_point before = std::chrono::high_resolution_clock::now();
 	
+#ifndef DEV_NOT_USING_SPONZA
 	mSponza = assimpLoadSponza(modelsPath.str, "sponzaPBR/sponzaPBR.obj");
 	
 	time_point after = std::chrono::high_resolution_clock::now();
@@ -91,7 +94,8 @@ GameScreen::GameScreen() noexcept
 		pointLight.range = 50.0f;
 		pointLight.strength = 100.0f * colours[i];
 		scene.staticPointLights.add(pointLight);
-	}	
+	}
+#endif
 }
 
 // GameScreen: Overriden methods from sfz::BaseScreen
