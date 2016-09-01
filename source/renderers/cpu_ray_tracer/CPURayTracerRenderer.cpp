@@ -44,7 +44,7 @@ Intersection intersects(const Triangle& triangle, vec3 origin, vec3 dir)
 	return { true, u, v };
 }
 
-vec4 tracePrimaryRays(Triangle triangle, vec3 origin, vec3 dir)
+vec4 tracePrimaryRays(Triangle& triangle, vec3 origin, vec3 dir)
 {
 	if (intersects(triangle, origin, dir).intersected) return vec4{ 1.0f, 0.0f, 0.0f, 1.0f };
 	return vec4{ 0.0f, 0.0f, 0.0f, 1.0f};
@@ -102,6 +102,7 @@ RenderResult CPURayTracerRenderer::render(const DynArray<DrawOp>& operations, co
 	vec3 dY = projOnY / float(mResolution.y);
 
 	// Lerp the ray direction and trace the rays
+	#pragma omp parallel for
 	for (int y = 0; y < mResolution.y; y++) {
 		vec3 yLerped = topLeftDir.xyz + dY * float(y);
 		for (int x = 0; x < mResolution.x; x++) {
