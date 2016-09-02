@@ -80,7 +80,7 @@ RenderResult CUDARayTracerRenderer::render(const DynArray<DrawOp>& operations,
 	cudaGraphicsResource_t& resource = mImpl->cudaResource;
 	cudaArray_t& array = mImpl->cudaArray;
 
-	writeBlau(mImpl->cudaSurface, mMaxResolution, mResolution);
+	writeBlau(mImpl->cudaSurface, mTargetResolution, mTargetResolution);
 	cudaDeviceSynchronize();
 
 	// Convert float texture result from cuda into rgb u8
@@ -97,21 +97,20 @@ RenderResult CUDARayTracerRenderer::render(const DynArray<DrawOp>& operations,
 	// Return result from cudaaaa shader
 	RenderResult tmp;
 	tmp.colorTex = result.texture(0);
-	tmp.colorTexRes = result.dimensions();
-	tmp.colorTexRenderedRes = mResolution;
+	tmp.colorTexRenderedRes = mTargetResolution;
 	return tmp;
 }
 
 // CUDARayTracerRenderer: Protected virtual methods from BaseRenderer interface
 // ------------------------------------------------------------------------------------------------
 
-void CUDARayTracerRenderer::maxResolutionUpdated() noexcept
+void CUDARayTracerRenderer::targetResolutionUpdated() noexcept
 {
 	using gl::FBTextureFiltering;
 	using gl::FBTextureFormat;
 	using gl::FramebufferBuilder;
 
-	mImpl->result = FramebufferBuilder(mMaxResolution)
+	mImpl->result = FramebufferBuilder(mTargetResolution)
 	                .addTexture(0, FBTextureFormat::RGB_U8, FBTextureFiltering::LINEAR)
 	                .build();
 
@@ -125,7 +124,7 @@ void CUDARayTracerRenderer::maxResolutionUpdated() noexcept
 	// Create OpenGL texture and allocate memory
 	glGenTextures(1, &mImpl->glTex);
 	glBindTexture(GL_TEXTURE_2D, mImpl->glTex);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, mMaxResolution.x, mMaxResolution.y, 0, GL_RGBA, GL_FLOAT, nullptr);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, mTargetResolution.x, mTargetResolution.y, 0, GL_RGBA, GL_FLOAT, nullptr);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
@@ -145,11 +144,6 @@ void CUDARayTracerRenderer::maxResolutionUpdated() noexcept
 	resDesc.resType = cudaResourceTypeArray;
 	resDesc.res.array.array = mImpl->cudaArray;
 	CHECK_CUDA_ERROR(cudaCreateSurfaceObject(&mImpl->cudaSurface, &resDesc));
-}
-
-void CUDARayTracerRenderer::resolutionUpdated() noexcept
-{
-
 }
 
 } // namespace sfz

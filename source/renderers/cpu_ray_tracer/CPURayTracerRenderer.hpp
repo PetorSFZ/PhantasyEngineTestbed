@@ -33,8 +33,7 @@ protected:
 	// Protected virtual methods from BaseRenderer interface
 	// --------------------------------------------------------------------------------------------
 
-	void maxResolutionUpdated() noexcept override final;
-	void resolutionUpdated() noexcept override final;
+	void targetResolutionUpdated() noexcept override final;
 
 private:
 	// Private members

@@ -125,10 +125,13 @@ static void setGraphicsCfg(GraphicsConfig& cfg) noexcept
 
 vec2i GraphicsConfig::getTargetResolution(vec2i drawableDim) const noexcept
 {
-	if (this->useNativeTargetResolution->boolValue()) return drawableDim;
-	int32_t h = this->targetResolutionHeight->intValue();
-	int32_t w = int32_t(std::round(float(h) * float(drawableDim.x) / float(drawableDim.y)));
-	return vec2i(w, h);
+	vec2i result = drawableDim;
+	if (!this->useNativeTargetResolution->boolValue()) {
+		int32_t h = this->targetResolutionHeight->intValue();
+		int32_t w = int32_t(std::round(float(h) * float(drawableDim.x) / float(drawableDim.y)));
+		result = vec2i(w, h);
+	}
+	return max(result, vec2i(1,1));
 }
 
 // GlobalConfigImpl

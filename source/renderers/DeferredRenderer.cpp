@@ -52,7 +52,7 @@ RenderResult DeferredRenderer::render(const DynArray<DrawOp>& operations,
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_GREATER); // reversed-z
 
-	mGBuffer.bindViewportClearColorDepth(vec2i(0), mResolution, vec4(0.0f), 0.0f);
+	mGBuffer.bindViewportClearColorDepth(vec2i(0), mTargetResolution, vec4(0.0f), 0.0f);
 	mGBufferGenShader.useProgram();
 
 	const mat4 modelMatrix = identityMatrix4<float>();
@@ -140,7 +140,7 @@ RenderResult DeferredRenderer::render(const DynArray<DrawOp>& operations,
 	glBlendEquation(GL_FUNC_ADD);
 	glBlendFunc(GL_ONE, GL_ONE);
 
-	mResult.bindViewportClearColorDepth(vec2i(0.0), mResolution, vec4(0.0f), 0.0f);
+	mResult.bindViewportClearColorDepth(vec2i(0.0), mTargetResolution, vec4(0.0f), 0.0f);
 	mShadingShader.useProgram();
 
 	gl::setUniform(mShadingShader, "uInvProjMatrix", invProjMatrix);
@@ -176,36 +176,30 @@ RenderResult DeferredRenderer::render(const DynArray<DrawOp>& operations,
 
 	RenderResult tmp;
 	tmp.colorTex = mResult.texture(0);
-	tmp.colorTexRes = mResult.dimensions();
-	tmp.colorTexRenderedRes = mResolution;
+	tmp.colorTexRenderedRes = mTargetResolution;
 	return tmp;
 }
 
 // DeferredRenderer: Protected virtual methods from BaseRenderer interface
 // ------------------------------------------------------------------------------------------------
 
-void DeferredRenderer::maxResolutionUpdated() noexcept
+void DeferredRenderer::targetResolutionUpdated() noexcept
 {
 	using gl::FBDepthFormat;
 	using gl::FBTextureFiltering;
 	using gl::FBTextureFormat;
 	using gl::FramebufferBuilder;
 
-	mGBuffer = FramebufferBuilder(mMaxResolution)
+	mGBuffer = FramebufferBuilder(mTargetResolution)
 	          .addDepthTexture(FBDepthFormat::F32, FBTextureFiltering::NEAREST)
 	          .addTexture(GBUFFER_NORMAL, FBTextureFormat::RGB_F16, FBTextureFiltering::LINEAR)
 	          .addTexture(GBUFFER_ALBEDO, FBTextureFormat::RGB_U8, FBTextureFiltering::LINEAR)
 	          .addTexture(GBUFFER_MATERIAL, FBTextureFormat::RG_U8, FBTextureFiltering::LINEAR) // Roughness, metallic
 	          .build();
 
-	mResult = FramebufferBuilder(mMaxResolution)
+	mResult = FramebufferBuilder(mTargetResolution)
 	          .addTexture(0, FBTextureFormat::RGB_U8, FBTextureFiltering::LINEAR)
 	          .build();
-}
-
-void DeferredRenderer::resolutionUpdated() noexcept
-{
-	
 }
 
 } // namespace sfz

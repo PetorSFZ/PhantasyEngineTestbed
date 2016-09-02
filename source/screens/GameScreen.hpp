@@ -29,8 +29,6 @@ public:
 
 	virtual UpdateOp update(UpdateState& state) override final;
 	virtual void render(UpdateState& state) override final;
-	virtual void onQuit() override final;
-	virtual void onResize(vec2 dimensions, vec2 drawableDimensions) override final;
 
 private:
 	// Private structs
@@ -61,7 +59,7 @@ private:
 	CameraMatrices mMatrices;
 	DynArray<DrawOp> mDrawOps;
 
-	Framebuffer mRendererResult, mGammaCorrected;
+	Framebuffer mGammaCorrected;
 	Program mScalingShader, mGammaCorrectionShader;
 	FullscreenTriangle mFullscreenTriangle;
 

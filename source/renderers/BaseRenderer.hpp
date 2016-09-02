@@ -60,7 +60,6 @@ struct DrawOp final {
 
 struct RenderResult final {
 	uint32_t colorTex = 0;
-	vec2i colorTexRes = vec2i(0);
 	vec2i colorTexRenderedRes = vec2i(0);
 };
 
@@ -69,6 +68,11 @@ struct RenderResult final {
 
 class BaseRenderer {
 public:
+	// Constructors & destructors
+	// --------------------------------------------------------------------------------------------
+
+	virtual ~BaseRenderer() noexcept { }
+
 	// Virtual methods
 	// --------------------------------------------------------------------------------------------
 	
@@ -80,36 +84,26 @@ public:
 
 	inline void updateMatrices(const CameraMatrices& matrices) noexcept { mMatrices = matrices; }
 
-	inline vec2i maxResolution() const noexcept { return mMaxResolution; }
-	inline void setMaxResolution(vec2i maxResolution) noexcept
+	inline vec2i targetResolution() const noexcept { return mTargetResolution; }
+	inline void setTargetResolution(vec2i targetResolution) noexcept
 	{
-		sfz_assert_debug(0 < maxResolution.x);
-		sfz_assert_debug(0 < maxResolution.y);
-		this->mMaxResolution = maxResolution;
-		this->maxResolutionUpdated();
-	}
-
-	inline vec2i resolution() const noexcept { return mResolution; }
-	inline void setResolution(vec2i resolution) noexcept
-	{
-		sfz_assert_debug(resolution.x <= mMaxResolution.x);
-		sfz_assert_debug(resolution.y <= mMaxResolution.y);
-		this->mResolution = resolution;
-		this->resolutionUpdated();
+		sfz_assert_debug(0 < targetResolution.x);
+		sfz_assert_debug(0 < targetResolution.y);
+		this->mTargetResolution = targetResolution;
+		this->targetResolutionUpdated();
 	}
 
 protected:
 	// Protected virtual methods
 	// --------------------------------------------------------------------------------------------
 
-	virtual void maxResolutionUpdated() noexcept = 0;
-	virtual void resolutionUpdated() noexcept = 0;
+	virtual void targetResolutionUpdated() noexcept = 0;
 
 	// Protected members
 	// --------------------------------------------------------------------------------------------
 
 	CameraMatrices mMatrices;
-	vec2i mMaxResolution, mResolution;
+	vec2i mTargetResolution = vec2i(0, 0);
 };
 
 } // namespace sfz

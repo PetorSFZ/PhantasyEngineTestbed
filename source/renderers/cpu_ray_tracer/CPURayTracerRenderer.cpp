@@ -98,48 +98,42 @@ RenderResult CPURayTracerRenderer::render(const DynArray<DrawOp>& operations, co
 	vec3 projOnX = dot(dirDifference, right) * right;
 	vec3 projOnY = dot(dirDifference, down) * down;
 
-	vec3 dX = projOnX / float(mResolution.x);
-	vec3 dY = projOnY / float(mResolution.y);
+	vec3 dX = projOnX / float(mTargetResolution.x);
+	vec3 dY = projOnY / float(mTargetResolution.y);
 
 	// Lerp the ray direction and trace the rays
 	#pragma omp parallel for
-	for (int y = 0; y < mResolution.y; y++) {
+	for (int y = 0; y < mTargetResolution.y; y++) {
 		vec3 yLerped = topLeftDir.xyz + dY * float(y);
-		for (int x = 0; x < mResolution.x; x++) {
+		for (int x = 0; x < mTargetResolution.x; x++) {
 			vec3 rayDir{ dX * float(x) + yLerped };
 			// rayDir is not normalized
-			mTexture[x + mResolution.x * y] = tracePrimaryRays(tri, mMatrices.position, rayDir);
+			mTexture[x + mTargetResolution.x * y] = tracePrimaryRays(tri, mMatrices.position, rayDir);
 		}
 	}
 
 	glBindTexture(GL_TEXTURE_2D, mResult.texture(0));
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, mMaxResolution.x, mMaxResolution.y, 0, GL_RGBA, GL_FLOAT, mTexture.get());
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, mTargetResolution.x, mTargetResolution.y, 0, GL_RGBA, GL_FLOAT, mTexture.get());
 	
 	RenderResult tmp;
 	tmp.colorTex = mResult.texture(0);
-	tmp.colorTexRes = mResult.dimensions();
-	tmp.colorTexRenderedRes = mResolution;
+	tmp.colorTexRenderedRes = mTargetResolution;
 	return tmp;
 }
 
 // CPURayTracerRenderer: Protected virtual methods from BaseRenderer interface
 // ------------------------------------------------------------------------------------------------
 
-void CPURayTracerRenderer::maxResolutionUpdated() noexcept
+void CPURayTracerRenderer::targetResolutionUpdated() noexcept
 {
 	using gl::FBTextureFiltering;
 	using gl::FBTextureFormat;
 	using gl::FramebufferBuilder;
 
-	mTexture = std::unique_ptr<vec4[]>{ new vec4[mMaxResolution.x * mMaxResolution.y] };
-	mResult = FramebufferBuilder(mMaxResolution)
+	mTexture = std::unique_ptr<vec4[]>{ new vec4[mTargetResolution.x * mTargetResolution.y] };
+	mResult = FramebufferBuilder(mTargetResolution)
 	          .addTexture(0, FBTextureFormat::RGB_U8, FBTextureFiltering::LINEAR)
 	          .build();
-}
-
-void CPURayTracerRenderer::resolutionUpdated() noexcept
-{
-
 }
 
 } // namespace sfz
