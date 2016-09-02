@@ -18,7 +18,7 @@
 static cudaError_t checkCudaError(const char* file, int line, cudaError_t error) noexcept
 {
 	if (error == cudaSuccess) return error;
-	sfz::printErrorMessage("%s:%i: cuda state error %s\n", file, line, cudaGetErrorString(error));
+	sfz::printErrorMessage("%s:%i: CUDA error: %s\n", file, line, cudaGetErrorString(error));
 	return error;
 }
 
@@ -35,8 +35,9 @@ public:
 
 	// Temp
 	GLuint glTex = 0;
-	cudaGraphicsResource_t cudaResource;
-	cudaArray_t cudaArray;
+	cudaGraphicsResource_t cudaResource = 0;
+	cudaArray_t cudaArray = 0; // Probably no need to free, since memory is owned by OpenGL
+	cudaSurfaceObject_t cudaSurface = 0;
 
 	CUDARayTracerRendererImpl() noexcept
 	{
@@ -45,6 +46,7 @@ public:
 
 	~CUDARayTracerRendererImpl() noexcept
 	{
+		CHECK_CUDA_ERROR(cudaDestroySurfaceObject(cudaSurface));
 		CHECK_CUDA_ERROR(cudaGraphicsUnregisterResource(cudaResource));
 		glDeleteTextures(1, &glTex);
 	}
@@ -78,10 +80,7 @@ RenderResult CUDARayTracerRenderer::render(const DynArray<DrawOp>& operations,
 	cudaGraphicsResource_t& resource = mImpl->cudaResource;
 	cudaArray_t& array = mImpl->cudaArray;
 
-	// cudaMemcpy color to texture
-	uint32_t size = mResolution.x * mResolution.y;
-	DynArray<vec4> floats(size, vec4(0.0f, 1.0f, 1.0f, 1.0f), size);
-	cudaMemcpyToArray(array, 0, 0, floats.data(), floats.size() * sizeof(vec4), cudaMemcpyHostToDevice);
+	writeBlau(mImpl->cudaSurface, mMaxResolution, mResolution);
 	cudaDeviceSynchronize();
 
 	// Convert float texture result from cuda into rgb u8
@@ -116,15 +115,16 @@ void CUDARayTracerRenderer::maxResolutionUpdated() noexcept
 	                .addTexture(0, FBTextureFormat::RGB_U8, FBTextureFiltering::LINEAR)
 	                .build();
 
-
 	glActiveTexture(GL_TEXTURE0);
-	GLuint& glTex = mImpl->glTex;
 
+	// Cleanup eventual previous texture and bindings
+	CHECK_CUDA_ERROR(cudaDestroySurfaceObject(mImpl->cudaSurface));
 	CHECK_CUDA_ERROR(cudaGraphicsUnregisterResource(mImpl->cudaResource));
-	glDeleteTextures(1, &glTex);
+	glDeleteTextures(1, &mImpl->glTex);
 
-	glGenTextures(1, &glTex);
-	glBindTexture(GL_TEXTURE_2D, glTex);
+	// Create OpenGL texture and allocate memory
+	glGenTextures(1, &mImpl->glTex);
+	glBindTexture(GL_TEXTURE_2D, mImpl->glTex);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, mMaxResolution.x, mMaxResolution.y, 0, GL_RGBA, GL_FLOAT, nullptr);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -134,10 +134,17 @@ void CUDARayTracerRenderer::maxResolutionUpdated() noexcept
 	// https://github.com/nvpro-samples/gl_cuda_interop_pingpong_st
 	cudaGraphicsResource_t& resource = mImpl->cudaResource;
 	cudaArray_t& array = mImpl->cudaArray;
-	CHECK_CUDA_ERROR(cudaGraphicsGLRegisterImage(&resource, glTex, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsSurfaceLoadStore));
+	CHECK_CUDA_ERROR(cudaGraphicsGLRegisterImage(&resource, mImpl->glTex, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsSurfaceLoadStore));
 	CHECK_CUDA_ERROR(cudaGraphicsMapResources(1, &resource, 0));
 	CHECK_CUDA_ERROR(cudaGraphicsSubResourceGetMappedArray(&array, resource, 0, 0));
 	CHECK_CUDA_ERROR(cudaGraphicsUnmapResources(1, &resource, 0));
+
+	// Create cuda surface object from binding
+	cudaResourceDesc resDesc;
+	memset(&resDesc, 0, sizeof(cudaResourceDesc));
+	resDesc.resType = cudaResourceTypeArray;
+	resDesc.res.array.array = mImpl->cudaArray;
+	CHECK_CUDA_ERROR(cudaCreateSurfaceObject(&mImpl->cudaSurface, &resDesc));
 }
 
 void CUDARayTracerRenderer::resolutionUpdated() noexcept
