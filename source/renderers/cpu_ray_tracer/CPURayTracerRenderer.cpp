@@ -1,54 +1,22 @@
 #include "CPURayTracerRenderer.hpp"
 
+#include <chrono>
+#include <thread>
+
 #include <sfz/gl/IncludeOpenGL.hpp>
+#include <sfz/math/MathHelpers.hpp>
 #include <sfz/math/Matrix.hpp>
 #include <sfz/math/MatrixSupport.hpp>
-#include <sfz/math/MathHelpers.hpp>
-#include <thread>
 
 namespace sfz {
 
-struct Intersection {
-	bool intersected;
-	float u, v;
-};
-
-struct Triangle {
-	vec3 p0, p1, p2;
-};
-
-Intersection intersects(const Triangle& triangle, vec3 origin, vec3 dir)
+vec4 CPURayTracerRenderer::tracePrimaryRays(vec3 origin, vec3 dir) const noexcept
 {
-	const vec3 p0 = triangle.p0;
-	const vec3 p1 = triangle.p1;
-	const vec3 p2 = triangle.p2;
-
-	const float EPS = 0.00001f;
-
-	vec3 e1 = p1 - p0;
-	vec3 e2 = p2 - p0;
-	vec3 q = cross(dir, e2);
-	float a = dot(e1, q);
-	if (-EPS < a && a < EPS) return { false, 0.0f, 0.0f };
-
-	float f = 1.0f / a;
-	vec3 s = origin - p0;
-	float u = f * dot(s, q);
-	if (u < 0.0f) return { false, 0.0f, 0.0f };
-
-	vec3 r = cross(s, e1);
-	float v = f * dot(dir, r);
-	if (v < 0.0f || (u + v) > 1.0f) return { false, 0.0f, 0.0f };
-
-	float t = f * dot(e2, r);
-	if (t < 0.0f) return { false, 0.0f, 0.0f }; // only trace the ray forward
-	return { true, u, v };
-}
-
-vec4 tracePrimaryRays(Triangle& triangle, vec3 origin, vec3 dir)
-{
-	if (intersects(triangle, origin, dir).intersected) return vec4{ 1.0f, 0.0f, 0.0f, 1.0f };
-	return vec4{ 0.0f, 0.0f, 0.0f, 1.0f};
+	RaycastResult result = aabbBvh.raycast(origin, dir);
+	if (!result.intersection.intersected) {
+		return vec4{ 0.0f, 0.0f, 0.0f, 1.0f };
+	}
+	return vec4(vec3(result.intersection.t * 20.0f), 1.0f);
 }
 
 // CPURayTracerRenderer: Constructors & destructors
@@ -72,12 +40,6 @@ RenderResult CPURayTracerRenderer::render(const DynArray<DrawOp>& operations, co
 	mat4 invViewMatrix = inverse(viewMatrix);
 
 	mat4 invViewProjectionMatrix = invViewMatrix * invProjectionMatrix;
-
-	Triangle tri{
-		vec3{ -0.5f, 2.0f, -2.0f },
-		vec3{ 0.0f, 2.0f, -2.0f },
-		vec3{ 0.0f, 2.5f, -2.0f }
-	};
 
 	// Clip space corners
 	vec4 min{ -1.0f, -1.0f, 0.0f, 1.0f };
@@ -108,7 +70,7 @@ RenderResult CPURayTracerRenderer::render(const DynArray<DrawOp>& operations, co
 
 	// Spawn threads for ray tracing
 	for (int i = 0; i < nThreads; i++) {
-		threads.add(std::thread{ [this, i, &tri, topLeftDir, dX, dY, rowsPerThread, nThreads]() {
+		threads.add(std::thread{ [this, i, topLeftDir, dX, dY, rowsPerThread, nThreads]() {
 			// Calculate the which row is the last one that the current thread is responsible for
 			int yEnd = i >= nThreads - 1 ? this->mTargetResolution.y : rowsPerThread * (i + 1);
 			for (int y = i * rowsPerThread; y < yEnd; y++) {
@@ -118,7 +80,7 @@ RenderResult CPURayTracerRenderer::render(const DynArray<DrawOp>& operations, co
 				for (int x = 0; x < this->mTargetResolution.x; x++) {
 					// Final ray direction
 					vec3 rayDir{ dX * float(x) + yLerped};
-					this->mTexture[x + rowStartIndex] = tracePrimaryRays(tri, this->mMatrices.position, rayDir);
+					this->mTexture[x + rowStartIndex] = tracePrimaryRays(this->mMatrices.position, rayDir);
 				}
 			}
 		} });
@@ -134,6 +96,39 @@ RenderResult CPURayTracerRenderer::render(const DynArray<DrawOp>& operations, co
 	tmp.colorTex = mResult.texture(0);
 	tmp.colorTexRenderedRes = mTargetResolution;
 	return tmp;
+}
+
+void CPURayTracerRenderer::prepareForScene(const Scene& scene) noexcept
+{
+	aabbBvh = AabbTree();
+
+	{
+		using time_point = std::chrono::high_resolution_clock::time_point;
+		time_point before = std::chrono::high_resolution_clock::now();
+
+		aabbBvh.constructFrom(scene.staticRenderables);
+
+		time_point after = std::chrono::high_resolution_clock::now();
+		using FloatSecond = std::chrono::duration<float>;
+		float delta = std::chrono::duration_cast<FloatSecond>(after - before).count();
+		printf("Time spent building BVH: %.3f seconds\n", delta);
+	}
+
+	{
+		using time_point = std::chrono::high_resolution_clock::time_point;
+		time_point before = std::chrono::high_resolution_clock::now();
+
+		vec3 origin = { 0.0f, 0.0f, 0.0f };
+		vec3 dir = { 1.0f, 0.0f, 0.0f };
+		RaycastResult result = aabbBvh.raycast(origin, dir);
+
+		time_point after = std::chrono::high_resolution_clock::now();
+		using FloatSecond = std::chrono::duration<float>;
+		float delta = std::chrono::duration_cast<FloatSecond>(after - before).count();
+		printf("Time to find ray intersection: %f seconds\n", delta);
+		printf("Test ray intersected=%i at t=%f, %s\n", result.intersection.intersected,result.intersection.t, toString(origin + result.intersection.t * dir).str);
+	}
+
 }
 
 // CPURayTracerRenderer: Protected virtual methods from BaseRenderer interface

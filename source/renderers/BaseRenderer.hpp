@@ -6,6 +6,7 @@
 #include <sfz/gl/Framebuffer.hpp>
 #include <sfz/math/Matrix.hpp>
 
+#include "level/Scene.hpp"
 #include "level/PointLight.hpp"
 #include "resources/Renderable.hpp"
 
@@ -78,6 +79,8 @@ public:
 	
 	virtual RenderResult render(const DynArray<DrawOp>& operations,
 	                            const DynArray<PointLight>& pointLights) noexcept = 0;
+
+	virtual void prepareForScene(const Scene& scene) noexcept = 0;
 
 	// Non-virtual methods
 	// --------------------------------------------------------------------------------------------

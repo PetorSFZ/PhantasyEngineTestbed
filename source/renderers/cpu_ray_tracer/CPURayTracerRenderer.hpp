@@ -1,13 +1,15 @@
-#pragma
-
-#include "renderers/BaseRenderer.hpp"
+#pragma once
 
 #include <memory>
+
 #include <sfz/math/Vector.hpp>
+
+#include "renderers/BaseRenderer.hpp"
+#include "AabbTree.hpp"
 
 namespace sfz {
 
-// CUDARayTracerRenderer
+// CPURayTracerRenderer
 // ------------------------------------------------------------------------------------------------
 
 class CPURayTracerRenderer final : public BaseRenderer {
@@ -28,6 +30,7 @@ public:
 
 	RenderResult render(const DynArray<DrawOp>& operations,
 	                    const DynArray<PointLight>& pointLights) noexcept override final;
+	void prepareForScene(const Scene& scene) noexcept override final;
 
 protected:
 	// Protected virtual methods from BaseRenderer interface
@@ -36,11 +39,15 @@ protected:
 	void targetResolutionUpdated() noexcept override final;
 
 private:
+
+	vec4 tracePrimaryRays(vec3 origin, vec3 dir) const noexcept;
+
 	// Private members
 	// --------------------------------------------------------------------------------------------
 	
 	Framebuffer mResult;
 	std::unique_ptr<vec4[]> mTexture;
+	AabbTree aabbBvh;
 };
 
 } // namespace sfz

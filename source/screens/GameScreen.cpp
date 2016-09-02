@@ -96,6 +96,8 @@ GameScreen::GameScreen() noexcept
 		scene.staticPointLights.add(pointLight);
 	}
 #endif
+
+	mRendererPtr->prepareForScene(scene);
 }
 
 // GameScreen: Overriden methods from sfz::BaseScreen

@@ -101,6 +101,8 @@ RenderResult CUDARayTracerRenderer::render(const DynArray<DrawOp>& operations,
 	return tmp;
 }
 
+void CUDARayTracerRenderer::prepareForScene(const Scene& scene) noexcept { }
+
 // CUDARayTracerRenderer: Protected virtual methods from BaseRenderer interface
 // ------------------------------------------------------------------------------------------------
 

@@ -180,6 +180,8 @@ RenderResult DeferredRenderer::render(const DynArray<DrawOp>& operations,
 	return tmp;
 }
 
+void DeferredRenderer::prepareForScene(const Scene& scene) noexcept { }
+
 // DeferredRenderer: Protected virtual methods from BaseRenderer interface
 // ------------------------------------------------------------------------------------------------
 
