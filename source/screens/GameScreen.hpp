@@ -48,6 +48,7 @@ private:
 	// Private methods
 	// --------------------------------------------------------------------------------------------
 
+	void reloadFramebuffers(vec2i maxResolution) noexcept;
 	void reloadShaders() noexcept;
 	void updateEmulatedController(const DynArray<SDL_Event>& events, const sdl::Mouse& rawMouse) noexcept;
 
@@ -59,7 +60,9 @@ private:
 	ViewFrustum mCam;
 	CameraMatrices mMatrices;
 	DynArray<DrawOp> mDrawOps;
-	Program mScalingShader;
+
+	Framebuffer mRendererResult, mGammaCorrected;
+	Program mScalingShader, mGammaCorrectionShader;
 	FullscreenTriangle mFullscreenTriangle;
 
 	// Temp

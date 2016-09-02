@@ -196,15 +196,17 @@ UpdateOp GameScreen::update(UpdateState& state)
 
 void GameScreen::render(UpdateState& state)
 {
-	vec2i drawableDim = state.window.drawableDimensions();
+	auto& cfg = GlobalConfig::instance();
 
-	if (drawableDim.x > 0 && drawableDim.y > 0) {
-		mCam.setAspectRatio(float(drawableDim.x) / float(drawableDim.y));
-	}
+	const vec2i drawableDim = state.window.drawableDimensions();
+	const vec2i targetRes = cfg.graphcisCfg().getTargetResolution(drawableDim);
 
-	if (drawableDim != mRendererPtr->resolution()) {
-		mRendererPtr->setMaxResolution(drawableDim);
-		mRendererPtr->setResolution(drawableDim);
+	// Check if framebuffers / renderer needs to be reloaded
+	if (targetRes != mRendererResult.dimensions()) {
+		this->reloadFramebuffers(targetRes);
+		mRendererPtr->setMaxResolution(targetRes);
+		mRendererPtr->setResolution(targetRes);
+		mCam.setAspectRatio(float(targetRes.x) / float(targetRes.y));
 	}
 
 	mDrawOps.clear();
@@ -251,6 +253,21 @@ void GameScreen::onResize(vec2 dimensions, vec2 drawableDimensions)
 
 // GameScreen: Private methods
 // ------------------------------------------------------------------------------------------------
+
+void GameScreen::reloadFramebuffers(vec2i internalRes) noexcept
+{
+	using gl::FBTextureFiltering;
+	using gl::FBTextureFormat;
+	using gl::FramebufferBuilder;
+
+	mRendererResult = FramebufferBuilder(internalRes)
+	                  .addTexture(0, FBTextureFormat::RGB_U8, FBTextureFiltering::LINEAR)
+	                  .build();
+
+	mGammaCorrected = FramebufferBuilder(internalRes)
+	                  .addTexture(0, FBTextureFormat::RGB_U8, FBTextureFiltering::LINEAR)
+	                  .build();
+}
 
 void GameScreen::reloadShaders() noexcept
 {

@@ -3,6 +3,7 @@
 #pragma once
 
 #include <sfz/containers/DynArray.hpp>
+#include <sfz/math/Vector.hpp>
 
 #include "config/Setting.hpp"
 
@@ -20,7 +21,15 @@ struct WindowConfig final {
 };
 
 struct GraphicsConfig final {
-	Setting* renderingBackend; // 0 = Deferred, 1 = CUDARayTracing, 2 = CPURayTracing
+	Setting* renderingBackend = nullptr; // 0 = Deferred, 1 = CUDARayTracing, 2 = CPURayTracing
+	Setting* useNativeTargetResolution = nullptr;
+	Setting* targetResolutionHeight = nullptr;
+
+	/// Helper function that retrieves the target resolution
+	/// Makes use of 'useNativeTargetResolution' and 'targetResolutionHeight' settings in
+	/// combination with the current native resolution
+	/// \param drawableDim the current native resolution, sdl::window.drawableDimensions()
+	vec2i getTargetResolution(vec2i drawableDim) const noexcept;
 };
 
 // GlobalConfig

@@ -89,7 +89,7 @@ static Setting* sanitizeBool(const char* section, const char* key,
 
 	// Set default value if created
 	if (created) {
-		setting->setFloat(defaultValue);
+		setting->setBool(defaultValue);
 		return setting;
 	}
 	
@@ -116,6 +116,19 @@ static void setWindowCfg(WindowConfig& cfg) noexcept
 static void setGraphicsCfg(GraphicsConfig& cfg) noexcept
 {
 	cfg.renderingBackend = sanitizeInt("Graphics", "renderingBackend", 0, 0, 2);
+	cfg.useNativeTargetResolution = sanitizeBool("Graphics", "useNativeTargetResolution", true);
+	cfg.targetResolutionHeight = sanitizeInt("Graphics", "targetResolutionHeight", 720, 120, 4320);
+}
+
+// GraphicConfig methods
+// ------------------------------------------------------------------------------------------------
+
+vec2i GraphicsConfig::getTargetResolution(vec2i drawableDim) const noexcept
+{
+	if (this->useNativeTargetResolution->boolValue()) return drawableDim;
+	int32_t h = this->targetResolutionHeight->intValue();
+	int32_t w = int32_t(std::round(float(h) * float(drawableDim.x) / float(drawableDim.y)));
+	return vec2i(w, h);
 }
 
 // GlobalConfigImpl
