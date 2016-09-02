@@ -4,6 +4,7 @@
 #include <sfz/math/Matrix.hpp>
 #include <sfz/math/MatrixSupport.hpp>
 #include <sfz/math/MathHelpers.hpp>
+#include <thread>
 
 namespace sfz {
 
@@ -101,15 +102,29 @@ RenderResult CPURayTracerRenderer::render(const DynArray<DrawOp>& operations, co
 	vec3 dX = projOnX / float(mTargetResolution.x);
 	vec3 dY = projOnY / float(mTargetResolution.y);
 
-	// Lerp the ray direction and trace the rays
-	#pragma omp parallel for
-	for (int y = 0; y < mTargetResolution.y; y++) {
-		vec3 yLerped = topLeftDir.xyz + dY * float(y);
-		for (int x = 0; x < mTargetResolution.x; x++) {
-			vec3 rayDir{ dX * float(x) + yLerped };
-			// rayDir is not normalized
-			mTexture[x + mTargetResolution.x * y] = tracePrimaryRays(tri, mMatrices.position, rayDir);
-		}
+	DynArray<std::thread> threads;
+	int nThreads = 10;
+	int rowsPerThread = mTargetResolution.y / nThreads;
+
+	// Spawn threads for ray tracing
+	for (int i = 0; i < nThreads; i++) {
+		threads.add(std::thread{ [this, i, &tri, topLeftDir, dX, dY, rowsPerThread, nThreads]() {
+			// Calculate the which row is the last one that the current thread is responsible for
+			int yEnd = i >= nThreads - 1 ? this->mTargetResolution.y : rowsPerThread * (i + 1);
+			for (int y = i * rowsPerThread; y < yEnd; y++) {
+				// Add the Y-component of the ray direction
+				vec3 yLerped = topLeftDir.xyz + dY * float(y);
+				int rowStartIndex = this->mTargetResolution.x * y;
+				for (int x = 0; x < this->mTargetResolution.x; x++) {
+					// Final ray direction
+					vec3 rayDir{ dX * float(x) + yLerped};
+					this->mTexture[x + rowStartIndex] = tracePrimaryRays(tri, this->mMatrices.position, rayDir);
+				}
+			}
+		} });
+	}
+	for (std::thread& thread : threads) {
+		thread.join();
 	}
 
 	glBindTexture(GL_TEXTURE_2D, mResult.texture(0));
