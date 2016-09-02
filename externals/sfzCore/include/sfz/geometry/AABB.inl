@@ -26,16 +26,16 @@ inline AABB::AABB(const vec3& min, const vec3& max) noexcept
 	mMin(min),
 	mMax(max)
 {
-	sfz_assert_debug(min[0] < max[0]);
-	sfz_assert_debug(min[1] < max[1]);
-	sfz_assert_debug(min[2] < max[2]);
+	sfz_assert_debug(min[0] <= max[0]);
+	sfz_assert_debug(min[1] <= max[1]);
+	sfz_assert_debug(min[2] <= max[2]);
 }
 
 inline AABB::AABB(const vec3& centerPos, float xExtent, float yExtent, float zExtent) noexcept
 {
-	sfz_assert_debug(xExtent > 0);
-	sfz_assert_debug(yExtent > 0);
-	sfz_assert_debug(zExtent > 0);
+	sfz_assert_debug(xExtent >= 0);
+	sfz_assert_debug(yExtent >= 0);
+	sfz_assert_debug(zExtent >= 0);
 
 	vec3 temp = centerPos;
 	temp[0] -= xExtent/2.0f;
@@ -110,9 +110,9 @@ inline void AABB::position(const vec3& newCenterPos) noexcept
 
 inline void AABB::extents(const vec3& newExtents) noexcept
 {
-	sfz_assert_debug(newExtents[0] > 0);
-	sfz_assert_debug(newExtents[1] > 0);
-	sfz_assert_debug(newExtents[2] > 0);
+	sfz_assert_debug(newExtents[0] >= 0);
+	sfz_assert_debug(newExtents[1] >= 0);
+	sfz_assert_debug(newExtents[2] >= 0);
 	const vec3 pos = position();
 	const vec3 halfExtents = newExtents/2.0f;
 	mMin = pos - halfExtents;
