@@ -11,20 +11,21 @@ using std::int32_t;
 FullscreenTriangle::FullscreenTriangle() noexcept
 {
 	const float positions[] = {
-		-3.0f, -1.0f, 0.0f, // bottom-left
-		1.0f, -1.0f, 0.0f, // bottom-right
-		1.0f, 3.0f, 0.0f // top-right
+		-3.0f, -1.0f, 0.0f, // top-left
+		1.0f, -1.0f, 0.0f, // top-right
+		1.0f, 3.0f, 0.0f // bottom-right
 	};
+	
 	const float uvCoords[] = {
-		// bottom-left UV
+		// top-left UV
 		-1.0f, 0.0f,
-		// bottom-right UV
-		1.0f, 0.0f,
 		// top-right UV
+		1.0f, 0.0f,
+		// bottom-right UV
 		1.0f, 2.0f
-	};
+	};	
 	const unsigned int indices[] = {
-		0, 1, 2
+		0, 1, 2 // Clock-wise order
 	};
 
 	// Buffer objects
