@@ -75,6 +75,8 @@ set(SOURCE_ALL_FILES
 
 	${INCLUDE_DIR}/renderers/cpu_ray_tracer/CPURayTracerRenderer.hpp
 	 ${SOURCE_DIR}/renderers/cpu_ray_tracer/CPURayTracerRenderer.cpp
+	${INCLUDE_DIR}/renderers/cpu_ray_tracer/AabbTree.hpp
+	 ${SOURCE_DIR}/renderers/cpu_ray_tracer/AabbTree.cpp
 
 	${INCLUDE_DIR}/Resources.hpp
 	${INCLUDE_DIR}/resources/GLModel.hpp
