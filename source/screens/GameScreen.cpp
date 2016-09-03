@@ -95,6 +95,30 @@ GameScreen::GameScreen() noexcept
 		pointLight.strength = 100.0f * colours[i];
 		scene.staticPointLights.add(pointLight);
 	}
+#else
+	Renderable testRenderable;
+	RenderableComponent testComponent;
+	Vertex v1;
+	v1.pos = {-0.5f, 2.0f, -2.0f};
+	v1.normal = {0.0f, 0.0f, 0.0f};
+	v1.uv = {0.0f, 1.0f};
+
+	Vertex v2;
+	v2.pos = {0.0f, 2.0f, -2.0f};
+	v2.uv = {1.0f, 1.0f};
+
+	Vertex v3;
+	v3.pos = {0.0f, 2.5f, -2.0f};
+	v3.uv = {1.0f, 0.0f};
+
+	Vertex testVertices[3] = {v1, v2, v3};
+	uint32_t indices[3] = {0, 1, 2};
+	testComponent.geometry.vertices.add(testVertices, 3);
+	testComponent.geometry.indices.add(indices, 3);
+	testComponent.glModel.load(testComponent.geometry);
+
+	testRenderable.components.add(std::move(testComponent));
+	scene.staticRenderables.add(std::move(testRenderable));
 #endif
 
 	mRendererPtr->prepareForScene(scene);

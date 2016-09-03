@@ -118,15 +118,17 @@ void CPURayTracerRenderer::prepareForScene(const Scene& scene) noexcept
 		using time_point = std::chrono::high_resolution_clock::time_point;
 		time_point before = std::chrono::high_resolution_clock::now();
 
-		vec3 origin = { 0.0f, 0.0f, 0.0f };
-		vec3 dir = { 1.0f, 0.0f, 0.0f };
+		vec3 origin = { -0.25f, 2.25f, 0.0f };
+		vec3 dir = { 0.0f, 0.0f, -1.0f };
 		RaycastResult result = aabbBvh.raycast(origin, dir);
 
 		time_point after = std::chrono::high_resolution_clock::now();
 		using FloatSecond = std::chrono::duration<float>;
 		float delta = std::chrono::duration_cast<FloatSecond>(after - before).count();
 		printf("Time to find ray intersection: %f seconds\n", delta);
-		printf("Test ray intersected=%i at t=%f, %s\n", result.intersection.intersected,result.intersection.t, toString(origin + result.intersection.t * dir).str);
+		if (result.intersection.intersected) {
+			printf("Test ray intersected at t=%f, %s\n",result.intersection.t, toString(origin + result.intersection.t * dir).str);
+		}
 	}
 
 }
