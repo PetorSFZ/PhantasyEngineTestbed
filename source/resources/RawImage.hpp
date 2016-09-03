@@ -28,9 +28,6 @@ struct RawImage final {
 	/// Flips the image vertically, i.e. the top row will become the bottom row, etc.
 	void flipVertically() noexcept;
 
-	/// Converts from sRGB to linear color space (assumes gamma == 2.2)
-	void convertToLinear() noexcept;
-
 	uint8_t* getPixelPtr(int32_t x, int32_t y) noexcept;
 	uint8_t* getPixelPtr(vec2i location) noexcept;
 	const uint8_t* getPixelPtr(int32_t x, int32_t y) const noexcept;

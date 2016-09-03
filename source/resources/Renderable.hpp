@@ -15,10 +15,15 @@ namespace sfz {
 // ------------------------------------------------------------------------------------------------
 
 struct Material final {
+	// Albedo is defined in gamma space
 	vec3 albedoValue = vec3(0.0f);
 	uint32_t albedoIndex = uint32_t(~0);
+
+	// Roughness is defined in linear space
 	float roughnessValue = 0.0f;
 	uint32_t roughnessIndex = uint32_t(~0);
+
+	// Metallic is defined in linear space
 	float metallicValue = 0.0f; // Should be 0 or 1 for most materials
 	uint32_t metallicIndex = uint32_t(~0);
 };

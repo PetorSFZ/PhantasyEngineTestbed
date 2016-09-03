@@ -78,7 +78,6 @@ static void processNode(const char* basePath, Renderable& renderable,
 				indexPtr = texMapping.get(tmpPath.C_Str());
 
 				renderable.images.add(loadImage(basePath, convertToOSPath(tmpPath.C_Str()).str()));
-				renderable.images.last().convertToLinear();
 				renderable.textures.add(GLTexture(renderable.images[nextIndex]));
 				sfz_assert_debug(renderable.textures.last().isValid());
 			}
@@ -101,7 +100,6 @@ static void processNode(const char* basePath, Renderable& renderable,
 				indexPtr = texMapping.get(tmpPath.C_Str());
 
 				renderable.images.add(loadImage(basePath, convertToOSPath(tmpPath.C_Str()).str()));
-				//renderable.images.last().convertToLinear();
 				renderable.textures.add(GLTexture(renderable.images[nextIndex]));
 				sfz_assert_debug(renderable.textures.last().isValid());
 			}
@@ -124,7 +122,6 @@ static void processNode(const char* basePath, Renderable& renderable,
 				indexPtr = texMapping.get(tmpPath.C_Str());
 
 				renderable.images.add(loadImage(basePath, convertToOSPath(tmpPath.C_Str()).str()));
-				//renderable.images.last().convertToLinear();
 				renderable.textures.add(GLTexture(renderable.images[nextIndex]));
 				sfz_assert_debug(renderable.textures.last().isValid());
 			}

@@ -193,12 +193,12 @@ void DeferredRenderer::targetResolutionUpdated() noexcept
 	mGBuffer = FramebufferBuilder(mTargetResolution)
 	          .addDepthTexture(FBDepthFormat::F32, FBTextureFiltering::NEAREST)
 	          .addTexture(GBUFFER_NORMAL, FBTextureFormat::RGB_F16, FBTextureFiltering::LINEAR)
-	          .addTexture(GBUFFER_ALBEDO, FBTextureFormat::RGB_U8, FBTextureFiltering::LINEAR)
+	          .addTexture(GBUFFER_ALBEDO, FBTextureFormat::RGB_U16, FBTextureFiltering::LINEAR)
 	          .addTexture(GBUFFER_MATERIAL, FBTextureFormat::RG_U8, FBTextureFiltering::LINEAR) // Roughness, metallic
 	          .build();
 
 	mResult = FramebufferBuilder(mTargetResolution)
-	          .addTexture(0, FBTextureFormat::RGB_U8, FBTextureFiltering::LINEAR)
+	          .addTexture(0, FBTextureFormat::RGBA_U16, FBTextureFiltering::LINEAR)
 	          .build();
 }
 

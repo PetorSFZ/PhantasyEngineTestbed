@@ -96,7 +96,7 @@ GameScreen::GameScreen() noexcept
 		PointLight pointLight;
 		pointLight.pos = vec3{ -50.0f + 25.0f * i , 5.0f, 0.0f };
 		pointLight.range = 50.0f;
-		pointLight.strength = 100.0f * colours[i];
+		pointLight.strength = 10.0f * colours[i];
 		scene.staticPointLights.add(pointLight);
 	}
 #endif
@@ -262,7 +262,7 @@ void GameScreen::reloadFramebuffers(vec2i internalRes) noexcept
 
 	if (mGammaCorrectedFB.dimensions() != internalRes) {
 		mGammaCorrectedFB = FramebufferBuilder(internalRes)
-		                    .addTexture(0, FBTextureFormat::RGB_U8, FBTextureFiltering::LINEAR)
+		                    .addTexture(0, FBTextureFormat::RGBA_U16, FBTextureFiltering::LINEAR)
 		                    .build();
 	}
 }

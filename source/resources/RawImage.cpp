@@ -13,17 +13,6 @@
 
 namespace sfz {
 
-// Statics
-// ------------------------------------------------------------------------------------------------
-
-static uint8_t linearizePixelComponent(uint8_t value) noexcept
-{
-	float nonLinear = float(value) / float(256);
-	float linear = std::pow(nonLinear, 2.2f);
-	float clampedLinear = clamp(linear * float(256), 0.0f, 255.0f);
-	return (uint8_t)clampedLinear;
-}
-
 // RawImage: Methods
 // ------------------------------------------------------------------------------------------------
 
@@ -40,34 +29,6 @@ void RawImage::flipVertically() noexcept
 		std::memcpy(end, buffer, pitch);
 	}
 	StandardAllocator::deallocate(buffer);
-}
-
-void RawImage::convertToLinear() noexcept
-{
-	if (bytesPerPixel == 1 || bytesPerPixel == 2) {
-		for (uint32_t y = 0; y < dim.y; y++) {
-			for (uint32_t x = 0; x < dim.x; x++) {
-				uint32_t index = y * pitch + x * bytesPerPixel;
-				this->imgData[index] = linearizePixelComponent(this->imgData[index]);
-				// Ignore index + 1, because it is alpha in an RG image
-			}
-		}
-	}
-	else if (bytesPerPixel == 3 || bytesPerPixel == 4) {
-		for (uint32_t y = 0; y < dim.y; y++) {
-			for (uint32_t x = 0; x < dim.x; x++) {
-				uint32_t index = y * pitch + x * bytesPerPixel;
-				this->imgData[index] = linearizePixelComponent(this->imgData[index]);
-				this->imgData[index + 1] = linearizePixelComponent(this->imgData[index + 1]);
-				this->imgData[index + 2] = linearizePixelComponent(this->imgData[index + 2]);
-				// Ignore index + 3, because it is alpha in an RGBA image
-			}
-		}
-	}
-
-	else {
-		sfz_assert_debug(false);
-	}
 }
 
 uint8_t* RawImage::getPixelPtr(int32_t x, int32_t y) noexcept
