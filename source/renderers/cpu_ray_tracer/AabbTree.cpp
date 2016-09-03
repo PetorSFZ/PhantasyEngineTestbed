@@ -146,13 +146,13 @@ void AabbTree::fillNode(uint32_t nodeInd, DynArray<BvhNode>& nodes, const DynArr
 	DynArray<uint32_t>& largerList = leftSmaller ? rightTriangles : leftTriangles;
 	float smallerExtremePos = leftSmaller ? node.aabb.min()[splitAxis] : node.aabb.max()[splitAxis];
 
-	// Handle edge case of everything going in one bin. Manually copy over one of the triangles.
+	// Handle edge case of everything going in one bin by manually copying over one of the triangles
 	if (smallerList.size() == 0) {
 		for (uint32_t i = 0; i < largerList.size(); i++) {
 			uint32_t triangleInd = largerList[i];
 			const auto& triangle = triangles[triangleInd];
 			for (const vec3& vertex : triangle.vertices) {
-				// Intentially use exact float equality, since no operations should have been
+				// Intentionally use exact float equality, since no operations should have been
 				// done on the stored values
 				if (vertex[splitAxis] == smallerExtremePos) {
 					smallerList.add(triangleInd);
@@ -184,7 +184,7 @@ void AabbTree::constructFrom(const DynArray<Renderable>& renderables) noexcept
 
 			const DynArray<Vertex>& vertices = rawGeometry.vertices;
 			for (uint32_t i = 0; i < rawGeometry.indices.size() - 2; i += 3) {
-				triangles.add({vertices[rawGeometry.indices[i]].pos,vertices[rawGeometry.indices[i + 1]].pos,vertices[rawGeometry.indices[i + 2]].pos});
+				triangles.add({vertices[rawGeometry.indices[i]].pos, vertices[rawGeometry.indices[i + 1]].pos, vertices[rawGeometry.indices[i + 2]].pos});
 				triangleAabbs.add(aabbFrom(triangles.size() - 1));
 				sfz_assert_debug(triangleAabbs.size() == triangles.size());
 			}
@@ -235,8 +235,8 @@ RaycastResult AabbTree::raycast(vec3 origin, vec3 direction) const noexcept
 				closestIntersection = intersection;
 			}
 		} else {
-			sfz_assert_debug(node.left != uint32_t(~0));
-			sfz_assert_debug(node.right != uint32_t(~0));
+			sfz_assert_debug(node.left != UINT32_MAX);
+			sfz_assert_debug(node.right != UINT32_MAX);
 			nodeStack.add(nodes[nodeInd].left);
 			nodeStack.add(nodes[nodeInd].right);
 		}

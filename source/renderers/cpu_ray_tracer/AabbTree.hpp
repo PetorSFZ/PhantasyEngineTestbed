@@ -26,19 +26,19 @@ struct RaycastResult {
 };
 
 struct BvhNode {
-	uint32_t left = ~0;
-	uint32_t right = ~0;
+	uint32_t left = UINT32_MAX;
+	uint32_t right = UINT32_MAX;
 	AABB aabb;
-	uint32_t triangleInd = ~0;
+	uint32_t triangleInd = UINT32_MAX;
 
 	inline bool isLeaf() const
 	{
-		return left == uint32_t(~0);
+		return left == UINT32_MAX;
 	}
 
 	inline bool isEmpty() const
 	{
-		return isLeaf() && triangleInd == uint32_t(~0);
+		return isLeaf() && triangleInd == UINT32_MAX;
 	}
 };
 
