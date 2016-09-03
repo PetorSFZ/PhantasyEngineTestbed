@@ -85,6 +85,7 @@ int main(int, char**)
 	              {WindowFlags::OPENGL, WindowFlags::RESIZABLE, WindowFlags::ALLOW_HIGHDPI});
 
 	// OpenGL context
+	SDL_GL_SetAttribute(SDL_GL_FRAMEBUFFER_SRGB_CAPABLE, 0); // Request a non-sRGB framebuffer
 	Context glContext = createGLContext(window, 4, 5);
 
 	// Initializes GLEW, must happen after GL context is created.
@@ -114,6 +115,15 @@ int main(int, char**)
 	// Fullscreen & VSync
 	window.setVSync(static_cast<VSync>(wCfg.vsync->intValue()));
 	window.setFullscreen(static_cast<Fullscreen>(wCfg.fullscreenMode->intValue()), wCfg.displayIndex->intValue());
+	if (wCfg.maximized->boolValue()) {
+		SDL_MaximizeWindow(window.ptr());
+	}
+
+	// Attempt to disable sRGB framebuffer for the default framebuffer
+	if (GLEW_ARB_framebuffer_sRGB) {
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glDisable(GL_FRAMEBUFFER_SRGB_EXT);
+	}
 
 	// Enable OpenGL debug message if in debug mode
 #if !defined(SFZ_NO_DEBUG)

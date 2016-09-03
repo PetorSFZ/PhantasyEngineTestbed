@@ -2,11 +2,13 @@
 
 #include "resources/RawImage.hpp"
 
+#include <cmath>
 #include <cstring> // std::memcpy
 
 #include <stb_image.h>
 
 #include <sfz/containers/DynString.hpp>
+#include <sfz/math/MathHelpers.hpp>
 #include <sfz/memory/Allocators.hpp>
 
 namespace sfz {

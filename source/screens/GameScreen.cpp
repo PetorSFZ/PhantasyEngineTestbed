@@ -62,6 +62,10 @@ GameScreen::GameScreen() noexcept
 	glUseProgram(mScalingShader.handle());
 	gl::setUniform(mScalingShader, "uSrcTexture", 0);
 
+	mGammaCorrectionShader = Program::postProcessFromFile(shadersPath.str, "gamma_correction.frag");
+	glUseProgram(mGammaCorrectionShader.handle());
+	gl::setUniform(mGammaCorrectionShader, "uLinearTexture", 0);
+
 	// Load models
 	StackString192 modelsPath;
 	modelsPath.printf("%sresources/models/", basePath());
@@ -244,11 +248,19 @@ void GameScreen::render(UpdateState& state)
 	mDrawOps.add(DrawOp(identityMatrix4<float>(), &mSnakeRenderable));
 	RenderResult res = mRendererPtr->render(mDrawOps, scene.staticPointLights);
 
-	// Scale result to screen
 	glDisable(GL_BLEND);
 	glEnable(GL_CULL_FACE);
 	glDisable(GL_DEPTH_TEST);
+	glActiveTexture(GL_TEXTURE0);
 
+	// Apply gamma correction
+	mGammaCorrectedFB.bindViewportClearColor();
+	glUseProgram(mGammaCorrectionShader.handle());
+	gl::setUniform(mGammaCorrectionShader, "uGamma", cfg.windowCfg().screenGamma->floatValue());
+	glBindTexture(GL_TEXTURE_2D, res.colorTex);
+	mFullscreenTriangle.render();
+
+	// Scale result to screen
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glViewport(0, 0, drawableDim.x, drawableDim.y);
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -256,8 +268,7 @@ void GameScreen::render(UpdateState& state)
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	glUseProgram(mScalingShader.handle());
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, res.colorTex);
+	glBindTexture(GL_TEXTURE_2D, mGammaCorrectedFB.texture(0));
 	gl::setUniform(mScalingShader, "uViewportRes", vec2(res.colorTexRenderedRes));
 	gl::setUniform(mScalingShader, "uDstRes", vec2(drawableDim));
 
@@ -275,10 +286,10 @@ void GameScreen::reloadFramebuffers(vec2i internalRes) noexcept
 	using gl::FBTextureFormat;
 	using gl::FramebufferBuilder;
 
-	if (mGammaCorrected.dimensions() != internalRes) {
-		mGammaCorrected = FramebufferBuilder(internalRes)
-		                  .addTexture(0, FBTextureFormat::RGB_U8, FBTextureFiltering::LINEAR)
-		                  .build();
+	if (mGammaCorrectedFB.dimensions() != internalRes) {
+		mGammaCorrectedFB = FramebufferBuilder(internalRes)
+		                    .addTexture(0, FBTextureFormat::RGBA_U16, FBTextureFiltering::LINEAR)
+		                    .build();
 	}
 }
 
@@ -288,6 +299,12 @@ void GameScreen::reloadShaders() noexcept
 	if (mScalingShader.isValid()) {
 		glUseProgram(mScalingShader.handle());
 		gl::setUniform(mScalingShader, "uSrcTexture", 0);
+	}
+
+	mGammaCorrectionShader.reload();
+	if (mGammaCorrectionShader.isValid()) {
+		glUseProgram(mGammaCorrectionShader.handle());
+		gl::setUniform(mGammaCorrectionShader, "uLinearTexture", 0);
 	}
 }
 

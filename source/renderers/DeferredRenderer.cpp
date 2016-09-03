@@ -200,7 +200,7 @@ void DeferredRenderer::targetResolutionUpdated() noexcept
 	          .build();
 
 	mResult = FramebufferBuilder(mTargetResolution)
-	          .addTexture(0, FBTextureFormat::RGB_U8, FBTextureFiltering::LINEAR)
+	          .addTexture(0, FBTextureFormat::RGBA_U16, FBTextureFiltering::LINEAR)
 	          .build();
 }
 

@@ -39,6 +39,18 @@ vec3 getPosition(vec2 coord)
 	return posTmp.xyz;
 }
 
+const vec3 gamma = vec3(2.2);
+
+vec3 linearize(vec3 rgbGamma)
+{
+	return pow(rgbGamma, gamma);
+}
+
+vec4 linearize(vec4 rgbaGamma)
+{
+	return vec4(linearize(rgbaGamma.rgb), rgbaGamma.a);
+}
+
 // PBR shading functions
 // ------------------------------------------------------------------------------------------------
 
@@ -104,8 +116,8 @@ void main()
 	}
 
 	// Retrieve material information from GBuffer
-	vec3 albedo = texture(uAlbedoTexture, uvCoord).rgb;
-	vec3 material = texture(uMaterialTexture, uvCoord).rgb;
+	vec3 albedo = linearize(texture(uAlbedoTexture, uvCoord).rgb); // Gamma space
+	vec3 material = texture(uMaterialTexture, uvCoord).rgb; // Linear space
 	float roughness = material.r;
 	float metallic = material.g;
 
