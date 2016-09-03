@@ -96,7 +96,7 @@ GameScreen::GameScreen() noexcept
 		PointLight pointLight;
 		pointLight.pos = vec3{ -50.0f + 25.0f * i , 5.0f, 0.0f };
 		pointLight.range = 50.0f;
-		pointLight.strength = 10.0f * colours[i];
+		pointLight.strength = 100.0f * colours[i];
 		scene.staticPointLights.add(pointLight);
 	}
 #endif
