@@ -111,6 +111,7 @@ static void setWindowCfg(WindowConfig& cfg) noexcept
 	cfg.vsync = sanitizeInt("Window", "vsync", 1, 0, 2); // 0 = off, 1 = on, 2 = swap control tear
 	cfg.width = sanitizeInt("Window", "width", 1280, 320, 3840);
 	cfg.height = sanitizeInt("Window", "height", 720, 240, 2160);
+	cfg.screenGamma = sanitizeFloat("Window", "screenGamma", 2.2f, 1.0f, 3.0f);
 }
 
 static void setGraphicsCfg(GraphicsConfig& cfg) noexcept

@@ -26,7 +26,7 @@ void main()
 	vec2 offs = dstFragSize * 0.25;
 
 	vec2 coord = uvCoord;
-	coord.y = 1.0 - coord.y;
+	//coord.y = 1.0 - coord.y;
 	coord = coord * uViewportRes / srcRes;
 	//coord.y = 1.0 - coord.y;
 
