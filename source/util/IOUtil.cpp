@@ -5,7 +5,8 @@ namespace sfz {
 DynString convertToOSPath(const char *path) noexcept
 {
 	size_t pathLen = std::strlen(path);
-	DynString outPath("", uint32_t(pathLen));
+	DynString outPath;
+	outPath.setCapacity(uint32_t(pathLen + 1)); // +1 for null terminator
 
 	auto& internalArray = outPath.internalDynArray();
 	for (size_t i = 0; i < pathLen; i++) {
