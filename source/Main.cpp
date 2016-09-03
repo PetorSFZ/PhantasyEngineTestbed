@@ -114,6 +114,9 @@ int main(int, char**)
 	// Fullscreen & VSync
 	window.setVSync(static_cast<VSync>(wCfg.vsync->intValue()));
 	window.setFullscreen(static_cast<Fullscreen>(wCfg.fullscreenMode->intValue()), wCfg.displayIndex->intValue());
+	if (wCfg.maximized->boolValue()) {
+		SDL_MaximizeWindow(window.ptr());
+	}
 
 	// Enable OpenGL debug message if in debug mode
 #if !defined(SFZ_NO_DEBUG)

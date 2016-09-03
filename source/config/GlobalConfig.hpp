@@ -18,6 +18,7 @@ struct WindowConfig final {
 	Setting* vsync = nullptr; // 0 = off, 1 = on, 2 = swap control tear
 	Setting* width = nullptr;
 	Setting* height = nullptr;
+	Setting* maximized = nullptr;
 	Setting* screenGamma = nullptr;
 };
 
