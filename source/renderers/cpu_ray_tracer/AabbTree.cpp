@@ -151,7 +151,7 @@ void AabbTree::fillNode(uint32_t nodeInd, DynArray<BvhNode>& nodes, const DynArr
 		for (uint32_t i = 0; i < largerList.size(); i++) {
 			uint32_t triangleInd = largerList[i];
 			const auto& triangle = triangles[triangleInd];
-			for (const vec3& vertex : triangle.vertices) {
+			for (const vec3& vertex : {triangle.p0, triangle.p1, triangle.p2}) {
 				// Intentionally use exact float equality, since no operations should have been
 				// done on the stored values
 				if (vertex[splitAxis] == smallerExtremePos) {

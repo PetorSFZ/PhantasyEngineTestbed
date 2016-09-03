@@ -14,10 +14,7 @@ struct TriangleIntersection {
 };
 
 struct Triangle {
-	union {
-		struct { vec3 p0, p1, p2; };
-		vec3 vertices[3];
-	};
+	vec3 p0, p1, p2;
 };
 
 struct RaycastResult {
