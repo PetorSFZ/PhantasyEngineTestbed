@@ -1,3 +1,25 @@
+# Functions
+# ------------------------------------------------------------------------------------------------
+
+# Automatically set source group to correspond to directory structure.
+# From Stack Overflow post by Florian:
+# http://stackoverflow.com/a/31423421
+function(set_directory_source_group)
+	foreach(_source IN ITEMS ${ARGN})
+		if (IS_ABSOLUTE "${_source}")
+			file(RELATIVE_PATH _source_rel "${CMAKE_CURRENT_SOURCE_DIR}" "${_source}")
+		else()
+			set(source_rel "${_source}")
+		endif()
+		get_filename_component(_source_path "${_source_rel}" PATH)
+		string(REPLACE "/" "\\" _source_path_msvc "${_source_path}")
+		source_group("${_source_path_msvc}" FILES "${_source}")
+	endforeach()
+endfunction(set_directory_source_group)
+
+# Compiler flags and directories
+# ------------------------------------------------------------------------------------------------
+
 cmake_minimum_required(VERSION 3.0 FATAL_ERROR)
 project("Phantasy Engine - Testbed")
 
@@ -27,6 +49,9 @@ set(INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/source)
 set(EXTERNALS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/externals)
 set(RUNTIME_DIR ${CMAKE_CURRENT_SOURCE_DIR}/runtime)
 
+# Dependencies
+# ------------------------------------------------------------------------------------------------
+
 # sfzCore
 set(SFZ_CORE_OPENGL TRUE)
 add_subdirectory(${EXTERNALS_DIR}/sfzCore)
@@ -37,16 +62,6 @@ add_subdirectory(${EXTERNALS_DIR}/assimp)
 # stb_image
 add_subdirectory(${EXTERNALS_DIR}/stb_image)
 
-# Cuda
-if(CUDA_TRACER)
-	find_package(CUDA REQUIRED)
-	add_definitions(-DCUDA_TRACER_AVAILABLE)
-
-	set(CUDA_NVCC_FLAGS
-		${CUDA_NVCC_FLAGS}
-		-O3)
-endif()
-
 # Include directories
 include_directories(
 	${INCLUDE_DIR}
@@ -55,97 +70,130 @@ include_directories(
 	${STB_IMAGE_INCLUDE_DIRS}
 )
 
-set(SOURCE_ALL_FILES
-	${SOURCE_DIR}/Main.cpp
+# Phantasy Engine Library
+# ------------------------------------------------------------------------------------------------
 
-	${INCLUDE_DIR}/Config.hpp
-	${INCLUDE_DIR}/config/GlobalConfig.hpp
-	 ${SOURCE_DIR}/config/GlobalConfig.cpp
-	${INCLUDE_DIR}/config/Setting.hpp
-	 ${SOURCE_DIR}/config/Setting.cpp
+set(PH_SOURCE_DIR ${SOURCE_DIR}/phantasy_engine)
+set(PH_INCLUDE_DIR ${INCLUDE_DIR}/phantasy_engine)
+include_directories(${PH_INCLUDE_DIR})
 
-	${INCLUDE_DIR}/Renderers.hpp
-	${INCLUDE_DIR}/renderers/BaseRenderer.hpp
-	${INCLUDE_DIR}/renderers/DeferredRenderer.hpp
-	 ${SOURCE_DIR}/renderers/DeferredRenderer.cpp
-	${INCLUDE_DIR}/renderers/ViewFrustum.hpp
-	 ${SOURCE_DIR}/renderers/ViewFrustum.cpp
-	${INCLUDE_DIR}/renderers/FullscreenTriangle.hpp
-	 ${SOURCE_DIR}/renderers/FullscreenTriangle.cpp
+set(PHANTASY_ENGINE_LIB_FILES
+	${PH_INCLUDE_DIR}/Config.hpp
+	${PH_INCLUDE_DIR}/config/GlobalConfig.hpp
+	 ${PH_SOURCE_DIR}/config/GlobalConfig.cpp
+	${PH_INCLUDE_DIR}/config/Setting.hpp
+	 ${PH_SOURCE_DIR}/config/Setting.cpp
 
-	${INCLUDE_DIR}/renderers/cpu_ray_tracer/CPURayTracerRenderer.hpp
-	 ${SOURCE_DIR}/renderers/cpu_ray_tracer/CPURayTracerRenderer.cpp
-	${INCLUDE_DIR}/renderers/cpu_ray_tracer/AabbTree.hpp
-	 ${SOURCE_DIR}/renderers/cpu_ray_tracer/AabbTree.cpp
+	${PH_INCLUDE_DIR}/Renderers.hpp
+	${PH_INCLUDE_DIR}/renderers/BaseRenderer.hpp
+	${PH_INCLUDE_DIR}/renderers/DeferredRenderer.hpp
+	 ${PH_SOURCE_DIR}/renderers/DeferredRenderer.cpp
+	${PH_INCLUDE_DIR}/renderers/ViewFrustum.hpp
+	 ${PH_SOURCE_DIR}/renderers/ViewFrustum.cpp
+	${PH_INCLUDE_DIR}/renderers/FullscreenTriangle.hpp
+	 ${PH_SOURCE_DIR}/renderers/FullscreenTriangle.cpp
 
-	${INCLUDE_DIR}/Resources.hpp
-	${INCLUDE_DIR}/resources/GLModel.hpp
-	 ${SOURCE_DIR}/resources/GLModel.cpp
-	${INCLUDE_DIR}/resources/GLTexture.hpp
-	 ${SOURCE_DIR}/resources/GLTexture.cpp
-	${INCLUDE_DIR}/resources/RawGeometry.hpp
-	${INCLUDE_DIR}/resources/RawImage.hpp
-	 ${SOURCE_DIR}/resources/RawImage.cpp
-	${INCLUDE_DIR}/resources/Renderable.hpp
-	 ${SOURCE_DIR}/resources/Renderable.cpp
+	${PH_INCLUDE_DIR}/renderers/cpu_ray_tracer/CPURayTracerRenderer.hpp
+	 ${PH_SOURCE_DIR}/renderers/cpu_ray_tracer/CPURayTracerRenderer.cpp
+	${PH_INCLUDE_DIR}/renderers/cpu_ray_tracer/AabbTree.hpp
+	 ${PH_SOURCE_DIR}/renderers/cpu_ray_tracer/AabbTree.cpp
 
-	${INCLUDE_DIR}/Screens.hpp
-	${INCLUDE_DIR}/screens/GameScreen.hpp
-	 ${SOURCE_DIR}/screens/GameScreen.cpp
-	${INCLUDE_DIR}/screens/LevelSelectScreen.hpp
-	 ${SOURCE_DIR}/screens/LevelSelectScreen.cpp
+	${PH_INCLUDE_DIR}/Resources.hpp
+	${PH_INCLUDE_DIR}/resources/GLModel.hpp
+	 ${PH_SOURCE_DIR}/resources/GLModel.cpp
+	${PH_INCLUDE_DIR}/resources/GLTexture.hpp
+	 ${PH_SOURCE_DIR}/resources/GLTexture.cpp
+	${PH_INCLUDE_DIR}/resources/RawGeometry.hpp
+	${PH_INCLUDE_DIR}/resources/RawImage.hpp
+	 ${PH_SOURCE_DIR}/resources/RawImage.cpp
+	${PH_INCLUDE_DIR}/resources/Renderable.hpp
+	 ${PH_SOURCE_DIR}/resources/Renderable.cpp
 
-	${INCLUDE_DIR}/level/PointLight.hpp
-	${INCLUDE_DIR}/level/Scene.hpp
+	${PH_INCLUDE_DIR}/Screens.hpp
+	${PH_INCLUDE_DIR}/screens/GameScreen.hpp
+	 ${PH_SOURCE_DIR}/screens/GameScreen.cpp
+	${PH_INCLUDE_DIR}/screens/LevelSelectScreen.hpp
+	 ${PH_SOURCE_DIR}/screens/LevelSelectScreen.cpp
 
-	${INCLUDE_DIR}/util/IOUtil.hpp
-	 ${SOURCE_DIR}/util/IOUtil.cpp)
+	${PH_INCLUDE_DIR}/level/PointLight.hpp
+	${PH_INCLUDE_DIR}/level/Scene.hpp
 
-if(CUDA_TRACER)
-set(SOURCE_ALL_FILES ${SOURCE_ALL_FILES}
-	${INCLUDE_DIR}/renderers/cuda_ray_tracer/CUDARayTracerRenderer.hpp
-	 ${SOURCE_DIR}/renderers/cuda_ray_tracer/CUDARayTracerRenderer.cpp
-	${INCLUDE_DIR}/renderers/cuda_ray_tracer/CUDATest.cuh
-	 ${SOURCE_DIR}/renderers/cuda_ray_tracer/CUDATest.cu)
-endif()
+	${PH_INCLUDE_DIR}/util/IOUtil.hpp
+	 ${PH_SOURCE_DIR}/util/IOUtil.cpp)
+set_directory_source_group(${PHANTASY_ENGINE_LIB_FILES})
 
-# Automatically set source group to correspond to directory structure.
-# From Stack Overflow post by Florian:
-# http://stackoverflow.com/a/31423421
-function(set_directory_source_group)
-	foreach(_source IN ITEMS ${ARGN})
-		if (IS_ABSOLUTE "${_source}")
-			file(RELATIVE_PATH _source_rel "${CMAKE_CURRENT_SOURCE_DIR}" "${_source}")
-		else()
-			set(source_rel "${_source}")
-		endif()
-		get_filename_component(_source_path "${_source_rel}" PATH)
-		string(REPLACE "/" "\\" _source_path_msvc "${_source_path}")
-		source_group("${_source_path_msvc}" FILES "${_source}")
-	endforeach()
-endfunction(set_directory_source_group)
-
-set_directory_source_group(${SOURCE_ALL_FILES})
-
-# Main executable
-if(CUDA_TRACER)
-	cuda_add_executable(PhantasyEngineTestbed ${SOURCE_ALL_FILES})
-else()
-	add_executable(PhantasyEngineTestbed ${SOURCE_ALL_FILES})
-endif()
-
-# Linking libraries to main executable
+add_library(PhantasyEngineLib ${PHANTASY_ENGINE_LIB_FILES})
 target_link_libraries(
-	PhantasyEngineTestbed
+	PhantasyEngineLib
 
 	${SFZ_CORE_LIBRARIES}
 	${ASSIMP_LIBRARIES}
 	${STB_IMAGE_LIBRARIES}
 )
 
+# CUDA Ray Tracer Renderer Library
+# ------------------------------------------------------------------------------------------------
+
+if(CUDA_TRACER)
+
+	# CUDA dependency
+	find_package(CUDA REQUIRED)
+	add_definitions(-DCUDA_TRACER_AVAILABLE)
+
+	# CUDA compiler flags
+	set(CUDA_NVCC_FLAGS
+		${CUDA_NVCC_FLAGS}
+		-O3)
+
+	set(CUDA_SOURCE_DIR ${SOURCE_DIR}/cuda_ray_tracer)
+	set(CUDA_INCLUDE_DIR ${INCLUDE_DIR}/cuda_ray_tracer)
+	include_directories(${CUDA_INCLUDE_DIR})
+
+	# Source files
+	set(CUDA_RAY_TRACER_FILES
+		${CUDA_INCLUDE_DIR}/CUDARayTracerRenderer.hpp
+		 ${CUDA_SOURCE_DIR}/CUDARayTracerRenderer.cpp
+		${CUDA_INCLUDE_DIR}/CUDATest.cuh
+		 ${CUDA_SOURCE_DIR}/CUDATest.cu)
+	set_directory_source_group(${CUDA_RAY_TRACER_FILES})
+
+	# CUDA Ray Tracer Library
+	cuda_add_library(CUDARayTracerLib ${CUDA_RAY_TRACER_FILES})
+	target_link_libraries(
+		CUDARayTracerLib
+
+		PhantasyEngineLib
+		${SFZ_CORE_LIBRARIES}
+	)
+
+endif()
+
+# Testbed application
+# ------------------------------------------------------------------------------------------------
+
+set(TB_SOURCE_DIR ${SOURCE_DIR}/testbed_application)
+set(TB_INCLUDE_DIR ${INCLUDE_DIR}/testbed_application)
+include_directories(${TB_INCLUDE_DIR})
+
+set(PHANTASY_ENGINE_TESTBED_FILES
+	 ${TB_SOURCE_DIR}/Main.cpp)
+set_directory_source_group(${PHANTASY_ENGINE_TESTBED_FILES})
+
+add_executable(PhantasyEngineTestbed ${PHANTASY_ENGINE_TESTBED_FILES})
+target_link_libraries(
+	PhantasyEngineTestbed
+
+	PhantasyEngineLib
+	CUDARayTracerLib
+	${SFZ_CORE_LIBRARIES}
+)
+
+# File copying
+# ------------------------------------------------------------------------------------------------
+
 # Windows specific file copying
 if(MSVC)
-	# Create assets symlinks batch file
+	# Copy assets symlinks batch file
 	file(COPY ${RUNTIME_DIR}/windows/CREATE_RESOURCES_SYMLINKS.BAT DESTINATION ${CMAKE_BINARY_DIR})
 
 	# Runtime DLLs
