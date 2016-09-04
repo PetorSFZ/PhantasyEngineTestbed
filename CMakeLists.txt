@@ -117,7 +117,7 @@ set(PHANTASY_ENGINE_LIB_FILES
 
 	${PH_INCLUDE_DIR}/level/Level.hpp
 	${PH_INCLUDE_DIR}/level/PointLight.hpp
-	${PH_INCLUDE_DIR}/level/Scene.hpp
+	${PH_INCLUDE_DIR}/level/StaticScene.hpp
 
 	${PH_INCLUDE_DIR}/util/IOUtil.hpp
 	 ${PH_SOURCE_DIR}/util/IOUtil.cpp)

@@ -24,8 +24,6 @@ GameScreen::GameScreen(UniquePtr<GameLogic>&& gameLogicIn, UniquePtr<Level>&& le
 
 	cam = ViewFrustum(vec3(0.0f, 3.0f, -6.0f), normalize(vec3(0.0f, -0.25f, 1.0f)),
 	                  normalize(vec3(0.0f, 1.0f, 0.0)), 60.0f, 1.0f, 0.01f, 10000.0f);
-
-	mDrawOps.ensureCapacity(8192);
 	
 	// Load shaders
 	StackString192 shadersPath;
@@ -39,7 +37,8 @@ GameScreen::GameScreen(UniquePtr<GameLogic>&& gameLogicIn, UniquePtr<Level>&& le
 	glUseProgram(mGammaCorrectionShader.handle());
 	gl::setUniform(mGammaCorrectionShader, "uLinearTexture", 0);
 
-	this->renderer->prepareForScene(this->level->scene);
+	// Set and bake static scene
+	this->renderer->setAndBakeStaticScene(this->level->staticScene);
 }
 
 // GameScreen: Overriden methods from sfz::BaseScreen
@@ -65,12 +64,8 @@ void GameScreen::render(UpdateState& state)
 		cam.setAspectRatio(float(targetRes.x) / float(targetRes.y));
 	}
 
-	// Render all static objects in the level
-	mDrawOps.clear();
-	for (Renderable& renderable : level->scene.staticRenderables) {
-		mDrawOps.add(DrawOp(scalingMatrix4<float>(0.05f), &renderable));
-	}
-	RenderResult res = renderer->render(mResultFB, mDrawOps, level->scene.staticPointLights);
+	// Render the level
+	RenderResult res = renderer->render(mResultFB);
 
 	glDisable(GL_BLEND);
 	glEnable(GL_CULL_FACE);

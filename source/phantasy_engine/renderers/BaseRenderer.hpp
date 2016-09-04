@@ -5,8 +5,9 @@
 #include <sfz/containers/DynArray.hpp>
 #include <sfz/gl/Framebuffer.hpp>
 #include <sfz/math/Matrix.hpp>
+#include <sfz/memory/SmartPointers.hpp>
 
-#include "phantasy_engine/level/Scene.hpp"
+#include "phantasy_engine/level/StaticScene.hpp"
 #include "phantasy_engine/level/PointLight.hpp"
 #include "phantasy_engine/resources/Renderable.hpp"
 
@@ -47,18 +48,6 @@ struct CameraMatrices final {
 	vec3 up{ 0.0f };
 };
 
-struct DrawOp final {
-	mat4 transform = identityMatrix4<float>();
-	const Renderable* renderablePtr = nullptr;
-
-	DrawOp() noexcept = default;
-	inline DrawOp(const mat4& transform, const Renderable* renderablePtr) noexcept
-	:
-		transform(transform),
-		renderablePtr(renderablePtr)
-	{ }
-};
-
 struct RenderResult final {
 	vec2i renderedRes = vec2i(0);
 };
@@ -79,14 +68,16 @@ public:
 	/// The resultFB framebuffer is required to have a color texture (rgba 16bit float) and a
 	/// depth texture of type 32bit float, the resolution of the framebuffer must be the same
 	/// as the target resolution of the renderer.
-	virtual RenderResult render(Framebuffer& resultFB,
-	                            const DynArray<DrawOp>& operations,
-	                            const DynArray<PointLight>& pointLights) noexcept = 0;
-
-	virtual void prepareForScene(const Scene& scene) noexcept = 0;
+	virtual RenderResult render(Framebuffer& resultFB) noexcept = 0;
 
 	// Non-virtual methods
 	// --------------------------------------------------------------------------------------------
+
+	inline void setAndBakeStaticScene(const SharedPtr<StaticScene>& staticScene) noexcept
+	{
+		this->mStaticScene = staticScene;
+		this->staticSceneChanged();
+	}
 
 	inline void updateMatrices(const CameraMatrices& matrices) noexcept { mMatrices = matrices; }
 
@@ -103,11 +94,14 @@ protected:
 	// Protected virtual methods
 	// --------------------------------------------------------------------------------------------
 
+	virtual void staticSceneChanged() noexcept = 0;
+
 	virtual void targetResolutionUpdated() noexcept = 0;
 
 	// Protected members
 	// --------------------------------------------------------------------------------------------
 
+	SharedPtr<StaticScene> mStaticScene;
 	CameraMatrices mMatrices;
 	vec2i mTargetResolution = vec2i(0, 0);
 };

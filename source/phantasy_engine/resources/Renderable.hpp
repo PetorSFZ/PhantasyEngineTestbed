@@ -3,6 +3,7 @@
 #pragma once
 
 #include <sfz/containers/DynArray.hpp>
+#include <sfz/math/Matrix.hpp>
 
 #include "phantasy_engine/resources/GLModel.hpp"
 #include "phantasy_engine/resources/GLTexture.hpp"
@@ -47,5 +48,10 @@ struct Renderable final {
 // ------------------------------------------------------------------------------------------------
 
 Renderable assimpLoadSponza(const char* basePath, const char* fileName) noexcept;
+
+// Other functions
+// ------------------------------------------------------------------------------------------------
+
+void modelToWorldSpace(Renderable& renderable, const mat4& modelMatrix) noexcept;
 
 } // namespace sfz

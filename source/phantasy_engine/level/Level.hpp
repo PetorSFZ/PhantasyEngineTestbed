@@ -2,12 +2,18 @@
 
 #pragma once
 
-#include "phantasy_engine/level/Scene.hpp"
+#include <sfz/memory/SmartPointers.hpp>
+
+#include "phantasy_engine/level/StaticScene.hpp"
 
 namespace sfz {
 
 struct Level final {
-	Scene scene;
+	SharedPtr<StaticScene> staticScene;
+
+	//DynArray<Renderable&transform> opaqueObjects;
+	//DynArray<Renderable&transform> transparentObjects;
+	//DynArray<PointLight> pointLights;
 };
 
 } // namespace sfz

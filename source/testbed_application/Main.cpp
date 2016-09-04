@@ -93,13 +93,16 @@ int main(int, char**)
 	modelsPath.printf("%sresources/models/", basePath());
 	
 	UniquePtr<Level> level = makeUnique<Level>();
+	level->staticScene = makeShared<StaticScene>();
 	if (useSponzaSetting->boolValue()) {
 		
 		using time_point = std::chrono::high_resolution_clock::time_point;
 		time_point before = std::chrono::high_resolution_clock::now();
 
-		level->scene.staticRenderables.add(assimpLoadSponza(modelsPath.str, "sponzaPBR/sponzaPBR.obj"));
-	
+		Renderable sponza = assimpLoadSponza(modelsPath.str, "sponzaPBR/sponzaPBR.obj");
+		modelToWorldSpace(sponza, scalingMatrix4(0.05f));
+		level->staticScene->opaqueRenderables.add(std::move(sponza));
+
 		time_point after = std::chrono::high_resolution_clock::now();
 		using FloatSecond = std::chrono::duration<float>;
 		float delta = std::chrono::duration_cast<FloatSecond>(after - before).count();
@@ -118,7 +121,7 @@ int main(int, char**)
 			pointLight.pos = vec3{ -50.0f + 25.0f * i , 5.0f, 0.0f };
 			pointLight.range = 50.0f;
 			pointLight.strength = 100.0f * colours[i];
-			level->scene.staticPointLights.add(pointLight);
+			level->staticScene->pointLights.add(pointLight);
 		}
 	}
 	else {
@@ -144,7 +147,7 @@ int main(int, char**)
 		testComponent.glModel.load(testComponent.geometry);
 
 		testRenderable.components.add(std::move(testComponent));
-		level->scene.staticRenderables.add(std::move(testRenderable));
+		level->staticScene->opaqueRenderables.add(std::move(testRenderable));
 	}
 
 	// Run gameloop

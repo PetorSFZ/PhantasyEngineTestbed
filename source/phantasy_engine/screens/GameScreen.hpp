@@ -74,8 +74,6 @@ private:
 	// Private members
 	// --------------------------------------------------------------------------------------------
 
-	DynArray<DrawOp> mDrawOps;
-
 	Framebuffer mResultFB, mGammaCorrectedFB;
 	Program mScalingShader, mGammaCorrectionShader;
 	FullscreenTriangle mFullscreenTriangle;

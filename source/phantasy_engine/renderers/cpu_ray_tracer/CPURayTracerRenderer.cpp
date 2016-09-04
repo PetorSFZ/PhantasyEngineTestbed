@@ -32,9 +32,7 @@ CPURayTracerRenderer::CPURayTracerRenderer() noexcept
 // CPURayTracerRenderer: Virtual methods from BaseRenderer interface
 // ------------------------------------------------------------------------------------------------
 
-RenderResult CPURayTracerRenderer::render(Framebuffer& resultFB,
-                                          const DynArray<DrawOp>& operations,
-                                          const DynArray<PointLight>& pointLights) noexcept
+RenderResult CPURayTracerRenderer::render(Framebuffer& resultFB) noexcept
 {
 	resultFB.bindViewportClearColorDepth(vec4(0.0f, 1.0f, 0.0f, 1.0f), 0.0f);
 	
@@ -101,7 +99,10 @@ RenderResult CPURayTracerRenderer::render(Framebuffer& resultFB,
 	return tmp;
 }
 
-void CPURayTracerRenderer::prepareForScene(const Scene& scene) noexcept
+// CPURayTracerRenderer: Protected virtual methods from BaseRenderer interface
+// ------------------------------------------------------------------------------------------------
+
+void CPURayTracerRenderer::staticSceneChanged() noexcept
 {
 	aabbBvh = AabbTree();
 
@@ -109,7 +110,7 @@ void CPURayTracerRenderer::prepareForScene(const Scene& scene) noexcept
 		using time_point = std::chrono::high_resolution_clock::time_point;
 		time_point before = std::chrono::high_resolution_clock::now();
 
-		aabbBvh.constructFrom(scene.staticRenderables);
+		aabbBvh.constructFrom(mStaticScene->opaqueRenderables);
 
 		time_point after = std::chrono::high_resolution_clock::now();
 		using FloatSecond = std::chrono::duration<float>;
@@ -121,8 +122,8 @@ void CPURayTracerRenderer::prepareForScene(const Scene& scene) noexcept
 		using time_point = std::chrono::high_resolution_clock::time_point;
 		time_point before = std::chrono::high_resolution_clock::now();
 
-		vec3 origin = { -0.25f, 2.25f, 0.0f };
-		vec3 dir = { 0.0f, 0.0f, -1.0f };
+		vec3 origin ={-0.25f, 2.25f, 0.0f};
+		vec3 dir ={0.0f, 0.0f, -1.0f};
 		RaycastResult result = aabbBvh.raycast(origin, dir);
 
 		time_point after = std::chrono::high_resolution_clock::now();
@@ -130,14 +131,10 @@ void CPURayTracerRenderer::prepareForScene(const Scene& scene) noexcept
 		float delta = std::chrono::duration_cast<FloatSecond>(after - before).count();
 		printf("Time to find ray intersection: %f seconds\n", delta);
 		if (result.intersection.intersected) {
-			printf("Test ray intersected at t=%f, %s\n",result.intersection.t, toString(origin + result.intersection.t * dir).str);
+			printf("Test ray intersected at t=%f, %s\n", result.intersection.t, toString(origin + result.intersection.t * dir).str);
 		}
 	}
-
 }
-
-// CPURayTracerRenderer: Protected virtual methods from BaseRenderer interface
-// ------------------------------------------------------------------------------------------------
 
 void CPURayTracerRenderer::targetResolutionUpdated() noexcept
 {

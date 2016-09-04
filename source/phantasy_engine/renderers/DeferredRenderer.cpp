@@ -37,9 +37,7 @@ DeferredRenderer::DeferredRenderer() noexcept
 // DeferredRenderer: Virtual methods from BaseRenderer interface
 // ------------------------------------------------------------------------------------------------
 
-RenderResult DeferredRenderer::render(Framebuffer& resultFB,
-                                      const DynArray<DrawOp>& operations,
-                                      const DynArray<PointLight>& pointLights) noexcept
+RenderResult DeferredRenderer::render(Framebuffer& resultFB) noexcept
 {
 	const mat4 viewMatrix = mMatrices.headMatrix * mMatrices.originMatrix;
 	const mat4 projMatrix = mMatrices.projMatrix;
@@ -65,8 +63,12 @@ RenderResult DeferredRenderer::render(Framebuffer& resultFB,
 	gl::setUniform(mGBufferGenShader, "uMetallicTexture", 2);
 	gl::setUniform(mGBufferGenShader, "uSpecularTexture", 3);
 
-	const int modelMatrixLoc = glGetUniformLocation(mGBufferGenShader.handle(), "uModelMatrix");
-	const int normalMatrixLoc = glGetUniformLocation(mGBufferGenShader.handle(), "uNormalMatrix");
+	// For the static scene the model matrix should be identity
+	gl::setUniform(mGBufferGenShader, "uModelMatrix", identityMatrix4<float>());
+	gl::setUniform(mGBufferGenShader, "uNormalMatrix", inverse(transpose(viewMatrix)));
+
+	//const int modelMatrixLoc = glGetUniformLocation(mGBufferGenShader.handle(), "uModelMatrix");
+	//const int normalMatrixLoc = glGetUniformLocation(mGBufferGenShader.handle(), "uNormalMatrix");
 
 	const int hasAlbedoTextureLoc = glGetUniformLocation(mGBufferGenShader.handle(), "uHasAlbedoTexture");
 	const int albedoValueLoc = glGetUniformLocation(mGBufferGenShader.handle(), "uAlbedoValue");
@@ -77,13 +79,7 @@ RenderResult DeferredRenderer::render(Framebuffer& resultFB,
 	const int hasMetallicTextureLoc = glGetUniformLocation(mGBufferGenShader.handle(), "uHasMetallicTexture");
 	const int metallicValueLoc = glGetUniformLocation(mGBufferGenShader.handle(), "uMetallicValue");
 
-	for (const DrawOp& op : operations) {
-		sfz_assert_debug(op.renderablePtr != nullptr);
-		const Renderable& renderable = *op.renderablePtr;
-
-		// Set model & normal matrix (= inverse(tranpose(modelViewMatrix)))
-		gl::setUniform(modelMatrixLoc, op.transform);
-		gl::setUniform(normalMatrixLoc, inverse(transpose(viewMatrix * op.transform)));
+	for (const Renderable& renderable : mStaticScene->opaqueRenderables) {
 
 		for (const RenderableComponent& comp : renderable.components) {
 
@@ -166,7 +162,7 @@ RenderResult DeferredRenderer::render(Framebuffer& resultFB,
 	const int lightStrengthLoc = glGetUniformLocation(mShadingShader.handle(), "uLightStrength");
 	const int lightRangeLoc = glGetUniformLocation(mShadingShader.handle(), "uLightRange");
 
-	for (const PointLight& pointLight : pointLights) {
+	for (const PointLight& pointLight : mStaticScene->pointLights) {
 		const vec3 lightPosVS = transformPoint(viewMatrix, pointLight.pos);
 		gl::setUniform(lightPosLoc, lightPosVS);
 		gl::setUniform(lightStrengthLoc, pointLight.strength);
@@ -180,10 +176,13 @@ RenderResult DeferredRenderer::render(Framebuffer& resultFB,
 	return tmp;
 }
 
-void DeferredRenderer::prepareForScene(const Scene& scene) noexcept { }
-
 // DeferredRenderer: Protected virtual methods from BaseRenderer interface
 // ------------------------------------------------------------------------------------------------
+
+void DeferredRenderer::staticSceneChanged() noexcept
+{
+	// TODO: Bake shadow maps for all static lights
+}
 
 void DeferredRenderer::targetResolutionUpdated() noexcept
 {

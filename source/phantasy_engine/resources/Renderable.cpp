@@ -181,4 +181,23 @@ Renderable assimpLoadSponza(const char* basePath, const char* fileName) noexcept
 	return std::move(renderable);
 }
 
+// Other functions
+// ------------------------------------------------------------------------------------------------
+
+void modelToWorldSpace(Renderable& renderable, const mat4& modelMatrix) noexcept
+{
+	mat4 normalMatrix = inverse(transpose(modelMatrix));
+	for (auto& comp : renderable.components) {
+		
+		// Transform position and normal
+		for (auto& v : comp.geometry.vertices) {
+			v.pos = transformPoint(modelMatrix, v.pos);
+			v.normal = transformDir(normalMatrix, v.normal);
+		}
+
+		// Reload OpenGL model
+		comp.glModel.load(comp.geometry);
+	}
+}
+
 } // namespace sfz

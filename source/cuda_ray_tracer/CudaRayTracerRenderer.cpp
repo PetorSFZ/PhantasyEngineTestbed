@@ -75,9 +75,7 @@ CUDARayTracerRenderer::~CUDARayTracerRenderer() noexcept
 // CUDARayTracerRenderer: Virtual methods from BaseRenderer interface
 // ------------------------------------------------------------------------------------------------
 
-RenderResult CUDARayTracerRenderer::render(Framebuffer& resultFB,
-                                           const DynArray<DrawOp>& operations,
-                                           const DynArray<PointLight>& pointLights) noexcept
+RenderResult CUDARayTracerRenderer::render(Framebuffer& resultFB) noexcept
 {
 	GLuint glTex = mImpl->glTex;
 	cudaGraphicsResource_t& resource = mImpl->cudaResource;
@@ -103,10 +101,13 @@ RenderResult CUDARayTracerRenderer::render(Framebuffer& resultFB,
 	return tmp;
 }
 
-void CUDARayTracerRenderer::prepareForScene(const Scene& scene) noexcept { }
-
 // CUDARayTracerRenderer: Protected virtual methods from BaseRenderer interface
 // ------------------------------------------------------------------------------------------------
+
+void CUDARayTracerRenderer::staticSceneChanged() noexcept
+{
+
+}
 
 void CUDARayTracerRenderer::targetResolutionUpdated() noexcept
 {
