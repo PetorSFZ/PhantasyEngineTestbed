@@ -27,7 +27,6 @@ struct WindowConfig final {
 };
 
 struct GraphicsConfig final {
-	Setting* renderingBackend = nullptr; // 0 = Deferred, 1 = CUDARayTracing, 2 = CPURayTracing
 	Setting* useNativeTargetResolution = nullptr;
 	Setting* targetResolutionHeight = nullptr;
 

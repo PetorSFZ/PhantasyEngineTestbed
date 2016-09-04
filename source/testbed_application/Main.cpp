@@ -27,8 +27,12 @@ int main(int, char**)
 	PhantasyEngine& engine = PhantasyEngine::instance();
 	engine.init(sfz::basePath(), "Config.ini");
 
-	// Retrieve and print all settings
+	// Retrieve global config and add testbed specific settings
 	sfz::GlobalConfig& cfg = sfz::GlobalConfig::instance();
+	Setting* renderingBackendSetting = cfg.sanitizeInt("PhantasyEngineTestbed", "renderingBackend", 0, 0, 2);
+	Setting* useSponzaSetting = cfg.sanitizeBool("PhantasyEngineTestbed", "useSponza", true);
+
+	// Print all settings
 	DynArray<Setting*> settings;
 	cfg.getSettings(settings);
 	printf("Available settings:\n");
@@ -54,7 +58,7 @@ int main(int, char**)
 
 	// Select rendering backend based on config
 	UniquePtr<BaseRenderer> renderer;
-	switch (cfg.graphcisCfg().renderingBackend->intValue()) {
+	switch (renderingBackendSetting->intValue()) {
 	default:
 		printf("%s\n", "Something is wrong with the config. Falling back to deferred rendering.");
 	case 0:
@@ -74,21 +78,15 @@ int main(int, char**)
 	}
 
 	// Load level
-	UniquePtr<Level> level = makeUnique<Level>();
-	// TODO: Make a setting instead
-#ifdef DEV_NOT_USING_SPONZA
-	bool sponza = false;
-#else
-	bool sponza = true;
-#endif
-	
 	StackString192 modelsPath;
 	modelsPath.printf("%sresources/models/", basePath());
-	using time_point = std::chrono::high_resolution_clock::time_point;
-	time_point before = std::chrono::high_resolution_clock::now();
-
-	if (sponza) {
+	
+	UniquePtr<Level> level = makeUnique<Level>();
+	if (useSponzaSetting->boolValue()) {
 		
+		using time_point = std::chrono::high_resolution_clock::time_point;
+		time_point before = std::chrono::high_resolution_clock::now();
+
 		level->scene.staticRenderables.add(assimpLoadSponza(modelsPath.str, "sponzaPBR/sponzaPBR.obj"));
 	
 		time_point after = std::chrono::high_resolution_clock::now();

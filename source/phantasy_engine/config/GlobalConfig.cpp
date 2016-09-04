@@ -27,7 +27,6 @@ static void setWindowCfg(GlobalConfig& g, WindowConfig& cfg) noexcept
 
 static void setGraphicsCfg(GlobalConfig& g, GraphicsConfig& cfg) noexcept
 {
-	cfg.renderingBackend = g.sanitizeInt("Graphics", "renderingBackend", 0, 0, 2);
 	cfg.useNativeTargetResolution = g.sanitizeBool("Graphics", "useNativeTargetResolution", true);
 	cfg.targetResolutionHeight = g.sanitizeInt("Graphics", "targetResolutionHeight", 720, 120, 4320);
 }
