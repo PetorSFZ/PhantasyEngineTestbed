@@ -14,112 +14,22 @@ namespace sfz {
 // GlobalConfig: Statics
 // ------------------------------------------------------------------------------------------------
 
-static Setting* sanitizeInt(const char* section, const char* key,
-                            int32_t defaultValue = 0,
-                            int32_t minValue = numeric_limits<int32_t>::min(),
-                            int32_t maxValue = numeric_limits<int32_t>::max()) noexcept
+static void setWindowCfg(GlobalConfig& g, WindowConfig& cfg) noexcept
 {
-	GlobalConfig& globalCfg = GlobalConfig::instance();
-	bool created = false;
-	Setting* setting = globalCfg.getCreateSetting(section, key, &created);
-
-	// Set default value if created
-	if (created) {
-		setting->setInt(defaultValue);
-		return setting;
-	}
-	
-	// Make sure setting is of correct type
-	if (setting->type() != SettingType::INT) {
-		if (setting->type() == SettingType::FLOAT) {
-			setting->setInt(setting->intValue());
-		} else {
-			setting->setInt(defaultValue);
-			return setting;
-		}
-	}
-
-	// Ensure value is in range
-	int32_t val = setting->intValue();
-	val = std::min(std::max(val, minValue), maxValue);
-	setting->setInt(val);
-
-	return setting;
+	cfg.displayIndex = g.sanitizeInt("Window", "displayIndex", 0, 0, 32);
+	cfg.fullscreenMode = g.sanitizeInt("Window", "fullscreenMode", 0, 0, 2); // 0 = off, 1 = windowed, 2 = exclusive
+	cfg.vsync = g.sanitizeInt("Window", "vsync", 1, 0, 2); // 0 = off, 1 = on, 2 = swap control tear
+	cfg.width = g.sanitizeInt("Window", "width", 1280, 320, 3840);
+	cfg.height = g.sanitizeInt("Window", "height", 720, 240, 2160);
+	cfg.maximized = g.sanitizeBool("Window", "maximized", false);
+	cfg.screenGamma = g.sanitizeFloat("Window", "screenGamma", 2.2f, 1.0f, 3.0f);
 }
 
-static Setting* sanitizeFloat(const char* section, const char* key,
-                              float defaultValue = 0.0f,
-                              float minValue = numeric_limits<float>::min(),
-                              float maxValue = numeric_limits<float>::max()) noexcept
+static void setGraphicsCfg(GlobalConfig& g, GraphicsConfig& cfg) noexcept
 {
-	GlobalConfig& globalCfg = GlobalConfig::instance();
-	bool created = false;
-	Setting* setting = globalCfg.getCreateSetting(section, key, &created);
-
-	// Set default value if created
-	if (created) {
-		setting->setFloat(defaultValue);
-		return setting;
-	}
-	
-	// Make sure setting is of correct type
-	if (setting->type() != SettingType::FLOAT) {
-		if (setting->type() == SettingType::INT) {
-			setting->setFloat(setting->floatValue());
-		} else {
-			setting->setFloat(defaultValue);
-			return setting;
-		}
-	}
-
-	// Ensure value is in range
-	float val = setting->floatValue();
-	val = std::min(std::max(val, minValue), maxValue);
-	setting->setFloat(val);
-
-	return setting;
-}
-
-static Setting* sanitizeBool(const char* section, const char* key,
-                             bool defaultValue = false) noexcept
-{
-	GlobalConfig& globalCfg = GlobalConfig::instance();
-	bool created = false;
-	Setting* setting = globalCfg.getCreateSetting(section, key, &created);
-
-	// Set default value if created
-	if (created) {
-		setting->setBool(defaultValue);
-		return setting;
-	}
-	
-	// Make sure setting is of correct type
-	if (setting->type() != SettingType::BOOL) {
-		if (setting->type() == SettingType::INT) {
-			setting->setBool(setting->boolValue());
-		} else {
-			setting->setBool(defaultValue);
-		}
-	}
-	return setting;
-}
-
-static void setWindowCfg(WindowConfig& cfg) noexcept
-{
-	cfg.displayIndex = sanitizeInt("Window", "displayIndex", 0, 0, 32);
-	cfg.fullscreenMode = sanitizeInt("Window", "fullscreenMode", 0, 0, 2); // 0 = off, 1 = windowed, 2 = exclusive
-	cfg.vsync = sanitizeInt("Window", "vsync", 1, 0, 2); // 0 = off, 1 = on, 2 = swap control tear
-	cfg.width = sanitizeInt("Window", "width", 1280, 320, 3840);
-	cfg.height = sanitizeInt("Window", "height", 720, 240, 2160);
-	cfg.maximized = sanitizeBool("Window", "maximized", false);
-	cfg.screenGamma = sanitizeFloat("Window", "screenGamma", 2.2f, 1.0f, 3.0f);
-}
-
-static void setGraphicsCfg(GraphicsConfig& cfg) noexcept
-{
-	cfg.renderingBackend = sanitizeInt("Graphics", "renderingBackend", 0, 0, 2);
-	cfg.useNativeTargetResolution = sanitizeBool("Graphics", "useNativeTargetResolution", true);
-	cfg.targetResolutionHeight = sanitizeInt("Graphics", "targetResolutionHeight", 720, 120, 4320);
+	cfg.renderingBackend = g.sanitizeInt("Graphics", "renderingBackend", 0, 0, 2);
+	cfg.useNativeTargetResolution = g.sanitizeBool("Graphics", "useNativeTargetResolution", true);
+	cfg.targetResolutionHeight = g.sanitizeInt("Graphics", "targetResolutionHeight", 720, 120, 4320);
 }
 
 // GraphicConfig methods
@@ -225,8 +135,8 @@ bool GlobalConfig::load() noexcept
 	}
 
 	// Fill specific setting structs
-	setWindowCfg(mImpl->mWindowCfg);
-	setGraphicsCfg(mImpl->mGraphicsCfg);
+	setWindowCfg(*this, mImpl->mWindowCfg);
+	setGraphicsCfg(*this, mImpl->mGraphicsCfg);
 
 	mImpl->mLoaded = true;
 	return true;
@@ -312,6 +222,98 @@ const GraphicsConfig& GlobalConfig::graphcisCfg() const noexcept
 {
 	sfz_assert_debug(mImpl != nullptr);
 	return mImpl->mGraphicsCfg;
+}
+
+// GlobalConfig: Sanitizers
+// ------------------------------------------------------------------------------------------------
+
+Setting* GlobalConfig::sanitizeInt(const char* section, const char* key,
+                                   int32_t defaultValue,
+                                   int32_t minValue,
+                                   int32_t maxValue) noexcept
+{
+	sfz_assert_debug(mImpl != nullptr);
+
+	bool created = false;
+	Setting* setting = getCreateSetting(section, key, &created);
+
+	// Set default value if created
+	if (created) {
+		setting->setInt(defaultValue);
+		return setting;
+	}
+
+	// Make sure setting is of correct type
+	if (setting->type() != SettingType::INT) {
+		if (setting->type() == SettingType::FLOAT) {
+			setting->setInt(setting->intValue());
+		} else {
+			setting->setInt(defaultValue);
+			return setting;
+		}
+	}
+
+	// Ensure value is in range
+	int32_t val = setting->intValue();
+	val = std::min(std::max(val, minValue), maxValue);
+	setting->setInt(val);
+
+	return setting;
+}
+
+Setting* GlobalConfig::sanitizeFloat(const char* section, const char* key,
+                                     float defaultValue,
+                                     float minValue,
+                                     float maxValue) noexcept
+{
+	bool created = false;
+	Setting* setting = getCreateSetting(section, key, &created);
+
+	// Set default value if created
+	if (created) {
+		setting->setFloat(defaultValue);
+		return setting;
+	}
+
+	// Make sure setting is of correct type
+	if (setting->type() != SettingType::FLOAT) {
+		if (setting->type() == SettingType::INT) {
+			setting->setFloat(setting->floatValue());
+		} else {
+			setting->setFloat(defaultValue);
+			return setting;
+		}
+	}
+
+	// Ensure value is in range
+	float val = setting->floatValue();
+	val = std::min(std::max(val, minValue), maxValue);
+	setting->setFloat(val);
+
+	return setting;
+}
+
+Setting* GlobalConfig::sanitizeBool(const char* section, const char* key,
+                                    bool defaultValue) noexcept
+{
+	bool created = false;
+	Setting* setting = getCreateSetting(section, key, &created);
+
+	// Set default value if created
+	if (created) {
+		setting->setBool(defaultValue);
+		return setting;
+	}
+
+	// Make sure setting is of correct type
+	if (setting->type() != SettingType::BOOL) {
+		if (setting->type() == SettingType::INT) {
+			setting->setBool(setting->boolValue());
+		} else {
+			setting->setBool(defaultValue);
+		}
+	}
+	return setting;
 }
 
 // GlobalConfig: Private constructors & destructors

@@ -2,12 +2,16 @@
 
 #pragma once
 
+#include <limits>
+
 #include <sfz/containers/DynArray.hpp>
 #include <sfz/math/Vector.hpp>
 
 #include "config/Setting.hpp"
 
 namespace sfz {
+
+using std::numeric_limits;
 
 // Config structs
 // ------------------------------------------------------------------------------------------------
@@ -87,6 +91,27 @@ public:
 
 	const WindowConfig& windowCfg() const noexcept;
 	const GraphicsConfig& graphcisCfg() const noexcept;
+
+	// Sanitizers
+	// --------------------------------------------------------------------------------------------
+
+	/// A sanitizer is basically a wrapper around "getCreateSetting()", with the addition that it
+	/// also ensures that the Setting is of the requested type and with values in the specified
+	/// range. Values below or above min or max value are clamped. If the setting does not exist
+	/// or is of an incompatible type it will be set to the specified default value.
+
+	Setting* sanitizeInt(const char* section, const char* key,
+	                     int32_t defaultValue = 0,
+	                     int32_t minValue = numeric_limits<int32_t>::min(),
+	                     int32_t maxValue = numeric_limits<int32_t>::max()) noexcept;
+
+	Setting* sanitizeFloat(const char* section, const char* key,
+	                       float defaultValue = 0.0f,
+	                       float minValue = numeric_limits<float>::min(),
+	                       float maxValue = numeric_limits<float>::max()) noexcept;
+
+	Setting* sanitizeBool(const char* section, const char* key,
+	                      bool defaultValue = false) noexcept;
 
 private:
 	// Private constructors & destructors
