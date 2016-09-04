@@ -10,20 +10,20 @@ namespace sfz {
 
 bool rayIntersectsAabb(const vec3& origin, const vec3& dir, const AABB& aabb)
 {
-	float tx1 = (aabb.min().x - origin.x) / dir.x;
-	float tx2 = (aabb.max().x - origin.x) / dir.x;
+	float tx1 = (aabb.min.x - origin.x) / dir.x;
+	float tx2 = (aabb.max.x - origin.x) / dir.x;
 
 	float tmin = std::min(tx1, tx2);
 	float tmax = std::max(tx1, tx2);
 
-	float ty1 = (aabb.min().y - origin.y) / dir.y;
-	float ty2 = (aabb.max().y - origin.y) / dir.y;
+	float ty1 = (aabb.min.y - origin.y) / dir.y;
+	float ty2 = (aabb.max.y - origin.y) / dir.y;
 
 	tmin = std::max(tmin, std::min(ty1, ty2));
 	tmax = std::min(tmax, std::max(ty1, ty2));
 
-	float tz1 = (aabb.min().z - origin.z) / dir.z;
-	float tz2 = (aabb.max().z - origin.z) / dir.z;
+	float tz1 = (aabb.min.z - origin.z) / dir.z;
+	float tz2 = (aabb.max.z - origin.z) / dir.z;
 
 	tmin = std::max(tmin, std::min(tz1, tz2));
 	tmax = std::min(tmax, std::max(tz1, tz2));
@@ -74,13 +74,13 @@ AABB AabbTree::aabbFromUseExisting(const DynArray<uint32_t>& triangleInds) noexc
 
 	// Initialize to first vertex
 	const AABB& firstAabb = triangleAabbs[triangleInds[0]];
-	vec3 min = firstAabb.min();
-	vec3 max = firstAabb.max();
+	vec3 min = firstAabb.min;
+	vec3 max = firstAabb.max;
 
 	for (const uint32_t triangleInd : triangleInds) {
 		const AABB& aabb = triangleAabbs[triangleInd];
-		min = sfz::min(min, aabb.min());
-		max = sfz::max(max, aabb.max());
+		min = sfz::min(min, aabb.min);
+		max = sfz::max(max, aabb.max);
 	}
 	return AABB(min, max);
 }
@@ -127,7 +127,7 @@ void AabbTree::fillNode(uint32_t nodeInd, DynArray<BvhNode>& nodes, const DynArr
 		splitAxis = 2;
 	}
 
-	float axisSplitPos = node.aabb.min()[splitAxis] + maxAxisLength / 2.0f;
+	float axisSplitPos = node.aabb.min[splitAxis] + maxAxisLength / 2.0f;
 
 	DynArray<uint32_t> leftTriangles;
 	DynArray<uint32_t> rightTriangles;
@@ -146,7 +146,7 @@ void AabbTree::fillNode(uint32_t nodeInd, DynArray<BvhNode>& nodes, const DynArr
 	bool leftSmaller = leftTriangles.size() < rightTriangles.size();
 	DynArray<uint32_t>& smallerList = leftSmaller ? leftTriangles : rightTriangles;
 	DynArray<uint32_t>& largerList = leftSmaller ? rightTriangles : leftTriangles;
-	float smallerExtremePos = leftSmaller ? node.aabb.min()[splitAxis] : node.aabb.max()[splitAxis];
+	float smallerExtremePos = leftSmaller ? node.aabb.min[splitAxis] : node.aabb.max[splitAxis];
 
 	// Handle edge case of everything going in one bin by manually copying over one of the triangles
 	if (smallerList.size() == 0) {
