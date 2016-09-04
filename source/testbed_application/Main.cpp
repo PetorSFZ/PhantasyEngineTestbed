@@ -1,5 +1,7 @@
 // Copyright (c) Peter Hillerström (skipifzero.com, peter@hstroem.se)
 
+#include <chrono>
+
 #include <sfz/memory/New.hpp>
 #include <sfz/Screens.hpp>
 #include <sfz/util/IO.hpp>
@@ -71,9 +73,75 @@ int main(int, char**)
 		break;
 	}
 
+	// Load level
+	UniquePtr<Level> level = makeUnique<Level>();
+	// TODO: Make a setting instead
+#ifdef DEV_NOT_USING_SPONZA
+	bool sponza = false;
+#else
+	bool sponza = true;
+#endif
+	
+	StackString192 modelsPath;
+	modelsPath.printf("%sresources/models/", basePath());
+	using time_point = std::chrono::high_resolution_clock::time_point;
+	time_point before = std::chrono::high_resolution_clock::now();
+
+	if (sponza) {
+		
+		level->scene.staticRenderables.add(assimpLoadSponza(modelsPath.str, "sponzaPBR/sponzaPBR.obj"));
+	
+		time_point after = std::chrono::high_resolution_clock::now();
+		using FloatSecond = std::chrono::duration<float>;
+		float delta = std::chrono::duration_cast<FloatSecond>(after - before).count();
+		printf("Time spent loading sponza: %.3f seconds\n", delta);
+
+		// Add lights to the scene
+		vec3 colours[]{
+			vec3{ 1.0f, 0.0f, 0.0f },
+			vec3{ 1.0f, 0.0f, 1.0f },
+			vec3{ 0.0f, 1.0f, 1.0f },
+			vec3{ 1.0f, 1.0f, 0.0f },
+			vec3{ 0.0f, 1.0f, 0.0f }
+		};
+		for (int i = 0; i < 5; i++) {
+			PointLight pointLight;
+			pointLight.pos = vec3{ -50.0f + 25.0f * i , 5.0f, 0.0f };
+			pointLight.range = 50.0f;
+			pointLight.strength = 100.0f * colours[i];
+			level->scene.staticPointLights.add(pointLight);
+		}
+	}
+	else {
+		Renderable testRenderable;
+		RenderableComponent testComponent;
+		Vertex v1;
+		v1.pos ={-0.5f, 2.0f, -2.0f};
+		v1.normal ={0.0f, 0.0f, 0.0f};
+		v1.uv ={0.0f, 1.0f};
+
+		Vertex v2;
+		v2.pos ={0.0f, 2.0f, -2.0f};
+		v2.uv ={1.0f, 1.0f};
+
+		Vertex v3;
+		v3.pos ={0.0f, 2.5f, -2.0f};
+		v3.uv ={1.0f, 0.0f};
+
+		Vertex testVertices[3] ={v1, v2, v3};
+		uint32_t indices[3] ={0, 1, 2};
+		testComponent.geometry.vertices.add(testVertices, 3);
+		testComponent.geometry.indices.add(indices, 3);
+		testComponent.glModel.load(testComponent.geometry);
+
+		testRenderable.components.add(std::move(testComponent));
+		level->scene.staticRenderables.add(std::move(testRenderable));
+	}
+
 	// Run gameloop
 	sfz::runGameLoop(engine.window(), SharedPtr<BaseScreen>(sfz_new<GameScreen>(
 		UniquePtr<GameLogic>(sfz_new<TestbedLogic>()),
+		std::move(level),
 		std::move(renderer)
 	)));
 

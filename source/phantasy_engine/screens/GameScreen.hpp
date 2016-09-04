@@ -5,12 +5,10 @@
 #include <sfz/gl/Program.hpp>
 #include <sfz/screens/BaseScreen.hpp>
 
+#include "level/Level.hpp"
 #include "renderers/BaseRenderer.hpp"
 #include "renderers/ViewFrustum.hpp"
 #include "renderers/FullscreenTriangle.hpp"
-#include "resources/Renderable.hpp"
-
-#include "level/Scene.hpp"
 
 namespace sfz {
 
@@ -21,6 +19,9 @@ using gl::Program;
 
 class GameScreen; // Forward declare
 
+/// Class responsible for handling the update() step of a GameScreen. It is free to do anything
+/// that a normal sfz::Screen is allowed to do, such as changing screens, exiting the game loop,
+/// modify members of GameScreen, etc.
 class GameLogic {
 public:
 	virtual UpdateOp update(GameScreen& screen, UpdateState& state) noexcept = 0;
@@ -29,14 +30,19 @@ public:
 // GameScreen
 // ------------------------------------------------------------------------------------------------
 
+/// The component that ties PhantasyEngine together. A GameScreen has three major components,
+/// a game logic component, a level and a renderer. It is responsible for applying the game logic
+/// every frame and then rendering the level.
 class GameScreen final : public sfz::BaseScreen {
 public:
 	// Public members
 	// --------------------------------------------------------------------------------------------
 
 	UniquePtr<GameLogic> gameLogic;
+	UniquePtr<Level> level;
 	UniquePtr<BaseRenderer> renderer;
 
+	// TODO: Come up with something better than these?
 	ViewFrustum cam;
 	CameraMatrices matrices;
 
@@ -49,7 +55,8 @@ public:
 	GameScreen(GameScreen&&) = delete;
 	GameScreen& operator= (GameScreen&&) = delete;
 
-	GameScreen(UniquePtr<GameLogic>&& gameLogic, UniquePtr<BaseRenderer>&& renderer) noexcept;
+	GameScreen(UniquePtr<GameLogic>&& gameLogic, UniquePtr<Level>&& level,
+	           UniquePtr<BaseRenderer>&& renderer) noexcept;
 
 	// Overriden methods from sfz::BaseScreen
 	// --------------------------------------------------------------------------------------------
@@ -72,12 +79,6 @@ private:
 	Framebuffer mResultFB, mGammaCorrectedFB;
 	Program mScalingShader, mGammaCorrectionShader;
 	FullscreenTriangle mFullscreenTriangle;
-
-	// Temp
-	Renderable mSponza;
-	Renderable mSnakeRenderable;
-
-	Scene scene;
 };
 
 } // namespace sfz
