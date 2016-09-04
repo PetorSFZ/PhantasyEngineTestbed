@@ -28,7 +28,8 @@ public:
 	// Virtual methods from BaseRenderer interface
 	// --------------------------------------------------------------------------------------------
 
-	RenderResult render(const DynArray<DrawOp>& operations,
+	RenderResult render(Framebuffer& resultFB,
+	                    const DynArray<DrawOp>& operations,
 	                    const DynArray<PointLight>& pointLights) noexcept override final;
 	void prepareForScene(const Scene& scene) noexcept override final;
 
@@ -44,8 +45,7 @@ private:
 
 	// Private members
 	// --------------------------------------------------------------------------------------------
-	
-	Framebuffer mResult;
+
 	std::unique_ptr<vec4[]> mTexture;
 	AabbTree aabbBvh;
 };

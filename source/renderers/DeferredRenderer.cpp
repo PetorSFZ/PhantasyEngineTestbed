@@ -37,7 +37,8 @@ DeferredRenderer::DeferredRenderer() noexcept
 // DeferredRenderer: Virtual methods from BaseRenderer interface
 // ------------------------------------------------------------------------------------------------
 
-RenderResult DeferredRenderer::render(const DynArray<DrawOp>& operations,
+RenderResult DeferredRenderer::render(Framebuffer& resultFB,
+                                      const DynArray<DrawOp>& operations,
                                       const DynArray<PointLight>& pointLights) noexcept
 {
 	const mat4 viewMatrix = mMatrices.headMatrix * mMatrices.originMatrix;
@@ -140,7 +141,7 @@ RenderResult DeferredRenderer::render(const DynArray<DrawOp>& operations,
 	glBlendEquation(GL_FUNC_ADD);
 	glBlendFunc(GL_ONE, GL_ONE);
 
-	mResult.bindViewportClearColorDepth(vec2i(0.0), mTargetResolution, vec4(0.0f), 0.0f);
+	resultFB.bindViewportClearColorDepth(vec2i(0.0), mTargetResolution, vec4(0.0f), 0.0f);
 	mShadingShader.useProgram();
 
 	gl::setUniform(mShadingShader, "uInvProjMatrix", invProjMatrix);
@@ -175,8 +176,7 @@ RenderResult DeferredRenderer::render(const DynArray<DrawOp>& operations,
 	}
 
 	RenderResult tmp;
-	tmp.colorTex = mResult.texture(0);
-	tmp.colorTexRenderedRes = mTargetResolution;
+	tmp.renderedRes = mTargetResolution;
 	return tmp;
 }
 
@@ -197,10 +197,6 @@ void DeferredRenderer::targetResolutionUpdated() noexcept
 	          .addTexture(GBUFFER_NORMAL, FBTextureFormat::RGB_F16, FBTextureFiltering::LINEAR)
 	          .addTexture(GBUFFER_ALBEDO, FBTextureFormat::RGB_U8, FBTextureFiltering::LINEAR)
 	          .addTexture(GBUFFER_MATERIAL, FBTextureFormat::RG_U8, FBTextureFiltering::LINEAR) // Roughness, metallic
-	          .build();
-
-	mResult = FramebufferBuilder(mTargetResolution)
-	          .addTexture(0, FBTextureFormat::RGBA_U16, FBTextureFiltering::LINEAR)
 	          .build();
 }
 

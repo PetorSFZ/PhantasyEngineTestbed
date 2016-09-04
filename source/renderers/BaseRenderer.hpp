@@ -60,8 +60,7 @@ struct DrawOp final {
 };
 
 struct RenderResult final {
-	uint32_t colorTex = 0;
-	vec2i colorTexRenderedRes = vec2i(0);
+	vec2i renderedRes = vec2i(0);
 };
 
 // BaseRenderer
@@ -77,7 +76,11 @@ public:
 	// Virtual methods
 	// --------------------------------------------------------------------------------------------
 	
-	virtual RenderResult render(const DynArray<DrawOp>& operations,
+	/// The resultFB framebuffer is required to have a color texture (rgba 16bit float) and a
+	/// depth texture of type 32bit float, the resolution of the framebuffer must be the same
+	/// as the target resolution of the renderer.
+	virtual RenderResult render(Framebuffer& resultFB,
+	                            const DynArray<DrawOp>& operations,
 	                            const DynArray<PointLight>& pointLights) noexcept = 0;
 
 	virtual void prepareForScene(const Scene& scene) noexcept = 0;

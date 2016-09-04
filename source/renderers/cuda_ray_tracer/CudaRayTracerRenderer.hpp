@@ -26,8 +26,9 @@ public:
 	// Virtual methods from BaseRenderer interface
 	// --------------------------------------------------------------------------------------------
 
-	RenderResult render(const DynArray<DrawOp>& operations,
-	                            const DynArray<PointLight>& pointLights) noexcept override final;
+	RenderResult render(Framebuffer& resultFB,
+	                    const DynArray<DrawOp>& operations,
+	                    const DynArray<PointLight>& pointLights) noexcept override final;
 	void prepareForScene(const Scene& scene) noexcept override final;
 
 protected:

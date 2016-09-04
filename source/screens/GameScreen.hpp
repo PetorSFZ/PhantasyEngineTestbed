@@ -59,7 +59,7 @@ private:
 	CameraMatrices mMatrices;
 	DynArray<DrawOp> mDrawOps;
 
-	Framebuffer mGammaCorrectedFB;
+	Framebuffer mResultFB, mGammaCorrectedFB;
 	Program mScalingShader, mGammaCorrectionShader;
 	FullscreenTriangle mFullscreenTriangle;
 

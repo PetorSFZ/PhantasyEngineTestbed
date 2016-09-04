@@ -246,7 +246,7 @@ void GameScreen::render(UpdateState& state)
 		mDrawOps.add(DrawOp(scalingMatrix4<float>(0.05f), &renderable));
 	}
 	mDrawOps.add(DrawOp(identityMatrix4<float>(), &mSnakeRenderable));
-	RenderResult res = mRendererPtr->render(mDrawOps, scene.staticPointLights);
+	RenderResult res = mRendererPtr->render(mResultFB, mDrawOps, scene.staticPointLights);
 
 	glDisable(GL_BLEND);
 	glEnable(GL_CULL_FACE);
@@ -257,7 +257,7 @@ void GameScreen::render(UpdateState& state)
 	mGammaCorrectedFB.bindViewportClearColor();
 	glUseProgram(mGammaCorrectionShader.handle());
 	gl::setUniform(mGammaCorrectionShader, "uGamma", cfg.windowCfg().screenGamma->floatValue());
-	glBindTexture(GL_TEXTURE_2D, res.colorTex);
+	glBindTexture(GL_TEXTURE_2D, mResultFB.texture(0));
 	mFullscreenTriangle.render();
 
 	// Scale result to screen
@@ -269,7 +269,7 @@ void GameScreen::render(UpdateState& state)
 
 	glUseProgram(mScalingShader.handle());
 	glBindTexture(GL_TEXTURE_2D, mGammaCorrectedFB.texture(0));
-	gl::setUniform(mScalingShader, "uViewportRes", vec2(res.colorTexRenderedRes));
+	gl::setUniform(mScalingShader, "uViewportRes", vec2(res.renderedRes));
 	gl::setUniform(mScalingShader, "uDstRes", vec2(drawableDim));
 
 	mFullscreenTriangle.render();
@@ -282,13 +282,21 @@ void GameScreen::render(UpdateState& state)
 
 void GameScreen::reloadFramebuffers(vec2i internalRes) noexcept
 {
+	using gl::FBDepthFormat;
 	using gl::FBTextureFiltering;
 	using gl::FBTextureFormat;
 	using gl::FramebufferBuilder;
 
+	if (mResultFB.dimensions() != internalRes) {
+		mResultFB = FramebufferBuilder(internalRes)
+		            .addTexture(0, FBTextureFormat::RGBA_F16, FBTextureFiltering::LINEAR)
+		            .addDepthTexture(FBDepthFormat::F32, FBTextureFiltering::NEAREST)
+		            .build();
+	}
+
 	if (mGammaCorrectedFB.dimensions() != internalRes) {
 		mGammaCorrectedFB = FramebufferBuilder(internalRes)
-		                    .addTexture(0, FBTextureFormat::RGBA_U16, FBTextureFiltering::LINEAR)
+		                    .addTexture(0, FBTextureFormat::RGBA_F16, FBTextureFiltering::LINEAR)
 		                    .build();
 	}
 }

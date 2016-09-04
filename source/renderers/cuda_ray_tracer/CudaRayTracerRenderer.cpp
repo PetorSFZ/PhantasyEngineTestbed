@@ -73,7 +73,8 @@ CUDARayTracerRenderer::~CUDARayTracerRenderer() noexcept
 // CUDARayTracerRenderer: Virtual methods from BaseRenderer interface
 // ------------------------------------------------------------------------------------------------
 
-RenderResult CUDARayTracerRenderer::render(const DynArray<DrawOp>& operations,
+RenderResult CUDARayTracerRenderer::render(Framebuffer& resultFB,
+                                           const DynArray<DrawOp>& operations,
                                            const DynArray<PointLight>& pointLights) noexcept
 {
 	GLuint glTex = mImpl->glTex;
@@ -96,8 +97,7 @@ RenderResult CUDARayTracerRenderer::render(const DynArray<DrawOp>& operations,
 
 	// Return result from cudaaaa shader
 	RenderResult tmp;
-	tmp.colorTex = result.texture(0);
-	tmp.colorTexRenderedRes = mTargetResolution;
+	tmp.renderedRes = mTargetResolution;
 	return tmp;
 }
 

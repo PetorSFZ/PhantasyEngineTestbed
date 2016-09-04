@@ -30,9 +30,11 @@ CPURayTracerRenderer::CPURayTracerRenderer() noexcept
 // CPURayTracerRenderer: Virtual methods from BaseRenderer interface
 // ------------------------------------------------------------------------------------------------
 
-RenderResult CPURayTracerRenderer::render(const DynArray<DrawOp>& operations, const DynArray<PointLight>& pointLights) noexcept
+RenderResult CPURayTracerRenderer::render(Framebuffer& resultFB,
+                                          const DynArray<DrawOp>& operations,
+                                          const DynArray<PointLight>& pointLights) noexcept
 {
-	mResult.bindViewportClearColorDepth(vec4(0.0f, 1.0f, 0.0f, 1.0f), 0.0f);
+	resultFB.bindViewportClearColorDepth(vec4(0.0f, 1.0f, 0.0f, 1.0f), 0.0f);
 	
 	mat4 invProjectionMatrix = inverse(mMatrices.projMatrix);
 	
@@ -89,12 +91,11 @@ RenderResult CPURayTracerRenderer::render(const DynArray<DrawOp>& operations, co
 		thread.join();
 	}
 
-	glBindTexture(GL_TEXTURE_2D, mResult.texture(0));
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, mTargetResolution.x, mTargetResolution.y, 0, GL_RGBA, GL_FLOAT, mTexture.get());
+	glBindTexture(GL_TEXTURE_2D, resultFB.texture(0));
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, mTargetResolution.x, mTargetResolution.y, 0, GL_RGBA, GL_FLOAT, mTexture.get());
 	
 	RenderResult tmp;
-	tmp.colorTex = mResult.texture(0);
-	tmp.colorTexRenderedRes = mTargetResolution;
+	tmp.renderedRes = mTargetResolution;
 	return tmp;
 }
 
@@ -143,9 +144,6 @@ void CPURayTracerRenderer::targetResolutionUpdated() noexcept
 	using gl::FramebufferBuilder;
 
 	mTexture = std::unique_ptr<vec4[]>{ new vec4[mTargetResolution.x * mTargetResolution.y] };
-	mResult = FramebufferBuilder(mTargetResolution)
-	          .addTexture(0, FBTextureFormat::RGB_U8, FBTextureFiltering::LINEAR)
-	          .build();
 }
 
 } // namespace sfz
