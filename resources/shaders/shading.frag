@@ -110,7 +110,12 @@ void main()
 	// no shading needs to be performed
 	float nDotL = dot(n, l);
 	float nDotV = dot(n, v);
-	if (nDotL <= 0.0 || nDotV <= 0.0) {
+
+	// Interpolation of normals sometimes makes them face away from the camera. Clamp
+	// these to almost zero, to not break shading calculations.
+	nDotV = max(0.001, nDotV);
+
+	if (nDotL <= 0.0) {
 		outFragColor = vec4(0.0, 0.0, 0.0, 1.0);
 		return;
 	}
