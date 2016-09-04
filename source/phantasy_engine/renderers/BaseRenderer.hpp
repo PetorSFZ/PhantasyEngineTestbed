@@ -6,9 +6,9 @@
 #include <sfz/gl/Framebuffer.hpp>
 #include <sfz/math/Matrix.hpp>
 
-#include "level/Scene.hpp"
-#include "level/PointLight.hpp"
-#include "resources/Renderable.hpp"
+#include "phantasy_engine/level/Scene.hpp"
+#include "phantasy_engine/level/PointLight.hpp"
+#include "phantasy_engine/resources/Renderable.hpp"
 
 namespace sfz {
 

@@ -9,7 +9,7 @@
 #include <cuda_runtime.h>
 
 #include "CUDATest.cuh"
-#include "renderers/FullscreenTriangle.hpp"
+#include "phantasy_engine/renderers/FullscreenTriangle.hpp"
 
 // CUDA helpers
 // ------------------------------------------------------------------------------------------------

@@ -1,6 +1,6 @@
 // Copyright (c) Peter Hillerström (skipifzero.com, peter@hstroem.se)
 
-#include "config/GlobalConfig.hpp"
+#include "phantasy_engine/config/GlobalConfig.hpp"
 
 #include <cstring>
 

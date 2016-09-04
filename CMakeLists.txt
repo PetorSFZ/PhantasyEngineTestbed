@@ -75,7 +75,6 @@ include_directories(
 
 set(PH_SOURCE_DIR ${SOURCE_DIR}/phantasy_engine)
 set(PH_INCLUDE_DIR ${INCLUDE_DIR}/phantasy_engine)
-include_directories(${PH_INCLUDE_DIR})
 
 set(PHANTASY_ENGINE_LIB_FILES
 	${PH_INCLUDE_DIR}/PhantasyEngine.hpp

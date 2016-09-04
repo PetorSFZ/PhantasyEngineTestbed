@@ -1,6 +1,6 @@
 // Copyright (c) Peter Hillerström (skipifzero.com, peter@hstroem.se)
 
-#include "resources/Renderable.hpp"
+#include "phantasy_engine/resources/Renderable.hpp"
 
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
@@ -9,7 +9,7 @@
 #include <sfz/containers/DynString.hpp>
 #include <sfz/containers/HashMap.hpp>
 
-#include "util/IOUtil.hpp"
+#include "phantasy_engine/util/IOUtil.hpp"
 
 namespace sfz {
 

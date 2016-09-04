@@ -1,8 +1,9 @@
 #pragma once
 
-#include <level/PointLight.hpp>
 #include <sfz/containers/DynArray.hpp>
-#include <resources/Renderable.hpp>
+
+#include "phantasy_engine/resources/Renderable.hpp"
+#include "phantasy_engine/level/PointLight.hpp"
 
 namespace sfz {
 

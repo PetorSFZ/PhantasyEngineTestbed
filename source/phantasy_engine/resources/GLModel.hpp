@@ -4,7 +4,7 @@
 
 #include <cstdint>
 
-#include "resources/RawGeometry.hpp"
+#include "phantasy_engine/resources/RawGeometry.hpp"
 
 namespace sfz {
 

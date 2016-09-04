@@ -1,6 +1,6 @@
 #pragma once
 
-#include <screens/GameScreen.hpp>
+#include <phantasy_engine/screens/GameScreen.hpp>
 
 namespace sfz {
 

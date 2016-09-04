@@ -7,7 +7,7 @@
 #include <sfz/containers/DynArray.hpp>
 #include <sfz/math/Vector.hpp>
 
-#include "config/Setting.hpp"
+#include "phantasy_engine/config/Setting.hpp"
 
 namespace sfz {
 

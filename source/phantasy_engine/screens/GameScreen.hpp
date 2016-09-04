@@ -5,10 +5,10 @@
 #include <sfz/gl/Program.hpp>
 #include <sfz/screens/BaseScreen.hpp>
 
-#include "level/Level.hpp"
-#include "renderers/BaseRenderer.hpp"
-#include "renderers/ViewFrustum.hpp"
-#include "renderers/FullscreenTriangle.hpp"
+#include "phantasy_engine/level/Level.hpp"
+#include "phantasy_engine/renderers/BaseRenderer.hpp"
+#include "phantasy_engine/renderers/ViewFrustum.hpp"
+#include "phantasy_engine/renderers/FullscreenTriangle.hpp"
 
 namespace sfz {
 

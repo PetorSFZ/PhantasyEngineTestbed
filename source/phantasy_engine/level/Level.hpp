@@ -1,6 +1,6 @@
 #pragma once
 
-#include "level/Scene.hpp"
+#include "phantasy_engine/level/Scene.hpp"
 
 namespace sfz {
 

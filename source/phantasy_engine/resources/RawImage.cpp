@@ -1,6 +1,6 @@
 // Copyright (c) Peter Hillerström (skipifzero.com, peter@hstroem.se)
 
-#include "resources/RawImage.hpp"
+#include "phantasy_engine/resources/RawImage.hpp"
 
 #include <cmath>
 #include <cstring> // std::memcpy

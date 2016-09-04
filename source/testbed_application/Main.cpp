@@ -6,9 +6,9 @@
 #include <sfz/Screens.hpp>
 #include <sfz/util/IO.hpp>
 
-#include <PhantasyEngine.hpp>
-#include <Config.hpp>
-#include <Renderers.hpp>
+#include <phantasy_engine/PhantasyEngine.hpp>
+#include <phantasy_engine/Config.hpp>
+#include <phantasy_engine/Renderers.hpp>
 
 #include <CudaRayTracerRenderer.hpp>
 

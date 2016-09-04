@@ -1,12 +1,12 @@
 // Copyright (c) Peter Hillerström (skipifzero.com, peter@hstroem.se)
 
-#include "screens/GameScreen.hpp"
+#include "phantasy_engine/screens/GameScreen.hpp"
 
 #include <sfz/gl/IncludeOpenGL.hpp>
 #include <sfz/util/IO.hpp>
 #include <sfz/math/Vector.hpp>
 
-#include "config/GlobalConfig.hpp"
+#include "phantasy_engine/config/GlobalConfig.hpp"
 
 namespace sfz {
 

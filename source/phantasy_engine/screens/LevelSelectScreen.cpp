@@ -1,7 +1,7 @@
 // Copyright (c) Peter Hillerström (skipifzero.com, peter@hstroem.se)
 
-#include "screens/LevelSelectScreen.hpp"
-#include "screens/GameScreen.hpp"
+#include "phantasy_engine/screens/LevelSelectScreen.hpp"
+#include "phantasy_engine/screens/GameScreen.hpp"
 
 namespace sfz {
 

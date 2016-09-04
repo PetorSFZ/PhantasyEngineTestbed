@@ -1,6 +1,6 @@
 // Copyright (c) Peter Hillerström (skipifzero.com, peter@hstroem.se)
 
-#include "renderers/ViewFrustum.hpp"
+#include "phantasy_engine/renderers/ViewFrustum.hpp"
 
 #include <sfz/geometry/AABB.hpp>
 #include <sfz/geometry/Intersection.hpp>

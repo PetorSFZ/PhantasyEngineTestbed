@@ -2,8 +2,8 @@
 
 #pragma once
 
-#include "resources/GLModel.hpp"
-#include "resources/GLTexture.hpp"
-#include "resources/RawGeometry.hpp"
-#include "resources/RawImage.hpp"
-#include "resources/Renderable.hpp"
+#include "phantasy_engine/resources/GLModel.hpp"
+#include "phantasy_engine/resources/GLTexture.hpp"
+#include "phantasy_engine/resources/RawGeometry.hpp"
+#include "phantasy_engine/resources/RawImage.hpp"
+#include "phantasy_engine/resources/Renderable.hpp"

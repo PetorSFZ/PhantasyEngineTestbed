@@ -1,11 +1,11 @@
 // Copyright (c) Peter Hillerström (skipifzero.com, peter@hstroem.se)
 
-#include "renderers/DeferredRenderer.hpp"
-#include "level/PointLight.hpp"
-
 #include <sfz/containers/StackString.hpp>
 #include <sfz/gl/IncludeOpenGL.hpp>
 #include <sfz/util/IO.hpp>
+
+#include "phantasy_engine/renderers/DeferredRenderer.hpp"
+#include "phantasy_engine/level/PointLight.hpp"
 
 namespace sfz {
 

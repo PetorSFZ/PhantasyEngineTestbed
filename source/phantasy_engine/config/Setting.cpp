@@ -1,6 +1,6 @@
 // Copyright (c) Peter Hillerström (skipifzero.com, peter@hstroem.se)
 
-#include "config/Setting.hpp"
+#include "phantasy_engine/config/Setting.hpp"
 
 #include <cmath>
 

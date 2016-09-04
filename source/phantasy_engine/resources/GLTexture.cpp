@@ -1,6 +1,6 @@
 // Copyright (c) Peter Hillerström (skipifzero.com, peter@hstroem.se)
 
-#include "resources/GLTexture.hpp"
+#include "phantasy_engine/resources/GLTexture.hpp"
 
 #include "sfz/gl/IncludeOpenGL.hpp"
 

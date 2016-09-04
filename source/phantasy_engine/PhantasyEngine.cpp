@@ -10,7 +10,7 @@
 #include <sfz/SDL.hpp>
 #include <sfz/util/IO.hpp>
 
-#include "Config.hpp"
+#include "phantasy_engine/Config.hpp"
 
 namespace sfz {
 

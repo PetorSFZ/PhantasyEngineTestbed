@@ -4,8 +4,8 @@
 
 #include <sfz/math/Vector.hpp>
 
-#include "renderers/BaseRenderer.hpp"
-#include "AabbTree.hpp"
+#include "phantasy_engine/renderers/BaseRenderer.hpp"
+#include "phantasy_engine/renderers/cpu_ray_tracer/AabbTree.hpp"
 
 namespace sfz {
 

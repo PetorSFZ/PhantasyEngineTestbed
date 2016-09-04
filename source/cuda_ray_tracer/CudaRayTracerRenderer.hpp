@@ -1,6 +1,6 @@
 #pragma
 
-#include "renderers/BaseRenderer.hpp"
+#include "phantasy_engine/renderers/BaseRenderer.hpp"
 
 namespace sfz {
 

@@ -1,6 +1,6 @@
 // Copyright (c) Peter Hillerström (skipifzero.com, peter@hstroem.se)
 
-#include "resources/GLModel.hpp"
+#include "phantasy_engine/resources/GLModel.hpp"
 
 #include <algorithm>
 #include <cstddef> // offsetof()

@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "resources/RawImage.hpp"
+#include "phantasy_engine/resources/RawImage.hpp"
 
 namespace sfz {
 

@@ -4,8 +4,8 @@
 
 #include <sfz/gl/Program.hpp>
 
-#include "renderers/BaseRenderer.hpp"
-#include "renderers/FullscreenTriangle.hpp"
+#include "phantasy_engine/renderers/BaseRenderer.hpp"
+#include "phantasy_engine/renderers/FullscreenTriangle.hpp"
 
 namespace sfz {
 

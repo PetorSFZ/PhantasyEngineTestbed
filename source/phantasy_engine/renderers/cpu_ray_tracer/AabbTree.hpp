@@ -4,7 +4,7 @@
 #include <sfz/geometry/AABB.hpp>
 #include <sfz/math/Vector.hpp>
 
-#include "resources/Renderable.hpp"
+#include "phantasy_engine/resources/Renderable.hpp"
 
 namespace sfz {
 

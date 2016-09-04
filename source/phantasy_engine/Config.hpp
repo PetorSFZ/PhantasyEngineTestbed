@@ -2,5 +2,5 @@
 
 #pragma once
 
-#include "config/GlobalConfig.hpp"
-#include "config/Setting.hpp"
+#include "phantasy_engine/config/GlobalConfig.hpp"
+#include "phantasy_engine/config/Setting.hpp"

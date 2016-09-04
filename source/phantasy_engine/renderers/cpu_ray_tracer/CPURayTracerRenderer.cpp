@@ -1,4 +1,4 @@
-#include "CPURayTracerRenderer.hpp"
+#include "phantasy_engine/renderers/cpu_ray_tracer/CPURayTracerRenderer.hpp"
 
 #include <chrono>
 #include <thread>

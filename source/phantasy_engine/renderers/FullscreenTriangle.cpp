@@ -1,4 +1,4 @@
-#include "renderers/FullscreenTriangle.hpp"
+#include "phantasy_engine/renderers/FullscreenTriangle.hpp"
 
 #include <algorithm>
 

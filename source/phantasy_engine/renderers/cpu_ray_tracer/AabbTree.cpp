@@ -1,4 +1,4 @@
-#include "AabbTree.hpp"
+#include "phantasy_engine/renderers/cpu_ray_tracer/AabbTree.hpp"
 
 #include <chrono>
 
