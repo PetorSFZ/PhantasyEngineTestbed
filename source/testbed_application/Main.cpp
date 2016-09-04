@@ -18,6 +18,16 @@ using namespace sfz;
 using namespace sfz::gl;
 using namespace sfz::sdl;
 
+// Statics
+// ------------------------------------------------------------------------------------------------
+
+static void ensureIniDirectoryExists()
+{
+	StackString256 tmp;
+	tmp.printf("%sPhantasyEngineTestbed", sfz::gameBaseFolderPath());
+	sfz::createDirectory(tmp.str);
+}
+
 // Main
 // ------------------------------------------------------------------------------------------------
 
@@ -25,6 +35,7 @@ int main(int, char**)
 {
 	// Initialize phantasy engine
 	PhantasyEngine& engine = PhantasyEngine::instance();
+	ensureIniDirectoryExists();
 	engine.init(sfz::gameBaseFolderPath(), "PhantasyEngineTestbed/Config.ini");
 
 	// Retrieve global config and add testbed specific settings
