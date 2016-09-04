@@ -114,8 +114,6 @@ set(PHANTASY_ENGINE_LIB_FILES
 	${PH_INCLUDE_DIR}/Screens.hpp
 	${PH_INCLUDE_DIR}/screens/GameScreen.hpp
 	 ${PH_SOURCE_DIR}/screens/GameScreen.cpp
-	${PH_INCLUDE_DIR}/screens/LevelSelectScreen.hpp
-	 ${PH_SOURCE_DIR}/screens/LevelSelectScreen.cpp
 
 	${PH_INCLUDE_DIR}/level/Level.hpp
 	${PH_INCLUDE_DIR}/level/PointLight.hpp
