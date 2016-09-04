@@ -8,7 +8,7 @@
 #include <cuda_gl_interop.h>
 #include <cuda_runtime.h>
 
-#include "renderers/cuda_ray_tracer/CUDATest.cuh"
+#include "CUDATest.cuh"
 #include "renderers/FullscreenTriangle.hpp"
 
 // CUDA helpers

@@ -78,6 +78,9 @@ set(PH_INCLUDE_DIR ${INCLUDE_DIR}/phantasy_engine)
 include_directories(${PH_INCLUDE_DIR})
 
 set(PHANTASY_ENGINE_LIB_FILES
+	${PH_INCLUDE_DIR}/PhantasyEngine.hpp
+	 ${PH_SOURCE_DIR}/PhantasyEngine.cpp
+
 	${PH_INCLUDE_DIR}/Config.hpp
 	${PH_INCLUDE_DIR}/config/GlobalConfig.hpp
 	 ${PH_SOURCE_DIR}/config/GlobalConfig.cpp
@@ -176,7 +179,10 @@ set(TB_INCLUDE_DIR ${INCLUDE_DIR}/testbed_application)
 include_directories(${TB_INCLUDE_DIR})
 
 set(PHANTASY_ENGINE_TESTBED_FILES
-	 ${TB_SOURCE_DIR}/Main.cpp)
+	 ${TB_SOURCE_DIR}/Main.cpp
+
+	${TB_INCLUDE_DIR}/TestbedLogic.hpp
+	 ${TB_SOURCE_DIR}/TestbedLogic.cpp)
 set_directory_source_group(${PHANTASY_ENGINE_TESTBED_FILES})
 
 add_executable(PhantasyEngineTestbed ${PHANTASY_ENGINE_TESTBED_FILES})

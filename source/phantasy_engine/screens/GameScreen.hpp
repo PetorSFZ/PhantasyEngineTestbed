@@ -15,14 +15,41 @@
 namespace sfz {
 
 using gl::Program;
-using sdl::ButtonState;
 
-class GameScreen : public sfz::BaseScreen {
+// GameScreen updatable
+// ------------------------------------------------------------------------------------------------
+
+class GameScreen; // Forward declare
+
+class GameLogic {
 public:
+	virtual UpdateOp update(GameScreen& screen, UpdateState& state) noexcept = 0;
+};
+
+// GameScreen
+// ------------------------------------------------------------------------------------------------
+
+class GameScreen final : public sfz::BaseScreen {
+public:
+	// Public members
+	// --------------------------------------------------------------------------------------------
+
+	UniquePtr<GameLogic> gameLogic;
+	UniquePtr<BaseRenderer> renderer;
+
+	ViewFrustum cam;
+	CameraMatrices matrices;
+
 	// Constructors & destructors
 	// --------------------------------------------------------------------------------------------
 
-	GameScreen() noexcept;
+	GameScreen() = delete;
+	GameScreen(const GameScreen&) = delete;
+	GameScreen& operator= (const GameScreen&) = delete;
+	GameScreen(GameScreen&&) = delete;
+	GameScreen& operator= (GameScreen&&) = delete;
+
+	GameScreen(UniquePtr<GameLogic>&& gameLogic, UniquePtr<BaseRenderer>&& renderer) noexcept;
 
 	// Overriden methods from sfz::BaseScreen
 	// --------------------------------------------------------------------------------------------
@@ -31,32 +58,15 @@ public:
 	virtual void render(UpdateState& state) override final;
 
 private:
-	// Private structs
-	// --------------------------------------------------------------------------------------------
-
-	struct EmulatedGameController {
-		sdl::GameControllerState state;
-		ButtonState leftStickUp = ButtonState::NOT_PRESSED;
-		ButtonState leftStickDown = ButtonState::NOT_PRESSED;
-		ButtonState leftStickLeft = ButtonState::NOT_PRESSED;
-		ButtonState leftStickRight = ButtonState::NOT_PRESSED;
-		ButtonState shiftPressed = ButtonState::NOT_PRESSED;
-	};
-	
 	// Private methods
 	// --------------------------------------------------------------------------------------------
 
 	void reloadFramebuffers(vec2i maxResolution) noexcept;
 	void reloadShaders() noexcept;
-	void updateEmulatedController(const DynArray<SDL_Event>& events, const sdl::Mouse& rawMouse) noexcept;
 
 	// Private members
 	// --------------------------------------------------------------------------------------------
 
-	UniquePtr<BaseRenderer> mRendererPtr;
-	EmulatedGameController mEmulatedController;
-	ViewFrustum mCam;
-	CameraMatrices mMatrices;
 	DynArray<DrawOp> mDrawOps;
 
 	Framebuffer mResultFB, mGammaCorrectedFB;

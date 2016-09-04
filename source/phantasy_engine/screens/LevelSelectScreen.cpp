@@ -18,7 +18,8 @@ LevelSelectScreen::LevelSelectScreen() noexcept
 
 UpdateOp LevelSelectScreen::update(UpdateState& state)
 {
-	return UpdateOp(UpdateOpType::SWITCH_SCREEN, SharedPtr<BaseScreen>(sfz_new<GameScreen>()));
+	//return UpdateOp(UpdateOpType::SWITCH_SCREEN, SharedPtr<BaseScreen>(sfz_new<GameScreen>()));
+	return sfz::SCREEN_NO_OP;
 }
 
 void LevelSelectScreen::render(UpdateState& state)

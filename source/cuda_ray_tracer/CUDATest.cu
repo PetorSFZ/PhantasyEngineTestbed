@@ -1,4 +1,4 @@
-#include "renderers/cuda_ray_tracer/CUDATest.cuh"
+#include "CUDATest.cuh"
 
 __global__ void writeBlauImpl(cudaSurfaceObject_t surf, int width, int height)
 {
