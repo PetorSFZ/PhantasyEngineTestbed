@@ -3,10 +3,6 @@ Testbed for what might become Phantasy Engine
 
 Remember kids:
 
-In `build` directory:
-
-	cmake .. -G "Visual Studio 14 2015 Win64"
-
-In `build_cuda` directory:
+We no longer use `build_cuda`, only `build` Run the following command in the `build` directory:
 
 	cmake .. -G "Visual Studio 14 2015 Win64" -DCUDA_TRACER=TRUE

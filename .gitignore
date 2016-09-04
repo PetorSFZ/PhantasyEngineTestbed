@@ -44,4 +44,3 @@ install_manifest.txt
 
 # Build directory
 build/
-build_cuda/
