@@ -1,3 +1,5 @@
+// See 'LICENSE_PHANTASY_ENGINE' for copyright and contributors.
+
 #include "phantasy_engine/renderers/FullscreenTriangle.hpp"
 
 #include <algorithm>

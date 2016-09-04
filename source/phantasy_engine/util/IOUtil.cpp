@@ -1,3 +1,5 @@
+// See 'LICENSE_PHANTASY_ENGINE' for copyright and contributors.
+
 #include "phantasy_engine/util/IOUtil.hpp"
 
 namespace sfz {

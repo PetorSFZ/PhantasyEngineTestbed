@@ -1,4 +1,4 @@
-// Copyright (c) Peter Hillerström (skipifzero.com, peter@hstroem.se)
+// See 'LICENSE_PHANTASY_ENGINE' for copyright and contributors.
 
 #include <sfz/containers/StackString.hpp>
 #include <sfz/gl/IncludeOpenGL.hpp>

@@ -1,3 +1,5 @@
+// See 'LICENSE_PHANTASY_ENGINE' for copyright and contributors.
+
 #include "CUDATest.cuh"
 
 __global__ void writeBlauImpl(cudaSurfaceObject_t surf, int width, int height)

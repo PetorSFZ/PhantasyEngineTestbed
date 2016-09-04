@@ -1,3 +1,5 @@
+// See 'LICENSE_PHANTASY_ENGINE' for copyright and contributors.
+
 #include "CudaRayTracerRenderer.hpp"
 
 #include <sfz/gl/Program.hpp>

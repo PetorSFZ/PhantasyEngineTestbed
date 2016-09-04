@@ -1,3 +1,5 @@
+// See 'LICENSE_PHANTASY_ENGINE' for copyright and contributors.
+
 #pragma
 
 #include "phantasy_engine/renderers/BaseRenderer.hpp"

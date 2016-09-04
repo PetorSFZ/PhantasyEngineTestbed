@@ -1,3 +1,5 @@
+// See 'LICENSE_PHANTASY_ENGINE' for copyright and contributors.
+
 #include "PhantasyEngine.hpp"
 
 #ifdef _WIN32
