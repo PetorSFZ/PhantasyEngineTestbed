@@ -148,7 +148,7 @@ vec4 CPURayTracerRenderer::tracePrimaryRays(vec3 origin, vec3 dir) const noexcep
 	if (!result.intersection.intersected) {
 		return vec4{0.0f, 0.0f, 0.0f, 1.0f};
 	}
-	return vec4(vec3(result.intersection.t * 50.0f), 1.0f);
+	return vec4((vec3(1.0f) + normalize(result.rawGeometryTriangle.v0->normal)) / 2.0f, 1.0f);
 }
 
 } // namespace phe
