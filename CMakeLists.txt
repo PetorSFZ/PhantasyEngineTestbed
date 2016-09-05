@@ -46,6 +46,7 @@ endif()
 # Directories
 set(SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/source)
 set(INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/source)
+set(TESTS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/tests)
 set(EXTERNALS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/externals)
 set(RUNTIME_DIR ${CMAKE_CURRENT_SOURCE_DIR}/runtime)
 
@@ -197,6 +198,35 @@ if(CUDA_TRACER)
 
 		CUDARayTracerLib
 	)
+endif()
+
+# Phantasy Engine Tests
+# ------------------------------------------------------------------------------------------------
+
+if(PHANTASY_ENGINE_BUILD_TESTS)
+
+	# Catch
+	add_subdirectory(${EXTERNALS_DIR}/catch)
+	include_directories(${CATCH_INCLUDE_DIRS})
+
+	# Test files
+	set(PHANTASY_ENGINE_TEST_FILES
+		${TESTS_DIR}/Main_Tests.cpp
+
+		${TESTS_DIR}/renderers/ViewFrustum_Tests.cpp
+	)
+	set_directory_source_group(${PHANTASY_ENGINE_TEST_FILES})
+
+	enable_testing(true)
+	add_executable(PhantasyEngineTests ${PHANTASY_ENGINE_TEST_FILES})
+	target_link_libraries(
+		PhantasyEngineTests
+
+		PhantasyEngineLib
+		${SFZ_CORE_LIBRARIES}
+	)
+	add_test(PhantasyEngineTestsName PhantasyEngineTests)
+
 endif()
 
 # File copying

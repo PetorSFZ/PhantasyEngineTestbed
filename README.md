@@ -5,4 +5,4 @@ Remember kids:
 
 We no longer use `build_cuda`, only `build` Run the following command in the `build` directory:
 
-	cmake .. -G "Visual Studio 14 2015 Win64" -DCUDA_TRACER=TRUE
+	cmake .. -G "Visual Studio 14 2015 Win64" -DCUDA_TRACER=TRUE -DPHANTASY_ENGINE_BUILD_TESTS=TRUE
