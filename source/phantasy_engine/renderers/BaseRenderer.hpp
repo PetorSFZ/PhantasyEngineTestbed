@@ -11,9 +11,14 @@
 #include "phantasy_engine/level/PointLight.hpp"
 #include "phantasy_engine/resources/Renderable.hpp"
 
-namespace sfz {
+namespace phe {
 
-using gl::Framebuffer;
+using sfz::gl::Framebuffer;
+using sfz::mat4;
+using sfz::SharedPtr;
+using sfz::vec2i;
+using sfz::vec3;
+using sfz::identityMatrix4;
 
 // Helper structs
 // ------------------------------------------------------------------------------------------------
@@ -106,4 +111,4 @@ protected:
 	vec2i mTargetResolution = vec2i(0, 0);
 };
 
-} // namespace sfz
+} // namespace phe

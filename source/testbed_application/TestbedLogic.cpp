@@ -2,7 +2,7 @@
 
 #include "TestbedLogic.hpp"
 
-namespace sfz {
+using namespace sfz;
 
 // TestbedLogic: Overriden methods from GameLogic
 // ------------------------------------------------------------------------------------------------
@@ -271,5 +271,3 @@ void TestbedLogic::updateEmulatedController(const DynArray<SDL_Event>& events,
 		mEmulatedController.state.leftTrigger = 1.0f;
 	}
 }
-
-} // namespace sfz

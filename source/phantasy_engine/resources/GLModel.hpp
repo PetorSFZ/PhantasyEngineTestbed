@@ -6,7 +6,7 @@
 
 #include "phantasy_engine/resources/RawGeometry.hpp"
 
-namespace sfz {
+namespace phe {
 
 using std::uint32_t;
 
@@ -52,4 +52,4 @@ private:
 	uint32_t mNumIndices = 0;
 };
 
-} // namespace sfz
+} // namespace phe

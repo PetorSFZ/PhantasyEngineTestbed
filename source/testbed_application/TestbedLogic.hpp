@@ -4,9 +4,14 @@
 
 #include <phantasy_engine/screens/GameScreen.hpp>
 
-namespace sfz {
-
-using sdl::ButtonState;
+using phe::GameLogic;
+using phe::GameScreen;
+using sfz::DynArray;
+using sfz::sdl::ButtonState;
+using sfz::sdl::Mouse;
+using sfz::UpdateOp;
+using sfz::UpdateOpType;
+using sfz::UpdateState;
 
 // TestbedLogic
 // ------------------------------------------------------------------------------------------------
@@ -24,7 +29,7 @@ private:
 	// --------------------------------------------------------------------------------------------
 
 	struct EmulatedGameController {
-		sdl::GameControllerState state;
+		sfz::sdl::GameControllerState state;
 		ButtonState leftStickUp = ButtonState::NOT_PRESSED;
 		ButtonState leftStickDown = ButtonState::NOT_PRESSED;
 		ButtonState leftStickLeft = ButtonState::NOT_PRESSED;
@@ -35,12 +40,10 @@ private:
 	// Private methods
 	// --------------------------------------------------------------------------------------------
 
-	void updateEmulatedController(const DynArray<SDL_Event>& events, const sdl::Mouse& rawMouse) noexcept;
+	void updateEmulatedController(const DynArray<SDL_Event>& events, const Mouse& rawMouse) noexcept;
 
 	// Private members
 	// --------------------------------------------------------------------------------------------
 
 	EmulatedGameController mEmulatedController;
 };
-
-} // namespace sfz

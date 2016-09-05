@@ -11,7 +11,9 @@
 #include <sfz/math/MathHelpers.hpp>
 #include <sfz/memory/Allocators.hpp>
 
-namespace sfz {
+namespace phe {
+
+using namespace sfz;
 
 // RawImage: Methods
 // ------------------------------------------------------------------------------------------------
@@ -86,4 +88,4 @@ RawImage loadImage(const char* basePath, const char* fileName) noexcept
 	return std::move(tmp);
 }
 
-} // namespace sfz
+} // namespace phe

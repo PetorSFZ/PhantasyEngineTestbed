@@ -14,8 +14,9 @@
 
 #include "phantasy_engine/Config.hpp"
 
-namespace sfz {
+namespace phe {
 
+using namespace sfz;
 using namespace sdl;
 using namespace gl;
 
@@ -181,4 +182,4 @@ PhantasyEngine::~PhantasyEngine() noexcept
 	this->destroy();
 }
 
-} // namespace sfz
+} // namespace phe

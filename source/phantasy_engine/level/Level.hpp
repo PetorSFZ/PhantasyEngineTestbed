@@ -6,7 +6,9 @@
 
 #include "phantasy_engine/level/StaticScene.hpp"
 
-namespace sfz {
+namespace phe {
+
+using sfz::SharedPtr;
 
 struct Level final {
 	SharedPtr<StaticScene> staticScene;
@@ -16,4 +18,4 @@ struct Level final {
 	//DynArray<PointLight> pointLights;
 };
 
-} // namespace sfz
+} // namespace phe

@@ -14,7 +14,7 @@ __global__ void writeBlauImpl(cudaSurfaceObject_t surf, int width, int height)
 	}
 }
 
-namespace sfz {
+namespace phe {
 
 void writeBlau(cudaSurfaceObject_t surf, vec2i surfRes, vec2i currRes) noexcept
 {

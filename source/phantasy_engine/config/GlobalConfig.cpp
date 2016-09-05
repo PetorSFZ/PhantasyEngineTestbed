@@ -9,7 +9,9 @@
 #include <sfz/math/MathHelpers.hpp>
 #include <sfz/memory/SmartPointers.hpp>
 
-namespace sfz {
+namespace phe {
+
+using namespace sfz;
 
 // GlobalConfig: Statics
 // ------------------------------------------------------------------------------------------------
@@ -323,4 +325,4 @@ GlobalConfig::~GlobalConfig() noexcept
 	this->destroy();
 }
 
-} // namespace sfz
+} // namespace phe

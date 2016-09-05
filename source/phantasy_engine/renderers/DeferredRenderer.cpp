@@ -7,7 +7,9 @@
 #include "phantasy_engine/renderers/DeferredRenderer.hpp"
 #include "phantasy_engine/level/PointLight.hpp"
 
-namespace sfz {
+namespace phe {
+
+using namespace sfz;
 
 // Statics
 // ------------------------------------------------------------------------------------------------
@@ -199,4 +201,4 @@ void DeferredRenderer::targetResolutionUpdated() noexcept
 	          .build();
 }
 
-} // namespace sfz
+} // namespace phe

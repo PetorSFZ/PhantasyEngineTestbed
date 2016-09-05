@@ -7,9 +7,10 @@
 #include "phantasy_engine/renderers/BaseRenderer.hpp"
 #include "phantasy_engine/renderers/FullscreenTriangle.hpp"
 
-namespace sfz {
+namespace phe {
 
-using gl::Program;
+using sfz::gl::Framebuffer;
+using sfz::gl::Program;
 
 // DeferredRenderer
 // ------------------------------------------------------------------------------------------------
@@ -49,4 +50,4 @@ private:
 	FullscreenTriangle mFullscreenTriangle;
 };
 
-} // namespace sfz
+} // namespace phe

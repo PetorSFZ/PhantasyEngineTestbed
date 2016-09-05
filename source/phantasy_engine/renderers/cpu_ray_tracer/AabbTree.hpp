@@ -8,7 +8,9 @@
 
 #include "phantasy_engine/resources/Renderable.hpp"
 
-namespace sfz {
+namespace phe {
+
+using sfz::AABB;
 
 struct TriangleIntersection {
 	bool intersected;
@@ -62,4 +64,4 @@ private:
 	DynArray<BvhNode> nodes;
 };
 
-} // namespace sfz
+} // namespace phe

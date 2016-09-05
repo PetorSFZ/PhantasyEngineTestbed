@@ -10,7 +10,11 @@
 #include "phantasy_engine/resources/RawGeometry.hpp"
 #include "phantasy_engine/resources/RawImage.hpp"
 
-namespace sfz {
+namespace phe {
+
+using sfz::DynArray;
+using sfz::mat4;
+using sfz::vec3;
 
 // Materials
 // ------------------------------------------------------------------------------------------------
@@ -54,4 +58,4 @@ Renderable assimpLoadSponza(const char* basePath, const char* fileName) noexcept
 
 void modelToWorldSpace(Renderable& renderable, const mat4& modelMatrix) noexcept;
 
-} // namespace sfz
+} // namespace phe

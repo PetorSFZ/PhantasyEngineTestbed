@@ -2,19 +2,24 @@
 
 #pragma once
 
+#include <sfz/geometry/AABB.hpp>
+#include <sfz/geometry/OBB.hpp>
 #include <sfz/geometry/Plane.hpp>
+#include <sfz/geometry/Sphere.hpp>
 #include <sfz/math/Vector.hpp>
 
 // Stupid hack for stupid near/far macros (windows.h)
 #undef near
 #undef far
 
-namespace sfz {
-	
-// Forward declares geometry primitives
-class AABB;
-class OBB;
-class Sphere;
+namespace phe {
+
+using sfz::AABB;
+using sfz::OBB;
+using sfz::Plane;
+using sfz::Sphere;
+using sfz::mat4;
+using sfz::vec3;
 
 class ViewFrustum final {
 public:
@@ -78,4 +83,4 @@ private:
 	Plane mNearPlane, mFarPlane, mUpPlane, mDownPlane, mLeftPlane, mRightPlane;
 };
 
-} // namespace sfz
+} // namespace phe

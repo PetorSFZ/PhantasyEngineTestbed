@@ -4,7 +4,7 @@
 
 #include <cstdint>
 
-namespace sfz {
+namespace phe {
 
 using std::uint32_t;
 
@@ -29,4 +29,4 @@ private:
 	uint32_t mIndexBuffer = 0;
 };
 
-}
+} // namespace phe

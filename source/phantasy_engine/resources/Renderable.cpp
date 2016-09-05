@@ -11,7 +11,9 @@
 
 #include "phantasy_engine/util/IOUtil.hpp"
 
-namespace sfz {
+namespace phe {
+
+using namespace sfz;
 
 // Renderable creation functions
 // ------------------------------------------------------------------------------------------------
@@ -200,4 +202,4 @@ void modelToWorldSpace(Renderable& renderable, const mat4& modelMatrix) noexcept
 	}
 }
 
-} // namespace sfz
+} // namespace phe

@@ -6,7 +6,7 @@
 
 #include "sfz/gl/IncludeOpenGL.hpp"
 
-namespace sfz {
+namespace phe {
 
 using std::int32_t;
 
@@ -88,4 +88,4 @@ void FullscreenTriangle::render() noexcept
 	glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, 0);
 }
 
-}
+} // namespace phe

@@ -8,7 +8,9 @@
 #include <sfz/geometry/Sphere.hpp>
 #include <sfz/math/ProjectionMatrices.hpp>
 
-namespace sfz {
+namespace phe {
+
+using namespace sfz;
 
 // Statics
 // ------------------------------------------------------------------------------------------------
@@ -170,4 +172,4 @@ void ViewFrustum::updatePlanes() noexcept
 	mLeftPlane = Plane{leftPlaneNormal, mPos};
 }
 
-} // namespace sfz
+} // namespace phe

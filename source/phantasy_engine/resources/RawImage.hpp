@@ -2,10 +2,17 @@
 
 #pragma once
 
+#include <cstdint>
+
 #include <sfz/containers/DynArray.hpp>
 #include <sfz/math/Vector.hpp>
 
-namespace sfz {
+namespace phe {
+
+using std::uint8_t;
+using std::uint32_t;
+using sfz::DynArray;
+using sfz::vec2i;
 
 // RawImage
 // ------------------------------------------------------------------------------------------------
@@ -37,4 +44,4 @@ struct RawImage final {
 /// Loads a RawImage from file using stb_image
 RawImage loadImage(const char* basePath, const char* fileName) noexcept;
 
-} // namespace sfz
+} // namespace phe

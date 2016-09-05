@@ -4,7 +4,9 @@
 
 #include <sfz/math/Vector.hpp>
 
-namespace sfz {
+namespace phe {
+
+using sfz::vec3;
 
 struct PointLight {
 	vec3 pos{ 0.0f, 0.0f, 0.0f };
@@ -13,4 +15,4 @@ struct PointLight {
 	bool shadows{ false };
 };
 
-}
+} // namespace phe

@@ -7,8 +7,11 @@
 #include <sfz/containers/DynArray.hpp>
 #include <sfz/math/Vector.hpp>
 
-namespace sfz {
+namespace phe {
 
+using sfz::DynArray;
+using sfz::vec2;
+using sfz::vec3;
 using std::uint32_t;
 
 // Vertex struct
@@ -30,4 +33,4 @@ struct RawGeometry final {
 	DynArray<uint32_t> indices;
 };
 
-} // namespace sfz
+} // namespace phe

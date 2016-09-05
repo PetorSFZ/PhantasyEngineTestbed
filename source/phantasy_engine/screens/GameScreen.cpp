@@ -8,7 +8,9 @@
 
 #include "phantasy_engine/config/GlobalConfig.hpp"
 
-namespace sfz {
+namespace phe {
+
+using namespace sfz;
 
 // GameScreen: Constructors & destructors
 // ------------------------------------------------------------------------------------------------
@@ -135,4 +137,4 @@ void GameScreen::reloadShaders() noexcept
 	}
 }
 
-} // namespace sfz
+} // namespace phe

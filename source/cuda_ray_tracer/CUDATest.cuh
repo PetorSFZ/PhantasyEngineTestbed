@@ -6,7 +6,9 @@
 
 #include <sfz/math/Vector.hpp>
 
-namespace sfz {
+namespace phe {
+
+using sfz::vec2i;
 
 void writeBlau(cudaSurfaceObject_t surf, vec2i surfRes, vec2i currRes) noexcept;
 

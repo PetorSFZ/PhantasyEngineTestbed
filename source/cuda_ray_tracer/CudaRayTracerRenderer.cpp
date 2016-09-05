@@ -24,7 +24,9 @@ static cudaError_t checkCudaError(const char* file, int line, cudaError_t error)
 	return error;
 }
 
-namespace sfz {
+namespace phe {
+
+using namespace sfz;
 
 // CUDARayTracerRendererImpl
 // ------------------------------------------------------------------------------------------------
@@ -151,4 +153,4 @@ void CUDARayTracerRenderer::targetResolutionUpdated() noexcept
 	CHECK_CUDA_ERROR(cudaCreateSurfaceObject(&mImpl->cudaSurface, &resDesc));
 }
 
-} // namespace sfz
+} // namespace phe

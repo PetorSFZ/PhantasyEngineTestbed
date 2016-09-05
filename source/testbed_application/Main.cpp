@@ -36,13 +36,16 @@ static void ensureIniDirectoryExists()
 
 int main(int, char**)
 {
+	using namespace phe;
+	using namespace sfz;
+
 	// Initialize phantasy engine
 	PhantasyEngine& engine = PhantasyEngine::instance();
 	ensureIniDirectoryExists();
 	engine.init("Phantasy Engine - Testbed", sfz::gameBaseFolderPath(), "PhantasyEngineTestbed/Config.ini");
 
 	// Retrieve global config and add testbed specific settings
-	sfz::GlobalConfig& cfg = sfz::GlobalConfig::instance();
+	GlobalConfig& cfg = GlobalConfig::instance();
 	Setting* renderingBackendSetting = cfg.sanitizeInt("PhantasyEngineTestbed", "renderingBackend", 0, 0, 2);
 	Setting* useSponzaSetting = cfg.sanitizeBool("PhantasyEngineTestbed", "useSponza", true);
 

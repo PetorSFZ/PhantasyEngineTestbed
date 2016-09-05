@@ -6,8 +6,10 @@
 
 #include <sfz/containers/StackString.hpp>
 
-namespace sfz {
+namespace phe {
 
+using sfz::StackString64;
+using sfz::StackString192;
 using std::int32_t;
 
 // Setting
@@ -65,4 +67,4 @@ private:
 	};
 };
 
-} // namespace sfz
+} // namespace phe

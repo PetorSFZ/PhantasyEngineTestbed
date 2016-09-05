@@ -7,7 +7,7 @@
 
 #include <sfz/gl/IncludeOpenGL.hpp>
 
-namespace sfz {
+namespace phe {
 
 // GLModel: Constructors & destructors
 // ------------------------------------------------------------------------------------------------
@@ -98,4 +98,4 @@ void GLModel::draw() const noexcept
 	glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(mNumIndices), GL_UNSIGNED_INT, 0);
 }
 
-} // namespace sfz
+} // namespace phe

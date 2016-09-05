@@ -4,7 +4,7 @@
 
 #include <chrono>
 
-namespace sfz {
+namespace phe {
 
 bool rayIntersectsAabb(const vec3& origin, const vec3& dir, const AABB& aabb)
 {
@@ -254,4 +254,4 @@ RaycastResult AabbTree::raycast(vec3 origin, vec3 direction) const noexcept
 	return res;
 }
 
-} // namespace sfz
+} // namespace phe

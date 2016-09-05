@@ -4,7 +4,7 @@
 
 #include "sfz/gl/IncludeOpenGL.hpp"
 
-namespace sfz {
+namespace phe {
 
 // GLTexture: Constructors & destructors
 // ------------------------------------------------------------------------------------------------
@@ -116,4 +116,4 @@ void GLTexture::setFilteringFormat(GLTextureFiltering filtering) noexcept
 	}
 }
 
-} // namespace sfz
+} // namespace phe

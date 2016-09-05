@@ -9,8 +9,10 @@
 
 #include "phantasy_engine/config/Setting.hpp"
 
-namespace sfz {
+namespace phe {
 
+using sfz::DynArray;
+using sfz::vec2i;
 using std::numeric_limits;
 
 // Config structs
@@ -130,4 +132,4 @@ private:
 	GlobalConfigImpl* mImpl = nullptr;
 };
 
-} // namespace sfz
+} // namespace phe

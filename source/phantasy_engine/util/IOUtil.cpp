@@ -2,7 +2,9 @@
 
 #include "phantasy_engine/util/IOUtil.hpp"
 
-namespace sfz {
+namespace phe {
+
+using sfz::DynString;
 
 DynString convertToOSPath(const char *path) noexcept
 {
@@ -28,4 +30,4 @@ DynString convertToOSPath(const char *path) noexcept
 	return outPath;
 }
 
-} // namespace sfz
+} // namespace phe

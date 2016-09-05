@@ -4,20 +4,21 @@
 
 #include <chrono>
 
-
 #include <sfz/gl/IncludeOpenGL.hpp>
 #include <sfz/math/MathHelpers.hpp>
 #include <sfz/math/Matrix.hpp>
 #include <sfz/math/MatrixSupport.hpp>
 
-namespace sfz {
+namespace phe {
+
+using namespace sfz;
 
 // CPURayTracerRenderer: Constructors & destructors
 // ------------------------------------------------------------------------------------------------
 
 CPURayTracerRenderer::CPURayTracerRenderer() noexcept
 {
-
+	
 }
 
 // CPURayTracerRenderer: Virtual methods from BaseRenderer interface
@@ -149,4 +150,4 @@ vec4 CPURayTracerRenderer::tracePrimaryRays(vec3 origin, vec3 dir) const noexcep
 	return vec4(vec3(result.intersection.t * 50.0f), 1.0f);
 }
 
-} // namespace sfz
+} // namespace phe

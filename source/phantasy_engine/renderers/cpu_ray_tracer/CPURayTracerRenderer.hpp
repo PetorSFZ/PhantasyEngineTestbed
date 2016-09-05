@@ -10,7 +10,12 @@
 #include "phantasy_engine/renderers/BaseRenderer.hpp"
 #include "phantasy_engine/renderers/cpu_ray_tracer/AabbTree.hpp"
 
-namespace sfz {
+namespace phe {
+
+using sfz::DynArray;
+using sfz::gl::Framebuffer;
+using sfz::vec3;
+using sfz::vec4;
 
 // CPURayTracerRenderer
 // ------------------------------------------------------------------------------------------------
@@ -55,4 +60,4 @@ private:
 	AabbTree mAabbTree;
 };
 
-} // namespace sfz
+} // namespace phe

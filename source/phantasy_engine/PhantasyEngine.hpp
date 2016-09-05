@@ -4,7 +4,9 @@
 
 #include <sfz/sdl/Window.hpp>
 
-namespace sfz {
+namespace phe {
+
+using sfz::sdl::Window;
 
 // Phantasy Engine singleton class
 // ------------------------------------------------------------------------------------------------
@@ -32,7 +34,7 @@ public:
 	// Getters
 	// --------------------------------------------------------------------------------------------
 
-	sdl::Window& window() noexcept;
+	Window& window() noexcept;
 
 private:
 	// Private constructors & destructors
@@ -52,4 +54,4 @@ private:
 	PhantasyEngineImpl* mImpl = nullptr;
 };
 
-} // namespace sfz
+} // namespace phe

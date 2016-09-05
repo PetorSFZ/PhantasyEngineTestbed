@@ -4,7 +4,7 @@
 
 #include "phantasy_engine/resources/RawImage.hpp"
 
-namespace sfz {
+namespace phe {
 
 // GLTexture class
 // ------------------------------------------------------------------------------------------------
@@ -65,5 +65,4 @@ private:
 	GLTextureFiltering mFiltering;
 };
 
-
-} // namespace sfz
+} // namespace phe

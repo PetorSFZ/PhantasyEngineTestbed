@@ -7,7 +7,9 @@
 #include "phantasy_engine/resources/Renderable.hpp"
 #include "phantasy_engine/level/PointLight.hpp"
 
-namespace sfz {
+namespace phe {
+
+using sfz::DynArray;
 
 // Static scene
 // ------------------------------------------------------------------------------------------------
@@ -24,4 +26,4 @@ struct StaticScene {
 	DynArray<PointLight> pointLights;
 };
 
-} // namespace sfz
+} // namespace phe

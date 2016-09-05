@@ -10,9 +10,15 @@
 #include "phantasy_engine/renderers/ViewFrustum.hpp"
 #include "phantasy_engine/renderers/FullscreenTriangle.hpp"
 
-namespace sfz {
+namespace phe {
 
-using gl::Program;
+using sfz::gl::Framebuffer;
+using sfz::gl::Program;
+using sfz::UniquePtr;
+using sfz::UpdateOp;
+using sfz::UpdateState;
+using sfz::UpdateOpType;
+using sfz::vec2i;
 
 // GameScreen updatable
 // ------------------------------------------------------------------------------------------------
@@ -79,4 +85,4 @@ private:
 	FullscreenTriangle mFullscreenTriangle;
 };
 
-} // namespace sfz
+} // namespace phe

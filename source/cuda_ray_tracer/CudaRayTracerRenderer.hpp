@@ -4,7 +4,7 @@
 
 #include "phantasy_engine/renderers/BaseRenderer.hpp"
 
-namespace sfz {
+namespace phe {
 
 // CUDARayTracerRenderer
 // ------------------------------------------------------------------------------------------------
@@ -45,4 +45,4 @@ private:
 	CUDARayTracerRendererImpl* mImpl = nullptr;
 };
 
-} // namespace sfz
+} // namespace phe

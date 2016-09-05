@@ -6,7 +6,7 @@
 
 #include <sfz/Assert.hpp>
 
-namespace sfz {
+namespace phe {
 
 // Setting: Constructors & destructors
 // ------------------------------------------------------------------------------------------------
@@ -91,4 +91,4 @@ void Setting::setBool(bool value) noexcept
 	this->b = value;
 }
 
-} // namespace sfz
+} // namespace phe
