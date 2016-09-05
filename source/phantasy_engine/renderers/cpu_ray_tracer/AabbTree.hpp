@@ -21,8 +21,15 @@ struct Triangle {
 	vec3 p0, p1, p2;
 };
 
+struct RawGeometryTriangle {
+	const Vertex* v0;
+	const Vertex* v1;
+	const Vertex* v2;
+};
+
 struct RaycastResult {
 	const Triangle* triangle;
+	RawGeometryTriangle rawGeometryTriangle = {nullptr, nullptr, nullptr};
 	TriangleIntersection intersection;
 };
 
@@ -62,6 +69,7 @@ private:
 	DynArray<Triangle> triangles;
 	DynArray<AABB> triangleAabbs;
 	DynArray<BvhNode> nodes;
+	DynArray<RawGeometryTriangle> rawGeometrytriangles;
 };
 
 } // namespace phe

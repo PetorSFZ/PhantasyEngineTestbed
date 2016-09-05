@@ -153,7 +153,8 @@ void AabbTree::fillNode(uint32_t nodeInd, DynArray<BvhNode>& nodes, const DynArr
 breakNestedFor:
 	sfz_assert_debug(leftTriangles.size() != 0);
 	sfz_assert_debug(rightTriangles.size() != 0);
-	sfz_assert_debug(leftTriangles.size() + rightTriangles.size() ==  triangleInds.size());
+	sfz_assert_debug(leftTriangles.size() + rightTriangles.size() == triangleInds.size());
+
 	nodes.add(BvhNode());
 	nodes.add(BvhNode());
 
@@ -177,7 +178,16 @@ void AabbTree::constructFrom(const DynArray<Renderable>& renderables) noexcept
 
 			const DynArray<Vertex>& vertices = rawGeometry.vertices;
 			for (uint32_t i = 0; i < rawGeometry.indices.size() - 2; i += 3) {
-				tmpTriangles.add({vertices[rawGeometry.indices[i]].pos, vertices[rawGeometry.indices[i + 1]].pos, vertices[rawGeometry.indices[i + 2]].pos});
+				tmpTriangles.add({
+					vertices[rawGeometry.indices[i]].pos,
+					vertices[rawGeometry.indices[i + 1]].pos,
+					vertices[rawGeometry.indices[i + 2]].pos
+				});
+				rawGeometrytriangles.add({
+					&vertices[rawGeometry.indices[i]],
+					&vertices[rawGeometry.indices[i + 1]],
+					&vertices[rawGeometry.indices[i + 2]]
+				});
 			}
 		}
 	}
@@ -212,7 +222,7 @@ RaycastResult AabbTree::raycast(vec3 origin, vec3 direction) const noexcept
 	DynArray<uint32_t> nodeStack;
 	nodeStack.add(0);
 
-	const Triangle* closestTriangle = nullptr;
+	uint32_t closestTriangleInd = 0;
 	TriangleIntersection closestIntersection;
 	closestIntersection.intersected = false;
 
@@ -237,7 +247,7 @@ RaycastResult AabbTree::raycast(vec3 origin, vec3 direction) const noexcept
 			TriangleIntersection intersection = rayTriangleIntersect(triangle, origin, direction);
 			if (intersection.intersected && (!closestIntersection.intersected || intersection.t < closestIntersection.t)) {
 				// Replace previous best candidate with a new one
-				closestTriangle = &triangles[node.triangleInd];
+				closestTriangleInd = node.triangleInd;
 				closestIntersection = intersection;
 			}
 		} else {
@@ -250,7 +260,10 @@ RaycastResult AabbTree::raycast(vec3 origin, vec3 direction) const noexcept
 	}
 	RaycastResult res;
 	res.intersection = closestIntersection;
-	res.triangle = closestTriangle;
+	res.triangle = &triangles[closestTriangleInd];
+	if (rawGeometrytriangles.size() > 0) {
+		res.rawGeometryTriangle = rawGeometrytriangles[closestTriangleInd];
+	}
 	return res;
 }
 
