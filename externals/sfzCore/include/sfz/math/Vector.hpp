@@ -241,6 +241,14 @@ Vector<T,N> max(const Vector<T,N>& vector, T scalar) noexcept;
 template<typename T, size_t N>
 Vector<T,N> max(T scalar, const Vector<T,N>& vector) noexcept;
 
+/// Returns the smallest element in a vector (as defined by the min function)
+template<typename T, size_t N>
+T minElement(const Vector<T,N>& vector) noexcept;
+
+/// Returns the largest element in a vector (as defined by the max function)
+template<typename T, size_t N>
+T maxElement(const Vector<T,N>& vector) noexcept;
+
 /// Returns the element-wise abs() of the vector.
 template<typename T, size_t N>
 Vector<T,N> abs(const Vector<T,N>& vector) noexcept;
@@ -281,11 +289,10 @@ Vector<T,N>& operator*= (Vector<T,N>& left, T right) noexcept;
 template<typename T, size_t N>
 Vector<T,N>& operator*= (Vector<T,N>& left, const Vector<T,N>& right) noexcept;
 
-/// sfz_assert_debug: rhs element != 0
 template<typename T, size_t N>
 Vector<T,N>& operator/= (Vector<T,N>& left, T right) noexcept;
 
-/// Element-wise division assignment, @sfz_assert_debug all elements of rhs != 0.
+/// Element-wise division assignment
 template<typename T, size_t N>
 Vector<T,N>& operator/= (Vector<T,N>& left, const Vector<T,N>& right) noexcept;
 
@@ -311,11 +318,10 @@ Vector<T,N> operator* (const Vector<T,N>& left, const Vector<T,N>& right) noexce
 template<typename T, size_t N>
 Vector<T,N> operator* (T left, const Vector<T,N>& right) noexcept;
 
-/// sfz_assert_debug: rhs element != 0 */
 template<typename T, size_t N>
 Vector<T,N> operator/ (const Vector<T,N>& left, T right) noexcept;
 
-/// Element-wise division of two vectors, @sfz_assert_debug all elements of rhs != 0.
+/// Element-wise division of two vectors
 template<typename T, size_t N>
 Vector<T,N> operator/ (const Vector<T,N>& left, const Vector<T,N>& right) noexcept;
 
