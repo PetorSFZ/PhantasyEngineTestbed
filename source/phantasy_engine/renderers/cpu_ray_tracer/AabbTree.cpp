@@ -143,13 +143,8 @@ void AabbTree::fillNode(uint32_t nodeInd, DynArray<BvhNode>& nodes, const DynArr
 				// Intentionally use exact float equality, since no operations should have been
 				// done on the stored values
 				if (vertex[splitAxis] == smallerExtremePos) {
+					largerList.remove(i);
 					smallerList.add(triangleInd);
-					DynArray<uint32_t> tmpList = largerList;
-					largerList.clear();
-					for (int j = 0; j < tmpList.size(); j++) {
-						if (j == i) continue;
-						largerList.add(tmpList[j]);
-					}
 					goto breakNestedFor;
 				}
 			}
