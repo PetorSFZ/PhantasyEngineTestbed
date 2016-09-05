@@ -47,6 +47,7 @@ public:
 	AabbTree() noexcept = default;
 
 	void constructFrom(const DynArray<Renderable>& renderables) noexcept;
+	void constructFrom(DynArray<Triangle> triangles) noexcept;
 
 	/// Find the closest triangle that intersects with the ray, making use of the constructed BVH.
 	RaycastResult raycast(vec3 origin, vec3 direction) const noexcept;

@@ -59,11 +59,11 @@ TriangleIntersection rayTriangleIntersect(const Triangle& triangle, const vec3& 
 	return {true, t, u, v};
 }
 
-/// Expand the AABB defined by min and max to also contain vec.
-void expandAabb(vec3& min, vec3& max, const vec3& vec)
+/// Expand the AABB defined by min and max to also contain point.
+void expandAabb(vec3& min, vec3& max, const vec3& point)
 {
-	max = sfz::max(max, vec);
-	min = sfz::min(min, vec);
+	max = sfz::max(max, point);
+	min = sfz::min(min, point);
 }
 
 /// Given a list of triangles (assumed to have associated AABBs) create an
@@ -180,20 +180,38 @@ breakNestedFor:
 
 void AabbTree::constructFrom(const DynArray<Renderable>& renderables) noexcept
 {
+	DynArray<Triangle> tmpTriangles;
+
 	for (const Renderable& renderable : renderables) {
 		for (const RenderableComponent& component : renderable.components) {
 			const RawGeometry& rawGeometry = component.geometry;
 
+			uint32_t newSize = tmpTriangles.size() + rawGeometry.indices.size() / 3;
+			tmpTriangles.ensureCapacity(newSize);
+
 			const DynArray<Vertex>& vertices = rawGeometry.vertices;
 			for (uint32_t i = 0; i < rawGeometry.indices.size() - 2; i += 3) {
-				triangles.add({vertices[rawGeometry.indices[i]].pos, vertices[rawGeometry.indices[i + 1]].pos, vertices[rawGeometry.indices[i + 2]].pos});
-				triangleAabbs.add(aabbFrom(triangles.size() - 1));
-				sfz_assert_debug(triangleAabbs.size() == triangles.size());
+				tmpTriangles.add({vertices[rawGeometry.indices[i]].pos, vertices[rawGeometry.indices[i + 1]].pos, vertices[rawGeometry.indices[i + 2]].pos});
 			}
 		}
 	}
 
+	constructFrom(std::move(tmpTriangles));
+}
+
+void AabbTree::constructFrom(DynArray<Triangle> trianglesIn) noexcept
+{
+	triangles = std::move(trianglesIn);
+
+	triangleAabbs.ensureCapacity(triangles.size());
+
+	for (uint32_t i = 0; i < triangles.size(); i++) {
+		triangleAabbs.add(aabbFrom(i));
+	}
+	sfz_assert_debug(triangleAabbs.size() == triangles.size());
+
 	DynArray<uint32_t> triangleInds;
+	triangleInds.ensureCapacity(triangles.size());
 	for (uint32_t i = 0; i < triangles.size(); i++) {
 		triangleInds.add(i);
 	}
