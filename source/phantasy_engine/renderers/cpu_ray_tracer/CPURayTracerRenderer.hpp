@@ -42,6 +42,8 @@ protected:
 	void targetResolutionUpdated() noexcept override final;
 
 private:
+	// Private methods
+	// --------------------------------------------------------------------------------------------
 
 	vec4 tracePrimaryRays(vec3 origin, vec3 dir) const noexcept;
 

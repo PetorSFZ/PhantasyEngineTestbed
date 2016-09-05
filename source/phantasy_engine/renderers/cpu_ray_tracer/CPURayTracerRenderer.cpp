@@ -12,15 +12,6 @@
 
 namespace sfz {
 
-vec4 CPURayTracerRenderer::tracePrimaryRays(vec3 origin, vec3 dir) const noexcept
-{
-	RaycastResult result = aabbBvh.raycast(origin, dir);
-	if (!result.intersection.intersected) {
-		return vec4{ 0.0f, 0.0f, 0.0f, 1.0f };
-	}
-	return vec4(vec3(result.intersection.t * 50.0f, 1.0f, 1.0f), 1.0f);
-}
-
 // CPURayTracerRenderer: Constructors & destructors
 // ------------------------------------------------------------------------------------------------
 
@@ -144,6 +135,18 @@ void CPURayTracerRenderer::targetResolutionUpdated() noexcept
 
 	mTexture.ensureCapacity(mTargetResolution.x * mTargetResolution.y);
 	mTexture.setSize(mTargetResolution.x * mTargetResolution.y);
+}
+
+// CPURayTracerRenderer: Private methods
+// ------------------------------------------------------------------------------------------------
+
+vec4 CPURayTracerRenderer::tracePrimaryRays(vec3 origin, vec3 dir) const noexcept
+{
+	RaycastResult result = aabbBvh.raycast(origin, dir);
+	if (!result.intersection.intersected) {
+		return vec4{0.0f, 0.0f, 0.0f, 1.0f};
+	}
+	return vec4(vec3(result.intersection.t * 50.0f), 1.0f);
 }
 
 } // namespace sfz
