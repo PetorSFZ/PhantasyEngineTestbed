@@ -11,6 +11,7 @@
 TEST_CASE("ViewFrustum: Getters", "[ViewFrustum]")
 {
 	using namespace sfz;
+	using namespace phe;
 
 	ViewFrustum frustum(vec3(0.0f, 0.0f, -1.0f), vec3(1.0f, 0.0f, 0.0f), vec3(0.0f, 1.0f, 0.0f), 45.0f, 1.0f, 0.01f, 100.0f);
 
