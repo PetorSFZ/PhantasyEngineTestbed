@@ -188,9 +188,16 @@ target_link_libraries(
 	PhantasyEngineTestbed
 
 	PhantasyEngineLib
-	CUDARayTracerLib
 	${SFZ_CORE_LIBRARIES}
 )
+
+if(CUDA_TRACER)
+	target_link_libraries(
+		PhantasyEngineTestbed
+
+		CUDARayTracerLib
+	)
+endif()
 
 # File copying
 # ------------------------------------------------------------------------------------------------

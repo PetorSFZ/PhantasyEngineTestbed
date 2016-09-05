@@ -10,7 +10,9 @@
 #include <phantasy_engine/Config.hpp>
 #include <phantasy_engine/Renderers.hpp>
 
+#ifdef CUDA_TRACER_AVAILABLE
 #include <CudaRayTracerRenderer.hpp>
+#endif
 
 #include "TestbedLogic.hpp"
 
