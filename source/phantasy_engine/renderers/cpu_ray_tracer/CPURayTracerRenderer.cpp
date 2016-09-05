@@ -73,6 +73,7 @@ RenderResult CPURayTracerRenderer::render(Framebuffer& resultFB) noexcept
 				for (int x = 0; x < this->mTargetResolution.x; x++) {
 					// Final ray direction
 					vec3 rayDir{ dX * float(x) + yLerped};
+					rayDir = normalize(rayDir);
 					this->mTexture[x + rowStartIndex] = tracePrimaryRays(this->mMatrices.position, rayDir);
 				}
 			}
