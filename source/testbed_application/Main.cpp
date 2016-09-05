@@ -27,6 +27,7 @@ static void ensureIniDirectoryExists()
 {
 	StackString256 tmp;
 	tmp.printf("%sPhantasyEngineTestbed", sfz::gameBaseFolderPath());
+	sfz::createDirectory(sfz::gameBaseFolderPath());
 	sfz::createDirectory(tmp.str);
 }
 
