@@ -4,29 +4,15 @@
 
 #include <chrono>
 
-#include <sfz/math/MathHelpers.hpp>
-
 namespace sfz {
 
 bool rayIntersectsAabb(const vec3& origin, const vec3& dir, const AABB& aabb)
 {
-	float tx1 = (aabb.min.x - origin.x) / dir.x;
-	float tx2 = (aabb.max.x - origin.x) / dir.x;
+	vec3 t1 = (aabb.min - origin) / dir;
+	vec3 t2 = (aabb.max - origin) / dir;
 
-	float tmin = std::min(tx1, tx2);
-	float tmax = std::max(tx1, tx2);
-
-	float ty1 = (aabb.min.y - origin.y) / dir.y;
-	float ty2 = (aabb.max.y - origin.y) / dir.y;
-
-	tmin = std::max(tmin, std::min(ty1, ty2));
-	tmax = std::min(tmax, std::max(ty1, ty2));
-
-	float tz1 = (aabb.min.z - origin.z) / dir.z;
-	float tz2 = (aabb.max.z - origin.z) / dir.z;
-
-	tmin = std::max(tmin, std::min(tz1, tz2));
-	tmax = std::min(tmax, std::max(tz1, tz2));
+	float tmin = sfz::maxElement(sfz::min(t1, t2));
+	float tmax = sfz::minElement(sfz::max(t1, t2));
 
 	return tmax >= tmin;
 }
