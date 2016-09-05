@@ -33,9 +33,8 @@ using namespace sfz;
 
 class CUDARayTracerRendererImpl final {
 public:
-	Framebuffer result;
-	gl::Program floatToUintShader;
-	FullscreenTriangle fullscreenQuad;
+	gl::Program transferShader;
+	FullscreenTriangle fullscreenTriangle;
 
 	// Temp
 	GLuint glTex = 0;
@@ -66,7 +65,9 @@ CUDARayTracerRenderer::CUDARayTracerRenderer() noexcept
 
 	StackString128 shadersPath;
 	shadersPath.printf("%sresources/shaders/", basePath());
-	mImpl->floatToUintShader = gl::Program::postProcessFromFile(shadersPath.str, "rgbaf32_to_rgbu8.frag");
+	mImpl->transferShader = gl::Program::postProcessFromFile(shadersPath.str, "transfer.frag");
+	glUseProgram(mImpl->transferShader.handle());
+	gl::setUniform(mImpl->transferShader, "uSrcTexture", 0);
 }
 
 CUDARayTracerRenderer::~CUDARayTracerRenderer() noexcept
@@ -87,15 +88,12 @@ RenderResult CUDARayTracerRenderer::render(Framebuffer& resultFB) noexcept
 	cudaDeviceSynchronize();
 
 	// Convert float texture result from cuda into rgb u8
-	Framebuffer& result = mImpl->result;
-	result.bindViewportClearColorDepth(vec4(0.0f, 0.0f, 0.0f, 0.0f), 0.0f);
-	glUseProgram(mImpl->floatToUintShader.handle());
+	resultFB.bindViewportClearColorDepth(vec4(0.0f, 0.0f, 0.0f, 0.0f), 0.0f);
 
-	gl::setUniform(mImpl->floatToUintShader, "uFloatTexture", 0);
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, glTex);
 
-	mImpl->fullscreenQuad.render();
+	mImpl->fullscreenTriangle.render();
 
 	// Return result from cudaaaa shader
 	RenderResult tmp;
@@ -113,18 +111,12 @@ void CUDARayTracerRenderer::staticSceneChanged() noexcept
 
 void CUDARayTracerRenderer::targetResolutionUpdated() noexcept
 {
-	using gl::FBTextureFiltering;
-	using gl::FBTextureFormat;
-	using gl::FramebufferBuilder;
-
-	mImpl->result = FramebufferBuilder(mTargetResolution)
-	                .addTexture(0, FBTextureFormat::RGB_U8, FBTextureFiltering::LINEAR)
-	                .build();
-
 	glActiveTexture(GL_TEXTURE0);
 
 	// Cleanup eventual previous texture and bindings
-	CHECK_CUDA_ERROR(cudaDestroySurfaceObject(mImpl->cudaSurface));
+	if (mImpl->cudaSurface != 0) {
+		CHECK_CUDA_ERROR(cudaDestroySurfaceObject(mImpl->cudaSurface));
+	}
 	CHECK_CUDA_ERROR(cudaGraphicsUnregisterResource(mImpl->cudaResource));
 	glDeleteTextures(1, &mImpl->glTex);
 
