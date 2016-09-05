@@ -95,13 +95,13 @@ RenderResult CPURayTracerRenderer::render(Framebuffer& resultFB) noexcept
 
 void CPURayTracerRenderer::staticSceneChanged() noexcept
 {
-	aabbBvh = AabbTree();
+	mAabbTree = AabbTree();
 
 	{
 		using time_point = std::chrono::high_resolution_clock::time_point;
 		time_point before = std::chrono::high_resolution_clock::now();
 
-		aabbBvh.constructFrom(mStaticScene->opaqueRenderables);
+		mAabbTree.constructFrom(mStaticScene->opaqueRenderables);
 
 		time_point after = std::chrono::high_resolution_clock::now();
 		using FloatSecond = std::chrono::duration<float>;
@@ -115,7 +115,7 @@ void CPURayTracerRenderer::staticSceneChanged() noexcept
 
 		vec3 origin ={-0.25f, 2.25f, 0.0f};
 		vec3 dir ={0.0f, 0.0f, -1.0f};
-		RaycastResult result = aabbBvh.raycast(origin, dir);
+		RaycastResult result = mAabbTree.raycast(origin, dir);
 
 		time_point after = std::chrono::high_resolution_clock::now();
 		using FloatSecond = std::chrono::duration<float>;
@@ -142,7 +142,7 @@ void CPURayTracerRenderer::targetResolutionUpdated() noexcept
 
 vec4 CPURayTracerRenderer::tracePrimaryRays(vec3 origin, vec3 dir) const noexcept
 {
-	RaycastResult result = aabbBvh.raycast(origin, dir);
+	RaycastResult result = mAabbTree.raycast(origin, dir);
 	if (!result.intersection.intersected) {
 		return vec4{0.0f, 0.0f, 0.0f, 1.0f};
 	}

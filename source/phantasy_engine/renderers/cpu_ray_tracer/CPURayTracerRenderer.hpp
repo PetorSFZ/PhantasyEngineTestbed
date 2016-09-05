@@ -52,7 +52,7 @@ private:
 
 	DynArray<vec4> mTexture;
 	DynArray<std::thread> mThreads;
-	AabbTree aabbBvh;
+	AabbTree mAabbTree;
 };
 
 } // namespace sfz
