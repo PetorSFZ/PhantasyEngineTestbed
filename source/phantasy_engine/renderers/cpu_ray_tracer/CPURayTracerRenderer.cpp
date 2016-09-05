@@ -3,7 +3,7 @@
 #include "phantasy_engine/renderers/cpu_ray_tracer/CPURayTracerRenderer.hpp"
 
 #include <chrono>
-#include <thread>
+
 
 #include <sfz/gl/IncludeOpenGL.hpp>
 #include <sfz/math/MathHelpers.hpp>
@@ -18,7 +18,7 @@ vec4 CPURayTracerRenderer::tracePrimaryRays(vec3 origin, vec3 dir) const noexcep
 	if (!result.intersection.intersected) {
 		return vec4{ 0.0f, 0.0f, 0.0f, 1.0f };
 	}
-	return vec4(vec3(result.intersection.t * 20.0f), 1.0f);
+	return vec4(vec3(result.intersection.t * 50.0f, 1.0f, 1.0f), 1.0f);
 }
 
 // CPURayTracerRenderer: Constructors & destructors
@@ -66,13 +66,12 @@ RenderResult CPURayTracerRenderer::render(Framebuffer& resultFB) noexcept
 	vec3 dX = projOnX / float(mTargetResolution.x);
 	vec3 dY = projOnY / float(mTargetResolution.y);
 
-	DynArray<std::thread> threads;
 	int nThreads = 10;
 	int rowsPerThread = mTargetResolution.y / nThreads;
 
 	// Spawn threads for ray tracing
 	for (int i = 0; i < nThreads; i++) {
-		threads.add(std::thread{ [this, i, topLeftDir, dX, dY, rowsPerThread, nThreads]() {
+		mThreads.add(std::thread{ [this, i, topLeftDir, dX, dY, rowsPerThread, nThreads]() {
 			// Calculate the which row is the last one that the current thread is responsible for
 			int yEnd = i >= nThreads - 1 ? this->mTargetResolution.y : rowsPerThread * (i + 1);
 			for (int y = i * rowsPerThread; y < yEnd; y++) {
@@ -87,12 +86,13 @@ RenderResult CPURayTracerRenderer::render(Framebuffer& resultFB) noexcept
 			}
 		} });
 	}
-	for (std::thread& thread : threads) {
+	for (std::thread& thread : mThreads) {
 		thread.join();
 	}
+	mThreads.clear();
 
 	glBindTexture(GL_TEXTURE_2D, resultFB.texture(0));
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, mTargetResolution.x, mTargetResolution.y, 0, GL_RGBA, GL_FLOAT, mTexture.get());
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, mTargetResolution.x, mTargetResolution.y, 0, GL_RGBA, GL_FLOAT, mTexture.data());
 	
 	RenderResult tmp;
 	tmp.renderedRes = mTargetResolution;
@@ -142,7 +142,8 @@ void CPURayTracerRenderer::targetResolutionUpdated() noexcept
 	using gl::FBTextureFormat;
 	using gl::FramebufferBuilder;
 
-	mTexture = std::unique_ptr<vec4[]>{ new vec4[mTargetResolution.x * mTargetResolution.y] };
+	mTexture.ensureCapacity(mTargetResolution.x * mTargetResolution.y);
+	mTexture.setSize(mTargetResolution.x * mTargetResolution.y);
 }
 
 } // namespace sfz

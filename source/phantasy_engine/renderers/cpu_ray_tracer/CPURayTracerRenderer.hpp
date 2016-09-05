@@ -2,8 +2,9 @@
 
 #pragma once
 
-#include <memory>
+#include <thread>
 
+#include <sfz/containers/DynArray.hpp>
 #include <sfz/math/Vector.hpp>
 
 #include "phantasy_engine/renderers/BaseRenderer.hpp"
@@ -47,7 +48,8 @@ private:
 	// Private members
 	// --------------------------------------------------------------------------------------------
 
-	std::unique_ptr<vec4[]> mTexture;
+	DynArray<vec4> mTexture;
+	DynArray<std::thread> mThreads;
 	AabbTree aabbBvh;
 };
 
