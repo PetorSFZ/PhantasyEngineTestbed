@@ -39,7 +39,7 @@ int main(int, char**)
 	// Initialize phantasy engine
 	PhantasyEngine& engine = PhantasyEngine::instance();
 	ensureIniDirectoryExists();
-	engine.init(sfz::gameBaseFolderPath(), "PhantasyEngineTestbed/Config.ini");
+	engine.init("Phantasy Engine - Testbed", sfz::gameBaseFolderPath(), "PhantasyEngineTestbed/Config.ini");
 
 	// Retrieve global config and add testbed specific settings
 	sfz::GlobalConfig& cfg = sfz::GlobalConfig::instance();

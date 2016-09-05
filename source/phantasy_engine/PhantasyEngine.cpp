@@ -74,7 +74,7 @@ PhantasyEngine& PhantasyEngine::instance() noexcept
 // Phantasy Engine: Methods
 // ------------------------------------------------------------------------------------------------
 
-void PhantasyEngine::init(const char* iniBasePath, const char* iniFileName) noexcept
+void PhantasyEngine::init(const char* projectName, const char* iniBasePath, const char* iniFileName) noexcept
 {
 	if (mImpl != nullptr) {
 		sfz::printErrorMessage("Attempting to initialize PhantasyEngine while already initialized.");
@@ -100,7 +100,7 @@ void PhantasyEngine::init(const char* iniBasePath, const char* iniFileName) noex
 	// Start SDL session and create window
 	mImpl->sdlSession = Session({SDLInitFlags::EVENTS, SDLInitFlags::VIDEO, SDLInitFlags::AUDIO,
 	                             SDLInitFlags::GAMECONTROLLER}, {});
-	mImpl->window = Window("Phantasy Engine - Testbed", wCfg.width->intValue(), wCfg.height->intValue(),
+	mImpl->window = Window(projectName, wCfg.width->intValue(), wCfg.height->intValue(),
 	                       {WindowFlags::OPENGL, WindowFlags::RESIZABLE, WindowFlags::ALLOW_HIGHDPI});
 
 	// OpenGL context

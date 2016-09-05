@@ -23,7 +23,7 @@ public:
 
 	/// Initializes phantasy engine. Should more or less be the first thing you call in your main
 	/// function. It sets up the config system, creates a window, initializes OpenGL, etc.
-	void init(const char* iniBasePath, const char* iniFileName) noexcept;
+	void init(const char* projectName, const char* iniBasePath, const char* iniFileName) noexcept;
 
 	/// Deinitializes phantasy engine. Should be called on shutdown when the engine will no longer
 	/// be used, for example at the end of your main function.
