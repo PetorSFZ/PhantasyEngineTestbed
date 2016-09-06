@@ -32,6 +32,6 @@ UniquePtr<BaseRenderer> createRendererBasedOnConfig() noexcept
 	case 2:
 		renderer = UniquePtr<BaseRenderer>(sfz_new<phe::CPURayTracerRenderer>());
 		break;
-	return renderer;
 	}
+	return renderer;
 }
