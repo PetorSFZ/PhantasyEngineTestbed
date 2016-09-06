@@ -26,7 +26,7 @@ UniquePtr<BaseRenderer> createRendererBasedOnConfig() noexcept
 		renderer = UniquePtr<BaseRenderer>(sfz_new<phe::CUDARayTracerRenderer>());
 #else
 		printf("%s\n", "CUDA not available in this build, using deferred renderer instead.");
-		renderer = UniquePtr<BaseRenderer>(sfz_new<DeferredRenderer>());
+		renderer = UniquePtr<BaseRenderer>(sfz_new<phe::DeferredRenderer>());
 #endif
 		break;
 	case 2:
