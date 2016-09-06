@@ -163,9 +163,29 @@ vec4 CPURayTracerRenderer::tracePrimaryRays(const Ray& ray) const noexcept
 	float v = result.intersection.v;
 
 	vec3 normal = normalize(n0 + (n1 - n0) * u + (n2 - n0) * v);
-	vec2 uv = uv0 + (uv1 - uv0) * u + (uv2 - uv0) * v;
+	vec2 textureUV = uv0 + (uv1 - uv0) * u + (uv2 - uv0) * v;
 
-	return vec4(normal, 1.0f);
+	const Renderable& renderable = *result.rawGeometryTriangle.renderable;
+	const Material& material = result.rawGeometryTriangle.component->material;
+	const DynArray<RawImage>& images = renderable.images;
+	const RawImage albedoImage = images[material.albedoIndex];
+
+	vec2 texDim = vec2(albedoImage.dim);
+
+	// Convert from triangle UV to texture coordinates
+	vec2 scaledUV = textureUV * texDim;
+	scaledUV.x = std::fmod(scaledUV.x, texDim.x);
+	scaledUV.y = std::fmod(scaledUV.y, texDim.y);
+	scaledUV += texDim;
+	scaledUV.x = std::fmod(scaledUV.x, texDim.x);
+	scaledUV.y = std::fmod(scaledUV.y, texDim.y);
+
+	vec2i texCoords = vec2i(std::round(scaledUV.x), std::round(scaledUV.y));
+
+	Vector<uint8_t,3> intColor = Vector<uint8_t,3>(albedoImage.getPixelPtr(texCoords));
+	vec3 albedoColor = vec3(intColor) / 255.0f;
+
+	return vec4(albedoColor, 1.0f);
 }
 
 } // namespace phe
