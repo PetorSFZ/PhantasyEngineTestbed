@@ -237,13 +237,6 @@ RaycastResult AabbTree::raycast(const Ray& ray) const noexcept
 			continue;
 		}
 
-		// AABBs for triangles/leaves are stored in separate array
-		const AABB& aabb = node.isLeaf() ? triangleAabbs[node.triangleInd] : node.aabb;
-
-		if (!rayIntersectsAabb(ray, aabb)) {
-			continue;
-		}
-
 		if (node.isLeaf()) {
 			const Triangle& triangle = triangles[node.triangleInd];
 			TriangleIntersection intersection = rayTriangleIntersect(triangle, ray);
@@ -253,6 +246,10 @@ RaycastResult AabbTree::raycast(const Ray& ray) const noexcept
 				closestIntersection = intersection;
 			}
 		} else {
+			if (!rayIntersectsAabb(ray, node.aabb)) {
+				continue;
+			}
+
 			sfz_assert_debug(node.left != UINT32_MAX);
 			sfz_assert_debug(node.right != UINT32_MAX);
 			nodeStack.add(nodes[nodeInd].left);
