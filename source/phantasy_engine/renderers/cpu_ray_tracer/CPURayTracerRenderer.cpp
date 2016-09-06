@@ -150,7 +150,22 @@ vec4 CPURayTracerRenderer::tracePrimaryRays(const Ray& ray) const noexcept
 	if (!result.intersection.intersected) {
 		return vec4{0.0f, 0.0f, 0.0f, 1.0f};
 	}
-	return vec4((vec3(1.0f) + normalize(result.rawGeometryTriangle.v0->normal)) / 2.0f, 1.0f);
+
+	vec3 n0 = result.rawGeometryTriangle.v0->normal;
+	vec3 n1 = result.rawGeometryTriangle.v1->normal;
+	vec3 n2 = result.rawGeometryTriangle.v2->normal;
+
+	vec2 uv0 = result.rawGeometryTriangle.v0->uv;
+	vec2 uv1 = result.rawGeometryTriangle.v1->uv;
+	vec2 uv2 = result.rawGeometryTriangle.v2->uv;
+
+	float u = result.intersection.u;
+	float v = result.intersection.v;
+
+	vec3 normal = normalize(n0 + (n1 - n0) * u + (n2 - n0) * v);
+	vec2 uv = uv0 + (uv1 - uv0) * u + (uv2 - uv0) * v;
+
+	return vec4(normal, 1.0f);
 }
 
 } // namespace phe
