@@ -26,6 +26,9 @@ CPURayTracerRenderer::CPURayTracerRenderer() noexcept
 
 RenderResult CPURayTracerRenderer::render(Framebuffer& resultFB) noexcept
 {
+	using time_point = std::chrono::high_resolution_clock::time_point;
+	time_point before = std::chrono::high_resolution_clock::now();
+
 	resultFB.bindViewportClearColorDepth(vec4(0.0f, 1.0f, 0.0f, 1.0f), 0.0f);
 	
 	mat4 invProjectionMatrix = inverse(mMatrices.projMatrix);
@@ -90,6 +93,12 @@ RenderResult CPURayTracerRenderer::render(Framebuffer& resultFB) noexcept
 	
 	RenderResult tmp;
 	tmp.renderedRes = mTargetResolution;
+
+	time_point after = std::chrono::high_resolution_clock::now();
+	using FloatSecond = std::chrono::duration<float>;
+	float delta = std::chrono::duration_cast<FloatSecond>(after - before).count();
+	printf("Render time (CPU tracer): %.3f seconds\n", delta);
+
 	return tmp;
 }
 
