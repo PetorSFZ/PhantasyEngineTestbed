@@ -23,6 +23,8 @@ struct Triangle {
 };
 
 struct RawGeometryTriangle {
+	const Renderable* renderable;
+	const RenderableComponent* component;
 	const Vertex* v0;
 	const Vertex* v1;
 	const Vertex* v2;

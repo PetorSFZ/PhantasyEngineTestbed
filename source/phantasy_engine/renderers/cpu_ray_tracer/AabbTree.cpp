@@ -184,6 +184,8 @@ void AabbTree::constructFrom(const DynArray<Renderable>& renderables) noexcept
 					vertices[rawGeometry.indices[i + 2]].pos
 				});
 				rawGeometrytriangles.add({
+					&renderable,
+					&component,
 					&vertices[rawGeometry.indices[i]],
 					&vertices[rawGeometry.indices[i + 1]],
 					&vertices[rawGeometry.indices[i + 2]]
