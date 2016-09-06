@@ -52,6 +52,8 @@ private:
 
 	vec4 tracePrimaryRays(const Ray& ray) const noexcept;
 
+	vec4 traceSecondaryRays(const Ray& ray) const noexcept;
+
 	// Private members
 	// --------------------------------------------------------------------------------------------
 

@@ -144,6 +144,17 @@ void CPURayTracerRenderer::targetResolutionUpdated() noexcept
 // CPURayTracerRenderer: Private methods
 // ------------------------------------------------------------------------------------------------
 
+vec4 CPURayTracerRenderer::traceSecondaryRays(const Ray& ray) const noexcept
+{
+	return vec4(0.0f);
+}
+
+// Reflect u in v, v must be normalized
+vec3 reflect(const vec3 u, const vec3 v) noexcept
+{
+	return u - 2 * dot(u, v) * v;
+}
+
 vec4 CPURayTracerRenderer::tracePrimaryRays(const Ray& ray) const noexcept
 {
 	RaycastResult result = mAabbTree.raycast(ray);
@@ -158,6 +169,8 @@ vec4 CPURayTracerRenderer::tracePrimaryRays(const Ray& ray) const noexcept
 	vec2 uv0 = result.rawGeometryTriangle.v0->uv;
 	vec2 uv1 = result.rawGeometryTriangle.v1->uv;
 	vec2 uv2 = result.rawGeometryTriangle.v2->uv;
+
+	float t = result.intersection.t;
 
 	float u = result.intersection.u;
 	float v = result.intersection.v;
@@ -183,9 +196,48 @@ vec4 CPURayTracerRenderer::tracePrimaryRays(const Ray& ray) const noexcept
 	vec2i texCoords = vec2i(std::round(scaledUV.x), std::round(scaledUV.y));
 
 	Vector<uint8_t,3> intColor = Vector<uint8_t,3>(albedoImage.getPixelPtr(texCoords));
-	vec3 albedoColor = vec3(intColor) / 255.0f;
+	vec3 albedoColour = vec3(intColor) / 255.0f;
 
-	return vec4(albedoColor, 1.0f);
+	vec3 pos = ray.origin + ray.dir * t;
+	vec3 reflectionDir = reflect(ray.dir, normal);
+
+	vec3 colour = vec3(0.0f);
+
+	//for (PointLight light : mStaticScene.get()->pointLights) {
+	PointLight light = mStaticScene.get()->pointLights[2];
+	{
+		vec3 toLight = light.pos - pos;
+		float toLightDist = length(toLight);
+		vec3 l = toLight / toLightDist;
+		vec3 v = normalize(-pos);
+		vec3 h = normalize(l + v);
+
+		float nDotL = dot(normal, l);
+		if (nDotL <= 0.0f) {
+
+		}
+		else {
+			float nDotV = dot(normal, v);
+
+			nDotV = std::max(0.001f, nDotV);
+
+			vec3 diffuse = albedoColour / sfz::PI();
+
+			vec3 specular = vec3(0.0f);
+
+			// Calculates light strength
+			float fallofNumerator = pow(sfz::clamp(1.0f - pow(toLightDist / light.range, 4), 0.0f, 1.0f), 2);
+			float fallofDenominator = (toLightDist * toLightDist + 1.0);
+			float falloff = fallofNumerator / fallofDenominator;
+			vec3 lighting = falloff * light.strength;
+
+			colour += (diffuse + specular) * lighting * nDotV;
+		}
+	}
+
+	vec4 bouncyBounce = traceSecondaryRays({ pos, reflectionDir });
+
+	return vec4(colour, 1.0f) + bouncyBounce;
 }
 
 } // namespace phe
