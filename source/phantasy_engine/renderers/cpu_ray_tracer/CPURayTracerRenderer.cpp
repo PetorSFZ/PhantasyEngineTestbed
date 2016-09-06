@@ -181,7 +181,7 @@ vec4 CPURayTracerRenderer::tracePrimaryRays(const Ray& ray) const noexcept
 	const Renderable& renderable = *result.rawGeometryTriangle.renderable;
 	const Material& material = result.rawGeometryTriangle.component->material;
 	const DynArray<RawImage>& images = renderable.images;
-	const RawImage albedoImage = images[material.albedoIndex];
+	const RawImage& albedoImage = images[material.albedoIndex];
 
 	vec2 texDim = vec2(albedoImage.dim);
 
