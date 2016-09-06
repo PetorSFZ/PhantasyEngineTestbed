@@ -150,22 +150,22 @@ if(CUDA_TRACER)
 		${CUDA_NVCC_FLAGS}
 		-O3)
 
-	set(CUDA_SOURCE_DIR ${SOURCE_DIR}/cuda_ray_tracer)
-	set(CUDA_INCLUDE_DIR ${INCLUDE_DIR}/cuda_ray_tracer)
-	include_directories(${CUDA_INCLUDE_DIR})
+	set(CT_SOURCE_DIR ${SOURCE_DIR}/cuda_ray_tracer)
+	set(CT_INCLUDE_DIR ${INCLUDE_DIR}/cuda_ray_tracer)
+	include_directories(${CT_INCLUDE_DIR})
 
 	# Source files
 	set(CUDA_RAY_TRACER_FILES
-		${CUDA_INCLUDE_DIR}/CUDARayTracerRenderer.hpp
-		 ${CUDA_SOURCE_DIR}/CUDARayTracerRenderer.cpp
-		${CUDA_INCLUDE_DIR}/CUDATest.cuh
-		 ${CUDA_SOURCE_DIR}/CUDATest.cu)
+		${CT_INCLUDE_DIR}/CudaRayTracerRenderer.hpp
+		 ${CT_SOURCE_DIR}/CudaRayTracerRenderer.cpp
+		${CT_INCLUDE_DIR}/CudaTracerEntry.cuh
+		 ${CT_SOURCE_DIR}/CudaTracerEntry.cu)
 	set_directory_source_group(${CUDA_RAY_TRACER_FILES})
 
 	# CUDA Ray Tracer Library
-	cuda_add_library(CUDARayTracerLib ${CUDA_RAY_TRACER_FILES})
+	cuda_add_library(CudaRayTracerLib ${CUDA_RAY_TRACER_FILES})
 	target_link_libraries(
-		CUDARayTracerLib
+		CudaRayTracerLib
 
 		PhantasyEngineLib
 		${SFZ_CORE_LIBRARIES}
@@ -201,7 +201,7 @@ if(CUDA_TRACER)
 	target_link_libraries(
 		PhantasyEngineTestbed
 
-		CUDARayTracerLib
+		CudaRayTracerLib
 	)
 endif()
 

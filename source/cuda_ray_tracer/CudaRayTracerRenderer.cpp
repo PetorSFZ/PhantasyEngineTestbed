@@ -10,8 +10,9 @@
 #include <cuda_gl_interop.h>
 #include <cuda_runtime.h>
 
-#include "CUDATest.cuh"
-#include "phantasy_engine/renderers/FullscreenTriangle.hpp"
+#include <phantasy_engine/renderers/FullscreenTriangle.hpp>
+
+#include "CudaTracerEntry.cuh"
 
 // CUDA helpers
 // ------------------------------------------------------------------------------------------------
@@ -80,22 +81,19 @@ CUDARayTracerRenderer::~CUDARayTracerRenderer() noexcept
 
 RenderResult CUDARayTracerRenderer::render(Framebuffer& resultFB) noexcept
 {
-	GLuint glTex = mImpl->glTex;
-	cudaGraphicsResource_t& resource = mImpl->cudaResource;
-	cudaArray_t& array = mImpl->cudaArray;
-
-	writeBlau(mImpl->cudaSurface, mTargetResolution, mTargetResolution);
-	cudaDeviceSynchronize();
-
-	// Convert float texture result from cuda into rgb u8
+	// Run CUDA ray tracer
+	runCudaRayTracer(mImpl->cudaSurface, mTargetResolution);
+	
+	// Transfer result from Cuda texture to result framebuffer
+	glUseProgram(mImpl->transferShader.handle());
 	resultFB.bindViewportClearColorDepth(vec4(0.0f, 0.0f, 0.0f, 0.0f), 0.0f);
 
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, glTex);
+	glBindTexture(GL_TEXTURE_2D, mImpl->glTex);
 
 	mImpl->fullscreenTriangle.render();
 
-	// Return result from cudaaaa shader
+	// Return result
 	RenderResult tmp;
 	tmp.renderedRes = mTargetResolution;
 	return tmp;

@@ -10,6 +10,6 @@ namespace phe {
 
 using sfz::vec2i;
 
-void writeBlau(cudaSurfaceObject_t surf, vec2i surfRes, vec2i currRes) noexcept;
+void runCudaRayTracer(cudaSurfaceObject_t surface, vec2i surfaceRes) noexcept;
 
-}
+} // namespace phe

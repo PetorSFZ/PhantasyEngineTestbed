@@ -1,6 +1,4 @@
-// See 'LICENSE_PHANTASY_ENGINE' for copyright and contributors.
-
-#include "CUDATest.cuh"
+#include "CudaTracerEntry.cuh"
 
 __global__ void writeBlauImpl(cudaSurfaceObject_t surf, int width, int height)
 {
@@ -16,16 +14,17 @@ __global__ void writeBlauImpl(cudaSurfaceObject_t surf, int width, int height)
 
 namespace phe {
 
-void writeBlau(cudaSurfaceObject_t surf, vec2i surfRes, vec2i currRes) noexcept
+void runCudaRayTracer(cudaSurfaceObject_t surface, vec2i surfaceRes) noexcept
 {
-	int width = surfRes.x;
-	int height = surfRes.y;
+	int width = surfaceRes.x;
+	int height = surfaceRes.y;
 	
 	dim3 threadsPerBlock(16, 16);
 	dim3 numBlocks((width + threadsPerBlock.x - 1) / threadsPerBlock.x,
 	               (height + threadsPerBlock.y  - 1) / threadsPerBlock.y);
 
-	writeBlauImpl<<<numBlocks, threadsPerBlock>>>(surf, width, height);
+	writeBlauImpl<<<numBlocks, threadsPerBlock>>>(surface, width, height);
+	cudaDeviceSynchronize();
 }
 
-}
+} // namespace phe
