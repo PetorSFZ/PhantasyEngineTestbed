@@ -2,6 +2,10 @@
 
 #include "TestbedLogic.hpp"
 
+#include <phantasy_engine/Config.hpp>
+
+#include "Helpers.hpp"
+
 using namespace sfz;
 
 // TestbedLogic: Overriden methods from GameLogic
@@ -12,17 +16,40 @@ UpdateOp TestbedLogic::update(GameScreen& screen, UpdateState& state) noexcept
 	using sdl::GameController;
 	using sdl::GameControllerState;
 
+	auto& cfg = phe::GlobalConfig::instance();
+	phe::Setting* renderingBackendSetting = cfg.getSetting("PhantasyEngineTestbed", "renderingBackend");
+
 	// Handle input
-	/*for (const SDL_Event& event : state.events) {
+	for (const SDL_Event& event : state.events) {
 		switch (event.type) {
 		case SDL_QUIT: return SCREEN_QUIT;
 		case SDL_KEYUP:
 			switch (event.key.keysym.sym) {
-			case SDLK_ESCAPE: return SCREEN_QUIT;
+
+			// Switch rendering backend
+			case SDLK_F1:
+				renderingBackendSetting->setInt(0);
+				screen.renderer = createRendererBasedOnConfig();
+				screen.renderer->setAndBakeStaticScene(screen.level->staticScene);
+				break;
+			case SDLK_F2:
+				renderingBackendSetting->setInt(1);
+				screen.renderer = createRendererBasedOnConfig();
+				screen.renderer->setAndBakeStaticScene(screen.level->staticScene);
+				break;
+			case SDLK_F3:
+				renderingBackendSetting->setInt(2);
+				screen.renderer = createRendererBasedOnConfig();
+				screen.renderer->setAndBakeStaticScene(screen.level->staticScene);
+				break;
+
+			default:
+				// Do nothing
+				break;
 			}
 			break;
 		}
-	}*/
+	}
 
 	updateEmulatedController(state.events, state.rawMouse);
 	uint32_t controllerIndex = 0;

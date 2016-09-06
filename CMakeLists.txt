@@ -183,6 +183,8 @@ include_directories(${TB_INCLUDE_DIR})
 set(PHANTASY_ENGINE_TESTBED_FILES
 	 ${TB_SOURCE_DIR}/Main.cpp
 
+	${TB_INCLUDE_DIR}/Helpers.hpp
+	 ${TB_SOURCE_DIR}/Helpers.cpp
 	${TB_INCLUDE_DIR}/TestbedLogic.hpp
 	 ${TB_SOURCE_DIR}/TestbedLogic.cpp)
 set_directory_source_group(${PHANTASY_ENGINE_TESTBED_FILES})

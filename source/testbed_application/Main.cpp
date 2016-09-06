@@ -8,12 +8,8 @@
 
 #include <phantasy_engine/PhantasyEngine.hpp>
 #include <phantasy_engine/Config.hpp>
-#include <phantasy_engine/Renderers.hpp>
 
-#ifdef CUDA_TRACER_AVAILABLE
-#include <CudaRayTracerRenderer.hpp>
-#endif
-
+#include "Helpers.hpp"
 #include "TestbedLogic.hpp"
 
 using namespace sfz;
@@ -74,25 +70,7 @@ int main(int, char**)
 	SDL_SetRelativeMouseMode(SDL_TRUE);
 
 	// Select rendering backend based on config
-	UniquePtr<BaseRenderer> renderer;
-	switch (renderingBackendSetting->intValue()) {
-	default:
-		printf("%s\n", "Something is wrong with the config. Falling back to deferred rendering.");
-	case 0:
-		renderer = UniquePtr<BaseRenderer>(sfz_new<DeferredRenderer>());
-		break;
-	case 1:
-#ifdef CUDA_TRACER_AVAILABLE
-		renderer = UniquePtr<BaseRenderer>(sfz_new<CUDARayTracerRenderer>());
-#else
-		printf("%s\n", "CUDA not available in this build, using deferred renderer instead.");
-		renderer = UniquePtr<BaseRenderer>(sfz_new<DeferredRenderer>());
-#endif
-		break;
-	case 2:
-		renderer = UniquePtr<BaseRenderer>(sfz_new<CPURayTracerRenderer>());
-		break;
-	}
+	UniquePtr<BaseRenderer> renderer = createRendererBasedOnConfig();
 
 	// Load level
 	StackString192 modelsPath;
