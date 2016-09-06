@@ -2,14 +2,14 @@
 
 #include "phantasy_engine/renderers/cpu_ray_tracer/AabbTree.hpp"
 
-#include <chrono>
+#include "phantasy_engine/geometry/Ray.hpp"
 
 namespace phe {
 
-bool rayIntersectsAabb(const vec3& origin, const vec3& dir, const AABB& aabb)
+bool rayIntersectsAabb(const Ray& ray, const AABB& aabb)
 {
-	vec3 t1 = (aabb.min - origin) / dir;
-	vec3 t2 = (aabb.max - origin) / dir;
+	vec3 t1 = (aabb.min - ray.origin) * ray.invDir;
+	vec3 t2 = (aabb.max - ray.origin) * ray.invDir;
 
 	float tmin = sfz::maxElement(sfz::min(t1, t2));
 	float tmax = sfz::minElement(sfz::max(t1, t2));
@@ -17,7 +17,7 @@ bool rayIntersectsAabb(const vec3& origin, const vec3& dir, const AABB& aabb)
 	return tmax >= tmin;
 }
 
-TriangleIntersection rayTriangleIntersect(const Triangle& triangle, const vec3& origin, const vec3& dir)
+TriangleIntersection rayTriangleIntersect(const Triangle& triangle, const Ray& ray)
 {
 	const vec3 p0 = triangle.p0;
 	const vec3 p1 = triangle.p1;
@@ -27,17 +27,17 @@ TriangleIntersection rayTriangleIntersect(const Triangle& triangle, const vec3& 
 
 	vec3 e1 = p1 - p0;
 	vec3 e2 = p2 - p0;
-	vec3 q = cross(dir, e2);
+	vec3 q = cross(ray.dir, e2);
 	float a = dot(e1, q);
 	if (-EPS < a && a < EPS) return {false, 0.0f, 0.0f};
 
 	float f = 1.0f / a;
-	vec3 s = origin - p0;
+	vec3 s = ray.origin - p0;
 	float u = f * dot(s, q);
 	if (u < 0.0f) return {false, 0.0f, 0.0f};
 
 	vec3 r = cross(s, e1);
-	float v = f * dot(dir, r);
+	float v = f * dot(ray.dir, r);
 	if (v < 0.0f || (u + v) > 1.0f) return {false, 0.0f, 0.0f};
 
 	float t = f * dot(e2, r);
@@ -216,7 +216,7 @@ void AabbTree::constructFrom(DynArray<Triangle> trianglesIn) noexcept
 	fillNode(0, nodes, triangleInds, 0);
 }
 
-RaycastResult AabbTree::raycast(vec3 origin, vec3 direction) const noexcept
+RaycastResult AabbTree::raycast(const Ray& ray) const noexcept
 {
 	sfz_assert_debug(nodes.size() > 0);
 	DynArray<uint32_t> nodeStack;
@@ -238,13 +238,13 @@ RaycastResult AabbTree::raycast(vec3 origin, vec3 direction) const noexcept
 		// AABBs for triangles/leaves are stored in separate array
 		const AABB& aabb = node.isLeaf() ? triangleAabbs[node.triangleInd] : node.aabb;
 
-		if (!rayIntersectsAabb(origin, direction, aabb)) {
+		if (!rayIntersectsAabb(ray, aabb)) {
 			continue;
 		}
 
 		if (node.isLeaf()) {
 			const Triangle& triangle = triangles[node.triangleInd];
-			TriangleIntersection intersection = rayTriangleIntersect(triangle, origin, direction);
+			TriangleIntersection intersection = rayTriangleIntersect(triangle, ray);
 			if (intersection.intersected && (!closestIntersection.intersected || intersection.t < closestIntersection.t)) {
 				// Replace previous best candidate with a new one
 				closestTriangleInd = node.triangleInd;

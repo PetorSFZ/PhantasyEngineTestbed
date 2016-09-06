@@ -74,7 +74,8 @@ RenderResult CPURayTracerRenderer::render(Framebuffer& resultFB) noexcept
 					// Final ray direction
 					vec3 rayDir{ dX * float(x) + yLerped};
 					rayDir = normalize(rayDir);
-					this->mTexture[x + rowStartIndex] = tracePrimaryRays(this->mMatrices.position, rayDir);
+					Ray ray(this->mMatrices.position, rayDir);
+					this->mTexture[x + rowStartIndex] = tracePrimaryRays(ray);
 				}
 			}
 		} });
@@ -117,7 +118,8 @@ void CPURayTracerRenderer::staticSceneChanged() noexcept
 
 		vec3 origin ={-0.25f, 2.25f, 0.0f};
 		vec3 dir ={0.0f, 0.0f, -1.0f};
-		RaycastResult result = mAabbTree.raycast(origin, dir);
+		Ray ray(origin, dir);
+		RaycastResult result = mAabbTree.raycast(ray);
 
 		time_point after = std::chrono::high_resolution_clock::now();
 		using FloatSecond = std::chrono::duration<float>;
@@ -142,9 +144,9 @@ void CPURayTracerRenderer::targetResolutionUpdated() noexcept
 // CPURayTracerRenderer: Private methods
 // ------------------------------------------------------------------------------------------------
 
-vec4 CPURayTracerRenderer::tracePrimaryRays(vec3 origin, vec3 dir) const noexcept
+vec4 CPURayTracerRenderer::tracePrimaryRays(const Ray& ray) const noexcept
 {
-	RaycastResult result = mAabbTree.raycast(origin, dir);
+	RaycastResult result = mAabbTree.raycast(ray);
 	if (!result.intersection.intersected) {
 		return vec4{0.0f, 0.0f, 0.0f, 1.0f};
 	}

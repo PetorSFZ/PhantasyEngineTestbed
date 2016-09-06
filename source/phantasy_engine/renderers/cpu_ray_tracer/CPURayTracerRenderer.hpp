@@ -50,7 +50,7 @@ private:
 	// Private methods
 	// --------------------------------------------------------------------------------------------
 
-	vec4 tracePrimaryRays(vec3 origin, vec3 dir) const noexcept;
+	vec4 tracePrimaryRays(const Ray& ray) const noexcept;
 
 	// Private members
 	// --------------------------------------------------------------------------------------------

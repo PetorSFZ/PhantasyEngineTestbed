@@ -6,6 +6,7 @@
 #include <sfz/geometry/AABB.hpp>
 #include <sfz/math/Vector.hpp>
 
+#include "phantasy_engine/geometry/Ray.hpp"
 #include "phantasy_engine/resources/Renderable.hpp"
 
 namespace phe {
@@ -59,7 +60,7 @@ public:
 	void constructFrom(DynArray<Triangle> triangles) noexcept;
 
 	/// Find the closest triangle that intersects with the ray, making use of the constructed BVH.
-	RaycastResult raycast(vec3 origin, vec3 direction) const noexcept;
+	RaycastResult raycast(const Ray& ray) const noexcept;
 
 private:
 	AABB aabbFromUseExisting(const DynArray<uint32_t>& triangleInds) noexcept;
