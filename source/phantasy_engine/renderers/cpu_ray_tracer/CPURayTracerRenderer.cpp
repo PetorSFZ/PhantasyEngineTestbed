@@ -193,15 +193,15 @@ vec4 CPURayTracerRenderer::tracePrimaryRays(const Ray& ray) const noexcept
 	scaledUV.x = std::fmod(scaledUV.x, texDim.x);
 	scaledUV.y = std::fmod(scaledUV.y, texDim.y);
 
-	vec2i texCoords = vec2i(std::round(scaledUV.x), std::round(scaledUV.y));
+	vec2i texCoord = vec2i(std::round(scaledUV.x), std::round(scaledUV.y));
 
-	Vector<uint8_t,3> intColor = Vector<uint8_t,3>(albedoImage.getPixelPtr(texCoords));
-	vec3 albedoColour = vec3(intColor) / 255.0f;
+	Vector<uint8_t,3> intColor = Vector<uint8_t,3>(albedoImage.getPixelPtr(texCoord));
+	vec3 albedoColor = vec3(intColor) / 255.0f;
 
 	vec3 pos = ray.origin + ray.dir * t;
 	vec3 reflectionDir = reflect(ray.dir, normal);
 
-	vec3 colour = vec3(0.0f);
+	vec3 color = vec3(0.0f);
 
 	//for (PointLight light : mStaticScene.get()->pointLights) {
 	PointLight light = mStaticScene.get()->pointLights[2];
@@ -221,7 +221,7 @@ vec4 CPURayTracerRenderer::tracePrimaryRays(const Ray& ray) const noexcept
 
 			nDotV = std::max(0.001f, nDotV);
 
-			vec3 diffuse = albedoColour / sfz::PI();
+			vec3 diffuse = albedoColor / sfz::PI();
 
 			vec3 specular = vec3(0.0f);
 
@@ -231,13 +231,13 @@ vec4 CPURayTracerRenderer::tracePrimaryRays(const Ray& ray) const noexcept
 			float falloff = fallofNumerator / fallofDenominator;
 			vec3 lighting = falloff * light.strength;
 
-			colour += (diffuse + specular) * lighting * nDotV;
+			color += (diffuse + specular) * lighting * nDotV;
 		}
 	}
 
 	vec4 bouncyBounce = traceSecondaryRays({ pos, reflectionDir });
 
-	return vec4(colour, 1.0f) + bouncyBounce;
+	return vec4(color, 1.0f) + bouncyBounce;
 }
 
 } // namespace phe
