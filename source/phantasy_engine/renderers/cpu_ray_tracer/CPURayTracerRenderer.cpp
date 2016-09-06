@@ -190,22 +190,31 @@ vec4 CPURayTracerRenderer::tracePrimaryRays(const Ray& ray) const noexcept
 	const Renderable& renderable = *result.rawGeometryTriangle.renderable;
 	const Material& material = result.rawGeometryTriangle.component->material;
 	const DynArray<RawImage>& images = renderable.images;
-	const RawImage& albedoImage = images[material.albedoIndex];
 
-	vec2 texDim = vec2(albedoImage.dim);
+	vec3 albedoColor = material.albedoValue;
 
-	// Convert from triangle UV to texture coordinates
-	vec2 scaledUV = textureUV * texDim;
-	scaledUV.x = std::fmod(scaledUV.x, texDim.x);
-	scaledUV.y = std::fmod(scaledUV.y, texDim.y);
-	scaledUV += texDim;
-	scaledUV.x = std::fmod(scaledUV.x, texDim.x);
-	scaledUV.y = std::fmod(scaledUV.y, texDim.y);
+	if (material.albedoIndex != UINT32_MAX) {
+		const RawImage& albedoImage = images[material.albedoIndex];
 
-	vec2i texCoord = vec2i(std::round(scaledUV.x), std::round(scaledUV.y));
+		vec2 texDim = vec2(albedoImage.dim);
 
-	Vector<uint8_t,3> intColor = Vector<uint8_t,3>(albedoImage.getPixelPtr(texCoord));
-	vec3 albedoColor = vec3(intColor) / 255.0f;
+		// Convert from triangle UV to texture coordinates
+		vec2 scaledUV = textureUV * texDim;
+		scaledUV.x = std::fmod(scaledUV.x, texDim.x);
+		scaledUV.y = std::fmod(scaledUV.y, texDim.y);
+		scaledUV += texDim;
+		scaledUV.x = std::fmod(scaledUV.x, texDim.x);
+		scaledUV.y = std::fmod(scaledUV.y, texDim.y);
+
+		vec2i texCoord = vec2i(std::round(scaledUV.x), std::round(scaledUV.y));
+
+		if (albedoImage.bytesPerPixel == 3 ||
+		    albedoImage.bytesPerPixel == 4) {
+			Vector<uint8_t, 3> intColor = Vector<uint8_t, 3>(albedoImage.getPixelPtr(texCoord));
+			albedoColor = vec3(intColor) / 255.0f;
+		}
+	}
+
 
 	vec3 pos = ray.origin + ray.dir * t;
 	vec3 reflectionDir = reflect(ray.dir, normal);
