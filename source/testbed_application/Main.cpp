@@ -71,7 +71,7 @@ int main(int, char**)
 
 	// Select rendering backend based on config
 	uint32_t rendererIndex = ~0u;
-	auto& renderers = createRenderers(rendererIndex);
+	auto renderers = createRenderers(rendererIndex);
 	SharedPtr<BaseRenderer> initialRenderer = renderers[rendererIndex].renderer;
 
 	// Load level
