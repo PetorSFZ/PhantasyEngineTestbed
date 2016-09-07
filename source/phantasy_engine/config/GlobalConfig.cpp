@@ -38,8 +38,58 @@ static void setDebugCfg(GlobalConfig& g, DebugConfig& cfg) noexcept
 	cfg.showDebugUI = g.sanitizeBool("Debug", "showDebugUI", false);
 }
 
-// GraphicConfig methods
+// Config struct methods
 // ------------------------------------------------------------------------------------------------
+
+bool operator== (const WindowConfigValues& lhs, const WindowConfigValues& rhs) noexcept
+{
+	return lhs.displayIndex == rhs.displayIndex &&
+	       lhs.fullscreenMode == rhs.fullscreenMode &&
+	       lhs.vsync == rhs.vsync &&
+	       lhs.width == rhs.width &&
+	       lhs.height == rhs.height &&
+	       lhs.maximized == rhs.maximized &&
+	       approxEqual(lhs.screenGamma, rhs.screenGamma);
+}
+
+bool operator!= (const WindowConfigValues& lhs, const WindowConfigValues& rhs) noexcept
+{
+	return !(lhs == rhs);
+}
+
+WindowConfigValues WindowConfig::getValues() const noexcept {
+	WindowConfigValues tmp;
+	tmp.displayIndex = this->displayIndex->intValue();
+	tmp.fullscreenMode = this->fullscreenMode->intValue();
+	tmp.vsync = this->vsync->boolValue();
+	tmp.width = this->width->intValue();
+	tmp.height = this->height->intValue();
+	tmp.maximized = this->maximized->boolValue();
+	tmp.screenGamma = this->screenGamma->floatValue();
+	return tmp;
+}
+
+void WindowConfig::setValues(const WindowConfigValues& values) noexcept
+{
+	this->displayIndex->setInt(values.displayIndex);
+	this->fullscreenMode->setInt(values.fullscreenMode);
+	this->vsync->setBool(values.vsync);
+	this->width->setInt(values.width);
+	this->height->setInt(values.height);
+	this->maximized->setBool(values.maximized);
+	this->screenGamma->setFloat(values.screenGamma);
+}
+
+bool operator== (const GraphicsConfigValues& lhs, const GraphicsConfigValues& rhs) noexcept
+{
+	return lhs.useNativeTargetResolution == rhs.useNativeTargetResolution &&
+	       lhs.targetResolutionHeight == rhs.targetResolutionHeight;
+}
+
+bool operator!= (const GraphicsConfigValues& lhs, const GraphicsConfigValues& rhs) noexcept
+{
+	return !(lhs == rhs);
+}
 
 vec2i GraphicsConfig::getTargetResolution(vec2i drawableDim) const noexcept
 {
@@ -49,7 +99,43 @@ vec2i GraphicsConfig::getTargetResolution(vec2i drawableDim) const noexcept
 		int32_t w = int32_t(std::round(float(h) * float(drawableDim.x) / float(drawableDim.y)));
 		result = vec2i(w, h);
 	}
-	return max(result, vec2i(1,1));
+	return max(result, vec2i(1, 1));
+}
+
+GraphicsConfigValues GraphicsConfig::getValues() const noexcept
+{
+	GraphicsConfigValues tmp;
+	tmp.useNativeTargetResolution = this->useNativeTargetResolution->boolValue();
+	tmp.targetResolutionHeight = this->targetResolutionHeight->intValue();
+	return tmp;
+}
+
+void GraphicsConfig::setValues(const GraphicsConfigValues& values) noexcept
+{
+	this->useNativeTargetResolution->setBool(values.useNativeTargetResolution);
+	this->targetResolutionHeight->setInt(values.targetResolutionHeight);
+}
+
+bool operator== (const DebugConfigValues& lhs, const DebugConfigValues& rhs) noexcept
+{
+	return lhs.showDebugUI == rhs.showDebugUI;
+}
+
+bool operator!= (const DebugConfigValues& lhs, const DebugConfigValues& rhs) noexcept
+{
+	return !(lhs == rhs);
+}
+
+DebugConfigValues DebugConfig::getValues() const noexcept
+{
+	DebugConfigValues tmp;
+	tmp.showDebugUI = this->showDebugUI->boolValue();
+	return tmp;
+}
+
+void DebugConfig::setValues(const DebugConfigValues& values) noexcept
+{
+	this->showDebugUI->setBool(values.showDebugUI);
 }
 
 // GlobalConfigImpl

@@ -28,6 +28,9 @@ struct WindowConfigValues {
 	float screenGamma;
 };
 
+bool operator== (const WindowConfigValues& lhs, const WindowConfigValues& rhs) noexcept;
+bool operator!= (const WindowConfigValues& lhs, const WindowConfigValues& rhs) noexcept;
+
 struct WindowConfig final {
 	Setting* displayIndex = nullptr;
 	Setting* fullscreenMode = nullptr; // 0 = off, 1 = windowed, 2 = exclusive
@@ -37,23 +40,17 @@ struct WindowConfig final {
 	Setting* maximized = nullptr;
 	Setting* screenGamma = nullptr;
 
-	WindowConfigValues getValues() const noexcept {
-		return {
-			displayIndex->intValue(),
-			fullscreenMode->intValue(),
-			vsync->boolValue(),
-			width->intValue(),
-			height->intValue(),
-			maximized->boolValue(),
-			screenGamma->floatValue()
-		};
-	}
+	WindowConfigValues getValues() const noexcept;
+	void setValues(const WindowConfigValues& values) noexcept;
 };
 
 struct GraphicsConfigValues {
 	bool useNativeTargetResolution;
 	int32_t targetResolutionHeight;
 };
+
+bool operator== (const GraphicsConfigValues& lhs, const GraphicsConfigValues& rhs) noexcept;
+bool operator!= (const GraphicsConfigValues& lhs, const GraphicsConfigValues& rhs) noexcept;
 
 struct GraphicsConfig final {
 	Setting* useNativeTargetResolution = nullptr;
@@ -65,26 +62,22 @@ struct GraphicsConfig final {
 	/// \param drawableDim the current native resolution, sdl::window.drawableDimensions()
 	vec2i getTargetResolution(vec2i drawableDim) const noexcept;
 
-	GraphicsConfigValues getValues() const noexcept {
-		return {
-			useNativeTargetResolution->boolValue(),
-			targetResolutionHeight->intValue(),
-		};
-	}
+	GraphicsConfigValues getValues() const noexcept;
+	void setValues(const GraphicsConfigValues& values) noexcept;
 };
 
 struct DebugConfigValues {
 	bool showDebugUI;
 };
 
+bool operator== (const DebugConfigValues& lhs, const DebugConfigValues& rhs) noexcept;
+bool operator!= (const DebugConfigValues& lhs, const DebugConfigValues& rhs) noexcept;
+
 struct DebugConfig final {
 	Setting* showDebugUI = nullptr;
 
-	DebugConfigValues getValues() const noexcept {
-		return {
-			showDebugUI->boolValue()
-		};
-	}
+	DebugConfigValues getValues() const noexcept;
+	void setValues(const DebugConfigValues& values) noexcept;
 };
 
 // GlobalConfig
