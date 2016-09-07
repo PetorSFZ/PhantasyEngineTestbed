@@ -48,6 +48,11 @@ private:
 	PhantasyEngine() noexcept = default;
 	~PhantasyEngine() noexcept;
 
+	// Private methods
+	// --------------------------------------------------------------------------------------------
+
+	void initImGui() const noexcept;
+
 	// Private members
 	// --------------------------------------------------------------------------------------------
 

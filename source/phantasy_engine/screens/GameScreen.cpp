@@ -2,6 +2,9 @@
 
 #include "phantasy_engine/screens/GameScreen.hpp"
 
+#include <imgui.h>
+#include <imgui_impl_sdl_gl3.h>
+
 #include <sfz/gl/IncludeOpenGL.hpp>
 #include <sfz/util/IO.hpp>
 #include <sfz/math/Vector.hpp>
@@ -48,7 +51,63 @@ GameScreen::GameScreen(SharedPtr<GameLogic> gameLogicIn, SharedPtr<Level> levelI
 
 UpdateOp GameScreen::update(UpdateState& state)
 {
-	UpdateOp op = gameLogic->update(*this, state);;
+	auto& cfg = GlobalConfig::instance();
+
+	bool showDebugUI = cfg.debugCfg().showDebugUI->boolValue();
+
+	// Intercept some key events at GameScreen level
+	for (const SDL_Event& event : state.events) {
+		switch (event.type) {
+		case SDL_QUIT: return SCREEN_QUIT;
+		case SDL_KEYUP:
+			switch (event.key.keysym.sym) {
+			case SDLK_F11:
+				// Pressing F11 toggles the rendering of the debug UI
+				showDebugUI = !showDebugUI;
+				cfg.debugCfg().showDebugUI->setBool(showDebugUI);
+				if (!showDebugUI) {
+					debugUIActive = false;
+					SDL_SetWindowGrab(state.window.ptr(), SDL_TRUE);
+					SDL_SetRelativeMouseMode(SDL_TRUE);
+					SDL_ShowCursor(SDL_FALSE);
+				}
+				break;
+			default:
+				// Do nothing
+				break;
+			}
+			switch (event.key.keysym.scancode) {
+			case SDL_SCANCODE_GRAVE:
+				// Pressing the "grave" key (left of 1) toggles input focus between the game and the debug UI
+				if (showDebugUI) {
+					debugUIActive = !debugUIActive;
+					SDL_SetWindowGrab(state.window.ptr(), !debugUIActive ? SDL_TRUE : SDL_FALSE);
+					SDL_SetRelativeMouseMode(!debugUIActive ? SDL_TRUE : SDL_FALSE);
+					SDL_ShowCursor(debugUIActive ? SDL_TRUE : SDL_FALSE);
+				}
+				break;
+			default:
+				// Do nothing
+				break;
+			}
+			break;
+		}
+	}
+
+	UpdateOp op = SCREEN_NO_OP;
+
+	// When debug UI is active, prevent GameLogic update.
+	// TODO: Perhaps only make GameLogic ignore input events when debug UI is active.
+	if (!debugUIActive) {
+		op = gameLogic->update(*this, state);
+	} else {
+		// Forward events to imgui
+		for (DynArray<SDL_Event>* eventList : { &state.events, &state.controllerEvents, &state.mouseEvents }) {
+			for (SDL_Event& event : *eventList) {
+				ImGui_ImplSdlGL3_ProcessEvent(&event);
+			}
+		}
+	}
 
 	// Update renderer matrices
 	mMatrices.headMatrix = cam.viewMatrix();
@@ -67,6 +126,17 @@ UpdateOp GameScreen::update(UpdateState& state)
 void GameScreen::render(UpdateState& state)
 {
 	auto& cfg = GlobalConfig::instance();
+
+	bool showDebugUI = cfg.debugCfg().showDebugUI->boolValue();
+
+	if (showDebugUI) {
+		ImGui_ImplSdlGL3_NewFrame(state.window.ptr());
+
+		if (!debugUIActive) {
+			// It seems that there isn't a nicer way to make ImGui ignore mouse input
+			ImGui::GetIO().MousePos = ImVec2(-1, -1);
+		}
+	}
 
 	const vec2i drawableDim = state.window.drawableDimensions();
 	const vec2i targetRes = cfg.graphcisCfg().getTargetResolution(drawableDim);
@@ -108,6 +178,17 @@ void GameScreen::render(UpdateState& state)
 
 	mFullscreenTriangle.render();
 
+	if (showDebugUI) {
+		// Change back to default clip space due to library incompatibility. This operation is
+		// potentially expensive since it's intended to only be used once in the program.
+		glClipControl(GL_LOWER_LEFT, GL_NEGATIVE_ONE_TO_ONE);
+
+		renderDebugUI();
+
+		// Reset to previous clip space
+		glClipControl(GL_UPPER_LEFT, GL_ZERO_TO_ONE);
+	}
+
 	SDL_GL_SwapWindow(state.window.ptr());
 }
 
@@ -148,6 +229,59 @@ void GameScreen::reloadShaders() noexcept
 		glUseProgram(mGammaCorrectionShader.handle());
 		gl::setUniform(mGammaCorrectionShader, "uLinearTexture", 0);
 	}
+}
+
+void GameScreen::renderDebugUI() const noexcept
+{
+	using namespace ImGui;
+
+	auto& cfg = GlobalConfig::instance();
+
+	SetNextWindowPos(ImVec2(0, 0), ImGuiSetCond_FirstUseEver);
+	SetNextWindowSize(ImVec2(400, 200), ImGuiSetCond_FirstUseEver);
+	ShowMetricsWindow();
+
+	SetNextWindowPos(ImVec2(0, 200), ImGuiSetCond_FirstUseEver);
+	SetNextWindowSize(ImVec2(400, 350), ImGuiSetCond_FirstUseEver);
+	SetNextWindowCollapsed(true, ImGuiSetCond_FirstUseEver);
+
+	if (Begin("Config", nullptr, ImGuiWindowFlags_ShowBorders)) {
+		DynArray<Setting*> settings;
+		cfg.getSettings(settings);
+		for (Setting* setting : settings) {
+
+			// Each case has extra scope to be able to declare local variables inside
+			switch (setting->type()) {
+			case SettingType::INT:
+				{
+					int32_t tmp = setting->intValue();
+					if (ImGui::InputInt(setting->key().str, &tmp)) {
+						setting->setInt(tmp);
+					}
+				}
+				break;
+			case SettingType::FLOAT:
+				{
+					float tmp = setting->floatValue();
+					if (ImGui::InputFloat(setting->key().str, &tmp)) {
+						setting->setFloat(tmp);
+					}
+				}
+				break;
+			case SettingType::BOOL:
+				{
+					bool tmp = setting->boolValue();
+					if (ImGui::Checkbox(setting->key().str, &tmp)) {
+						setting->setBool(tmp);
+					}
+				}
+				break;
+			}
+		}
+	}
+	End();
+
+	Render();
 }
 
 } // namespace phe

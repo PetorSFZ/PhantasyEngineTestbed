@@ -51,6 +51,8 @@ public:
 	// TODO: Come up with something better than these?
 	ViewFrustum cam;
 
+	bool debugUIActive = false;
+
 	// Constructors & destructors
 	// --------------------------------------------------------------------------------------------
 
@@ -75,6 +77,7 @@ private:
 
 	void reloadFramebuffers(vec2i maxResolution) noexcept;
 	void reloadShaders() noexcept;
+	void renderDebugUI() const noexcept;
 
 	// Private members
 	// --------------------------------------------------------------------------------------------

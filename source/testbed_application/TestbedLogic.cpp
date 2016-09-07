@@ -32,7 +32,6 @@ UpdateOp TestbedLogic::update(GameScreen& screen, UpdateState& state) noexcept
 	// Handle input
 	for (const SDL_Event& event : state.events) {
 		switch (event.type) {
-		case SDL_QUIT: return SCREEN_QUIT;
 		case SDL_KEYUP:
 			switch (event.key.keysym.sym) {
 
