@@ -9,6 +9,8 @@
 #include <sfz/math/Matrix.hpp>
 #include <sfz/math/MatrixSupport.hpp>
 
+#include "phantasy_engine/renderers/cpu_ray_tracer/RayTracerCommon.hpp"
+
 namespace phe {
 
 using namespace sfz;
@@ -29,65 +31,47 @@ RenderResult CPURayTracerRenderer::render(Framebuffer& resultFB) noexcept
 	using time_point = std::chrono::high_resolution_clock::time_point;
 	time_point before = std::chrono::high_resolution_clock::now();
 
-	resultFB.bindViewportClearColorDepth(vec4(0.0f, 1.0f, 0.0f, 1.0f), 0.0f);
-	
-	mat4 invProjectionMatrix = inverse(mMatrices.projMatrix);
-	
-	mat4 viewMatrix = mMatrices.headMatrix * mMatrices.originMatrix;
-	mat4 invViewMatrix = inverse(viewMatrix);
-
-	mat4 invViewProjectionMatrix = invViewMatrix * invProjectionMatrix;
-
-	// Clip space corners
-	vec4 min{ -1.0f, -1.0f, 0.0f, 1.0f };
-	vec4 max{ +1.0f, +1.0f, 0.0f, 1.0f };
-
-	// Calculate ray directions of the top left and bottom right corner of the screen respectively
-	vec4 topLeftDir = invViewProjectionMatrix * min;
-	topLeftDir /= topLeftDir.w;
-	vec4 bottomRightDir = invViewProjectionMatrix * max;
-	bottomRightDir /= bottomRightDir.w;
-
-	// Get view frustum vectors in world space
-	vec3 down = -mMatrices.up;
-	vec3 forward = mMatrices.forward;
-	vec3 right = normalize(cross(down, forward));
-
-	// Project the lerp step size projected onto the screen's X and Y axes
-	vec3 dirDifference = bottomRightDir.xyz - topLeftDir.xyz;
-	vec3 projOnX = dot(dirDifference, right) * right;
-	vec3 projOnY = dot(dirDifference, down) * down;
-
-	vec3 dX = projOnX / float(mTargetResolution.x);
-	vec3 dY = projOnY / float(mTargetResolution.y);
+	// Calculate camera def in order to generate first rays
+	vec2 resultRes = vec2(mTargetResolution);
+	CameraDef cam = generateCameraDef(mMatrices.position, mMatrices.forward, mMatrices.up,
+	                                  mMatrices.vertFovRad, resultRes);
 
 	int nThreads = 10;
 	int rowsPerThread = mTargetResolution.y / nThreads;
 
 	// Spawn threads for ray tracing
 	for (int i = 0; i < nThreads; i++) {
-		mThreads.add(std::thread{ [this, i, topLeftDir, dX, dY, rowsPerThread, nThreads]() {
+		mThreads.add(std::thread{ [this, i, resultRes, cam, rowsPerThread, nThreads]() {
+			
 			// Calculate the which row is the last one that the current thread is responsible for
 			int yEnd = i >= nThreads - 1 ? this->mTargetResolution.y : rowsPerThread * (i + 1);
+			
 			for (int y = i * rowsPerThread; y < yEnd; y++) {
-				// Add the Y-component of the ray direction
-				vec3 yLerped = topLeftDir.xyz + dY * float(y);
 				int rowStartIndex = this->mTargetResolution.x * y;
+
 				for (int x = 0; x < this->mTargetResolution.x; x++) {
-					// Final ray direction
-					vec3 rayDir{ dX * float(x) + yLerped};
-					rayDir = normalize(rayDir);
-					Ray ray(this->mMatrices.position, rayDir);
+					
+					// Calculate ray dir
+					vec2 loc = vec2(float(x), float(y));
+					vec2 locNormalized = loc / resultRes; // [0, 1]
+					vec2 centerOffsCoord = locNormalized * 2.0f - vec2(1.0f); // [-1.0, 1.0]
+					vec3 rayDir = normalize(cam.dir + centerOffsCoord.x * cam.dX + centerOffsCoord.y * cam.dY);
+
+					// Trace ray
+					Ray ray(cam.origin, rayDir);
 					this->mTexture[x + rowStartIndex] = tracePrimaryRays(ray);
 				}
 			}
 		} });
 	}
+
+	// Wait for all threads to finish
 	for (std::thread& thread : mThreads) {
 		thread.join();
 	}
 	mThreads.clear();
 
+	// Transfer result to resultFB
 	glBindTexture(GL_TEXTURE_2D, resultFB.texture(0));
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, mTargetResolution.x, mTargetResolution.y, 0, GL_RGBA, GL_FLOAT, mTexture.data());
 	

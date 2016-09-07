@@ -11,6 +11,7 @@
 #include <cuda_gl_interop.h>
 #include <cuda_runtime.h>
 
+#include <phantasy_engine/renderers/cpu_ray_tracer/RayTracerCommon.hpp>
 #include <phantasy_engine/renderers/FullscreenTriangle.hpp>
 
 #include "CudaTracerEntry.cuh"
@@ -82,14 +83,10 @@ CUDARayTracerRenderer::~CUDARayTracerRenderer() noexcept
 
 RenderResult CUDARayTracerRenderer::render(Framebuffer& resultFB) noexcept
 {
-	// Calculate camera variables
-	CameraDef cam;
-	cam.origin = mMatrices.position;
-	cam.dir = normalize(mMatrices.forward);
-	cam.up = normalize(mMatrices.up);
-	sfz_assert_debug(approxEqual(dot(cam.dir, cam.up), 0.0f));
-	cam.right = normalize(cross(cam.dir, cam.up));
-	cam.vertFovRad; 
+	// Calculate camera def in order to generate first rays
+	vec2 resultRes = vec2(mTargetResolution);
+	CameraDef cam = generateCameraDef(mMatrices.position, mMatrices.forward, mMatrices.up,
+	                                  mMatrices.vertFovRad, resultRes);
 
 	// Run CUDA ray tracer
 	runCudaRayTracer(mImpl->cudaSurface, mTargetResolution, cam);

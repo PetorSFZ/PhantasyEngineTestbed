@@ -107,6 +107,8 @@ set(PHANTASY_ENGINE_LIB_FILES
 	 ${PH_SOURCE_DIR}/renderers/cpu_ray_tracer/AabbTree.cpp
 	${PH_INCLUDE_DIR}/renderers/cpu_ray_tracer/CPURayTracerRenderer.hpp
 	 ${PH_SOURCE_DIR}/renderers/cpu_ray_tracer/CPURayTracerRenderer.cpp
+	${PH_INCLUDE_DIR}/renderers/cpu_ray_tracer/RayTracerCommon.hpp
+	 ${PH_SOURCE_DIR}/renderers/cpu_ray_tracer/RayTracerCommon.cpp
 
 	${PH_INCLUDE_DIR}/Resources.hpp
 	${PH_INCLUDE_DIR}/resources/GLModel.hpp
