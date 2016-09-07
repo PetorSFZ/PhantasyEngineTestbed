@@ -44,9 +44,9 @@ public:
 	// Public members
 	// --------------------------------------------------------------------------------------------
 
-	UniquePtr<GameLogic> gameLogic;
-	UniquePtr<Level> level;
-	UniquePtr<BaseRenderer> renderer;
+	SharedPtr<GameLogic> gameLogic;
+	SharedPtr<Level> level;
+	SharedPtr<BaseRenderer> renderer;
 
 	// TODO: Come up with something better than these?
 	ViewFrustum cam;
@@ -60,8 +60,8 @@ public:
 	GameScreen(GameScreen&&) = delete;
 	GameScreen& operator= (GameScreen&&) = delete;
 
-	GameScreen(UniquePtr<GameLogic>&& gameLogic, UniquePtr<Level>&& level,
-	           UniquePtr<BaseRenderer>&& renderer) noexcept;
+	GameScreen(SharedPtr<GameLogic> gameLogic, SharedPtr<Level> level,
+	           SharedPtr<BaseRenderer> renderer) noexcept;
 
 	// Overriden methods from sfz::BaseScreen
 	// --------------------------------------------------------------------------------------------

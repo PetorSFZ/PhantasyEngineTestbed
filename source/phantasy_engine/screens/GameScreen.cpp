@@ -15,12 +15,12 @@ using namespace sfz;
 // GameScreen: Constructors & destructors
 // ------------------------------------------------------------------------------------------------
 
-GameScreen::GameScreen(UniquePtr<GameLogic>&& gameLogicIn, UniquePtr<Level>&& levelIn,
-                       UniquePtr<BaseRenderer>&& rendererIn) noexcept
+GameScreen::GameScreen(SharedPtr<GameLogic> gameLogicIn, SharedPtr<Level> levelIn,
+                       SharedPtr<BaseRenderer> rendererIn) noexcept
 :
-	gameLogic(std::move(gameLogicIn)),
-	level(std::move(levelIn)),
-	renderer(std::move(rendererIn))
+	gameLogic(gameLogicIn),
+	level(levelIn),
+	renderer(rendererIn)
 {
 	auto& cfg = GlobalConfig::instance();
 

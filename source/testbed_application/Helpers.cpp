@@ -6,32 +6,34 @@
 
 #include <phantasy_engine/Config.hpp>
 
-using sfz::sfz_new;
+using namespace sfz;
 
-UniquePtr<BaseRenderer> createRendererBasedOnConfig() noexcept
+DynArray<RendererAndStatus> createRenderers(uint32_t& indexSelected) noexcept
 {
-	auto& cfg = phe::GlobalConfig::instance();
+	DynArray<RendererAndStatus> renderers;
+	renderers.ensureCapacity(16);
 
-	phe::Setting* renderingBackendSetting = cfg.getSetting("PhantasyEngineTestbed", "renderingBackend");
+	// 0 == Deferred renderer
+	renderers.add({SharedPtr<BaseRenderer>(sfz_new<phe::DeferredRenderer>()), false});
 
-	UniquePtr<BaseRenderer> renderer;
-	switch (renderingBackendSetting->intValue()) {
-	default:
-		printf("%s\n", "Something is wrong with the config. Falling back to deferred rendering.");
-	case 0:
-		renderer = UniquePtr<BaseRenderer>(sfz_new<phe::DeferredRenderer>());
-		break;
-	case 1:
+	// 1 == CUDA ray tracer
 #ifdef CUDA_TRACER_AVAILABLE
-		renderer = UniquePtr<BaseRenderer>(sfz_new<phe::CUDARayTracerRenderer>());
+	renderers.add({SharedPtr<BaseRenderer>(sfz_new<phe::CUDARayTracerRenderer>()), false});
 #else
-		printf("%s\n", "CUDA not available in this build, using deferred renderer instead.");
-		renderer = UniquePtr<BaseRenderer>(sfz_new<phe::DeferredRenderer>());
+	printf("%s\n", "CUDA not available in this build, using deferred renderer instead.");
+	renderers.add({renderers.first().renderer, false});
 #endif
-		break;
-	case 2:
-		renderer = UniquePtr<BaseRenderer>(sfz_new<phe::CPURayTracerRenderer>());
-		break;
+
+	// 2 == CPU ray tracer
+	renderers.add({SharedPtr<BaseRenderer>(sfz_new<phe::CPURayTracerRenderer>()), false});
+
+	// Retrieving index of selected renderer
+	auto& cfg = phe::GlobalConfig::instance();
+	phe::Setting* renderingBackendSetting = cfg.getSetting("PhantasyEngineTestbed", "renderingBackend");
+	indexSelected = renderingBackendSetting->intValue();
+	if (indexSelected >= renderers.size()) {
+		sfz::error("Renderer index out of bounds, probably need to add rendering backend to this function.");
 	}
-	return renderer;
+
+	return renderers;
 }

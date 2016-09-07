@@ -4,6 +4,8 @@
 
 #include <phantasy_engine/screens/GameScreen.hpp>
 
+#include "Helpers.hpp"
+
 using phe::GameLogic;
 using phe::GameScreen;
 using sfz::DynArray;
@@ -19,6 +21,11 @@ using sfz::UpdateState;
 class TestbedLogic final : public GameLogic {
 public:
 	
+	// Constructors & destructors
+	// --------------------------------------------------------------------------------------------
+
+	TestbedLogic(DynArray<RendererAndStatus>&& renderers, uint32_t rendererIndex) noexcept;
+
 	// Overriden methods from GameLogic
 	// --------------------------------------------------------------------------------------------
 
@@ -46,4 +53,7 @@ private:
 	// --------------------------------------------------------------------------------------------
 
 	EmulatedGameController mEmulatedController;
+
+	DynArray<RendererAndStatus> mRenderers;
+	uint32_t mCurrentRenderer;
 };

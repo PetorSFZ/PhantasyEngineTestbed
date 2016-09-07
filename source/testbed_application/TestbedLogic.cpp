@@ -8,6 +8,16 @@
 
 using namespace sfz;
 
+// TestbedLogic: Constructors & destructors
+// ------------------------------------------------------------------------------------------------
+
+TestbedLogic::TestbedLogic(DynArray<RendererAndStatus>&& renderers, uint32_t rendererIndex) noexcept
+:
+	mRenderers(std::move(renderers)),
+	mCurrentRenderer(rendererIndex)
+{
+}
+
 // TestbedLogic: Overriden methods from GameLogic
 // ------------------------------------------------------------------------------------------------
 
@@ -28,19 +38,25 @@ UpdateOp TestbedLogic::update(GameScreen& screen, UpdateState& state) noexcept
 
 			// Switch rendering backend
 			case SDLK_F1:
-				renderingBackendSetting->setInt(0);
-				screen.renderer = createRendererBasedOnConfig();
-				screen.renderer->setAndBakeStaticScene(screen.level->staticScene);
+				if (mCurrentRenderer != 0) {
+					renderingBackendSetting->setInt(0);
+					mCurrentRenderer = 0;
+					screen.renderer = mRenderers[mCurrentRenderer].renderer;
+				}
 				break;
 			case SDLK_F2:
-				renderingBackendSetting->setInt(1);
-				screen.renderer = createRendererBasedOnConfig();
-				screen.renderer->setAndBakeStaticScene(screen.level->staticScene);
+				if (mCurrentRenderer != 1) {
+					renderingBackendSetting->setInt(1);
+					mCurrentRenderer = 1;
+					screen.renderer = mRenderers[mCurrentRenderer].renderer;
+				}
 				break;
 			case SDLK_F3:
-				renderingBackendSetting->setInt(2);
-				screen.renderer = createRendererBasedOnConfig();
-				screen.renderer->setAndBakeStaticScene(screen.level->staticScene);
+				if (mCurrentRenderer != 2) {
+					renderingBackendSetting->setInt(2);
+					mCurrentRenderer = 2;
+					screen.renderer = mRenderers[mCurrentRenderer].renderer;
+				}
 				break;
 
 			default:
@@ -49,6 +65,12 @@ UpdateOp TestbedLogic::update(GameScreen& screen, UpdateState& state) noexcept
 			}
 			break;
 		}
+	}
+
+	// Check if current renderer needs to be baked or not
+	if (!mRenderers[mCurrentRenderer].baked) {
+		screen.renderer->setAndBakeStaticScene(screen.level->staticScene);
+		mRenderers[mCurrentRenderer].baked = true;
 	}
 
 	updateEmulatedController(state.events, state.rawMouse);

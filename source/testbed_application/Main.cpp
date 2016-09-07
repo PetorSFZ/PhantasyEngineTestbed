@@ -70,13 +70,15 @@ int main(int, char**)
 	SDL_SetRelativeMouseMode(SDL_TRUE);
 
 	// Select rendering backend based on config
-	UniquePtr<BaseRenderer> renderer = createRendererBasedOnConfig();
+	uint32_t rendererIndex = ~0u;
+	auto& renderers = createRenderers(rendererIndex);
+	SharedPtr<BaseRenderer> initialRenderer = renderers[rendererIndex].renderer;
 
 	// Load level
 	StackString192 modelsPath;
 	modelsPath.printf("%sresources/models/", basePath());
 	
-	UniquePtr<Level> level = makeUnique<Level>();
+	SharedPtr<Level> level = makeShared<Level>();
 	level->staticScene = makeShared<StaticScene>();
 	if (useSponzaSetting->boolValue()) {
 		
@@ -136,9 +138,9 @@ int main(int, char**)
 
 	// Run gameloop
 	sfz::runGameLoop(engine.window(), SharedPtr<BaseScreen>(sfz_new<GameScreen>(
-		UniquePtr<GameLogic>(sfz_new<TestbedLogic>()),
-		std::move(level),
-		std::move(renderer)
+		SharedPtr<GameLogic>(sfz_new<TestbedLogic>(std::move(renderers), rendererIndex)),
+		level,
+		initialRenderer
 	)));
 
 	// Deinitializes Phantasy Engine
