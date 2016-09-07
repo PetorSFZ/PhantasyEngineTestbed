@@ -33,6 +33,11 @@ static void setGraphicsCfg(GlobalConfig& g, GraphicsConfig& cfg) noexcept
 	cfg.targetResolutionHeight = g.sanitizeInt("Graphics", "targetResolutionHeight", 720, 120, 4320);
 }
 
+static void setDebugCfg(GlobalConfig& g, DebugConfig& cfg) noexcept
+{
+	cfg.showDebugUI = g.sanitizeBool("Debug", "showDebugUI", false);
+}
+
 // GraphicConfig methods
 // ------------------------------------------------------------------------------------------------
 
@@ -59,6 +64,7 @@ public:
 	DynArray<UniquePtr<Setting>> mSettings;
 	WindowConfig mWindowCfg;
 	GraphicsConfig mGraphicsCfg;
+	DebugConfig mDebugCfg;
 	bool mLoaded = false; // Can only be loaded once... for now
 
 	// Constructors & destructors
@@ -138,6 +144,7 @@ bool GlobalConfig::load() noexcept
 	// Fill specific setting structs
 	setWindowCfg(*this, mImpl->mWindowCfg);
 	setGraphicsCfg(*this, mImpl->mGraphicsCfg);
+	setDebugCfg(*this, mImpl->mDebugCfg);
 
 	mImpl->mLoaded = true;
 	return true;
@@ -223,6 +230,12 @@ const GraphicsConfig& GlobalConfig::graphcisCfg() const noexcept
 {
 	sfz_assert_debug(mImpl != nullptr);
 	return mImpl->mGraphicsCfg;
+}
+
+const DebugConfig& GlobalConfig::debugCfg() const noexcept
+{
+	sfz_assert_debug(mImpl != nullptr);
+	return mImpl->mDebugCfg;
 }
 
 // GlobalConfig: Sanitizers

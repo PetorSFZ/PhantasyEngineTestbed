@@ -18,6 +18,16 @@ using std::numeric_limits;
 // Config structs
 // ------------------------------------------------------------------------------------------------
 
+struct WindowConfigValues {
+	int32_t displayIndex;
+	int32_t fullscreenMode;
+	bool vsync;
+	int32_t width;
+	int32_t height;
+	bool maximized;
+	float screenGamma;
+};
+
 struct WindowConfig final {
 	Setting* displayIndex = nullptr;
 	Setting* fullscreenMode = nullptr; // 0 = off, 1 = windowed, 2 = exclusive
@@ -26,6 +36,23 @@ struct WindowConfig final {
 	Setting* height = nullptr;
 	Setting* maximized = nullptr;
 	Setting* screenGamma = nullptr;
+
+	WindowConfigValues getValues() const noexcept {
+		return {
+			displayIndex->intValue(),
+			fullscreenMode->intValue(),
+			vsync->boolValue(),
+			width->intValue(),
+			height->intValue(),
+			maximized->boolValue(),
+			screenGamma->floatValue()
+		};
+	}
+};
+
+struct GraphicsConfigValues {
+	bool useNativeTargetResolution;
+	int32_t targetResolutionHeight;
 };
 
 struct GraphicsConfig final {
@@ -37,6 +64,27 @@ struct GraphicsConfig final {
 	/// combination with the current native resolution
 	/// \param drawableDim the current native resolution, sdl::window.drawableDimensions()
 	vec2i getTargetResolution(vec2i drawableDim) const noexcept;
+
+	GraphicsConfigValues getValues() const noexcept {
+		return {
+			useNativeTargetResolution->boolValue(),
+			targetResolutionHeight->intValue(),
+		};
+	}
+};
+
+struct DebugConfigValues {
+	bool showDebugUI;
+};
+
+struct DebugConfig final {
+	Setting* showDebugUI = nullptr;
+
+	DebugConfigValues getValues() const noexcept {
+		return {
+			showDebugUI->boolValue()
+		};
+	}
 };
 
 // GlobalConfig
@@ -92,6 +140,7 @@ public:
 
 	const WindowConfig& windowCfg() const noexcept;
 	const GraphicsConfig& graphcisCfg() const noexcept;
+	const DebugConfig& debugCfg() const noexcept;
 
 	// Sanitizers
 	// --------------------------------------------------------------------------------------------
