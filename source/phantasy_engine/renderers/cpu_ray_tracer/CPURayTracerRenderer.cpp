@@ -217,7 +217,7 @@ float geometricSchlick(float nDotL, float nDotV, float k)
 // Schlick's approximation. F0 should typically be 0.04 for dielectrics
 vec3 fresnelSchlick(float nDotL, vec3 f0)
 {
-	return f0 + (vec3(1.0f) - f0) * clamp(pow(1.0f - nDotL, 5), 0.0f, 1.0f);
+	return f0 + (vec3(1.0f) - f0) * sfz::clamp(std::pow(1.0f - nDotL, 5.0f), 0.0f, 1.0f);
 }
 
 vec4 CPURayTracerRenderer::tracePrimaryRays(const Ray& ray) const noexcept
@@ -318,7 +318,7 @@ vec4 CPURayTracerRenderer::tracePrimaryRays(const Ray& ray) const noexcept
 		vec3 specular = ctD * ctF * ctG / (4.0f * nDotL * nDotV);
 
 		// Calculates light strength
-		float fallofNumerator = pow(sfz::clamp(1.0f - pow(toLightDist / light.range, 4), 0.0f, 1.0f), 2);
+		float fallofNumerator = pow(sfz::clamp(1.0f - std::pow(toLightDist / light.range, 4.0f), 0.0f, 1.0f), 2);
 		float fallofDenominator = (toLightDist * toLightDist + 1.0);
 		float falloff = fallofNumerator / fallofDenominator;
 		vec3 lighting = falloff * light.strength;
