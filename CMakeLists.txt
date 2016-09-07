@@ -159,7 +159,8 @@ if(CUDA_TRACER)
 		${CT_INCLUDE_DIR}/CudaRayTracerRenderer.hpp
 		 ${CT_SOURCE_DIR}/CudaRayTracerRenderer.cpp
 		${CT_INCLUDE_DIR}/CudaTracerEntry.cuh
-		 ${CT_SOURCE_DIR}/CudaTracerEntry.cu)
+		 ${CT_SOURCE_DIR}/CudaTracerEntry.cu
+		${CT_INCLUDE_DIR}/CudaVectorHelpers.cuh)
 	set_directory_source_group(${CUDA_RAY_TRACER_FILES})
 
 	# CUDA Ray Tracer Library

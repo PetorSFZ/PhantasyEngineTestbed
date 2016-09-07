@@ -9,7 +9,16 @@
 namespace phe {
 
 using sfz::vec2i;
+using sfz::vec3;
 
-void runCudaRayTracer(cudaSurfaceObject_t surface, vec2i surfaceRes) noexcept;
+struct CameraDef final {
+	vec3 origin;
+	vec3 dir; // normalized
+	vec3 up; // normalized and orthogonal to camDir
+	vec3 right; // normalized and orthogonal to both camDir and camUp
+	float vertFovRad;
+};
+
+void runCudaRayTracer(cudaSurfaceObject_t surface, vec2i surfaceRes, const CameraDef& cam) noexcept;
 
 } // namespace phe

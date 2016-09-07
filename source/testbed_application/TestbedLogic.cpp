@@ -123,6 +123,7 @@ UpdateOp TestbedLogic::update(GameScreen& screen, UpdateState& state) noexcept
 	screen.matrices.position = screen.cam.pos();
 	screen.matrices.forward = screen.cam.dir();
 	screen.matrices.up = screen.cam.up();
+	screen.matrices.vertFovRad = screen.cam.verticalFov() * sfz::DEG_TO_RAD();
 	screen.renderer->updateMatrices(screen.matrices);
 
 	return SCREEN_NO_OP;

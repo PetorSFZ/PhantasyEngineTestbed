@@ -3,6 +3,7 @@
 #include "CudaRayTracerRenderer.hpp"
 
 #include <sfz/gl/Program.hpp>
+#include <sfz/math/MathHelpers.hpp>
 #include <sfz/memory/New.hpp>
 #include <sfz/util/IO.hpp>
 
@@ -81,8 +82,17 @@ CUDARayTracerRenderer::~CUDARayTracerRenderer() noexcept
 
 RenderResult CUDARayTracerRenderer::render(Framebuffer& resultFB) noexcept
 {
+	// Calculate camera variables
+	CameraDef cam;
+	cam.origin = mMatrices.position;
+	cam.dir = normalize(mMatrices.forward);
+	cam.up = normalize(mMatrices.up);
+	sfz_assert_debug(approxEqual(dot(cam.dir, cam.up), 0.0f));
+	cam.right = normalize(cross(cam.dir, cam.up));
+	cam.vertFovRad; 
+
 	// Run CUDA ray tracer
-	runCudaRayTracer(mImpl->cudaSurface, mTargetResolution);
+	runCudaRayTracer(mImpl->cudaSurface, mTargetResolution, cam);
 	
 	// Transfer result from Cuda texture to result framebuffer
 	glUseProgram(mImpl->transferShader.handle());
@@ -114,8 +124,12 @@ void CUDARayTracerRenderer::targetResolutionUpdated() noexcept
 	// Cleanup eventual previous texture and bindings
 	if (mImpl->cudaSurface != 0) {
 		CHECK_CUDA_ERROR(cudaDestroySurfaceObject(mImpl->cudaSurface));
+		mImpl->cudaSurface = 0;
 	}
-	CHECK_CUDA_ERROR(cudaGraphicsUnregisterResource(mImpl->cudaResource));
+	if (mImpl->cudaResource != 0) {
+		CHECK_CUDA_ERROR(cudaGraphicsUnregisterResource(mImpl->cudaResource));
+		mImpl->cudaResource = 0;
+	}
 	glDeleteTextures(1, &mImpl->glTex);
 
 	// Create OpenGL texture and allocate memory
