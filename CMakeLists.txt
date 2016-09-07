@@ -63,12 +63,16 @@ add_subdirectory(${EXTERNALS_DIR}/assimp)
 # stb_image
 add_subdirectory(${EXTERNALS_DIR}/stb_image)
 
+# imgui
+add_subdirectory(${EXTERNALS_DIR}/imgui)
+
 # Include directories
 include_directories(
 	${INCLUDE_DIR}
 	${SFZ_CORE_INCLUDE_DIRS}
 	${ASSIMP_INCLUDE_DIRS}
 	${STB_IMAGE_INCLUDE_DIRS}
+	${IMGUI_INCLUDE_DIRS}
 )
 
 # Phantasy Engine Library
@@ -134,6 +138,7 @@ target_link_libraries(
 	${SFZ_CORE_LIBRARIES}
 	${ASSIMP_LIBRARIES}
 	${STB_IMAGE_LIBRARIES}
+	${IMGUI_LIBRARIES}
 )
 
 # CUDA Ray Tracer Renderer Library
