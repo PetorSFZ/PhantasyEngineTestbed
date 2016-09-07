@@ -164,6 +164,62 @@ vec3 reflect(const vec3 u, const vec3 v) noexcept
 	return u - 2 * dot(u, v) * v;
 }
 
+const uint8_t* CPURayTracerRenderer::sampleImage(const RawImage& image, const vec2 uv) const noexcept
+{
+	vec2 texDim = vec2(image.dim);
+
+	// Convert from triangle UV to texture coordinates
+	vec2 scaledUV = uv * texDim;
+	scaledUV.x = std::fmod(scaledUV.x, texDim.x);
+	scaledUV.y = std::fmod(scaledUV.y, texDim.y);
+	scaledUV += texDim;
+	scaledUV.x = std::fmod(scaledUV.x, texDim.x);
+	scaledUV.y = std::fmod(scaledUV.y, texDim.y);
+
+	vec2i texCoord = vec2i(std::round(scaledUV.x), std::round(scaledUV.y));
+
+	return image.getPixelPtr(texCoord);
+}
+
+// PBR shading functions
+// ------------------------------------------------------------------------------------------------
+
+// References used:
+// https://de45xmedrsdbp.cloudfront.net/Resources/files/2013SiggraphPresentationsNotes-26915738.pdf
+// http://blog.selfshadow.com/publications/s2016-shading-course/
+// http://www.codinglabs.net/article_physically_based_rendering_cook_torrance.aspx
+// http://graphicrants.blogspot.se/2013/08/specular-brdf-reference.html
+
+// Normal distribution function, GGX/Trowbridge-Reitz
+// a = roughness^2, UE4 parameterization
+// dot(n,h) term should be clamped to 0 if negative
+float ggx(float nDotH, float a)
+{
+	float a2 = a * a;
+	float div = sfz::PI() * pow(nDotH * nDotH * (a2 - 1.0f) + 1.0f, 2);
+	return a2 / div;
+}
+
+// Schlick's model adjusted to fit Smith's method
+// k = a/2, where a = roughness^2, however, for analytical light sources (non image based)
+// roughness is first remapped to roughness = (roughnessOrg + 1) / 2.
+// Essentially, for analytical light sources:
+// k = (roughness + 1)^2 / 8
+// For image based lighting:
+// k = roughness^2 / 2
+float geometricSchlick(float nDotL, float nDotV, float k)
+{
+	float g1 = nDotL / (nDotL * (1.0f - k) + k);
+	float g2 = nDotV / (nDotV * (1.0f - k) + k);
+	return g1 * g2;
+}
+
+// Schlick's approximation. F0 should typically be 0.04 for dielectrics
+vec3 fresnelSchlick(float nDotL, vec3 f0)
+{
+	return f0 + (vec3(1.0f) - f0) * clamp(pow(1.0f - nDotL, 5), 0.0f, 1.0f);
+}
+
 vec4 CPURayTracerRenderer::tracePrimaryRays(const Ray& ray) const noexcept
 {
 	RaycastResult result = mAabbTree.raycast(ray);
@@ -191,71 +247,88 @@ vec4 CPURayTracerRenderer::tracePrimaryRays(const Ray& ray) const noexcept
 	const Material& material = result.rawGeometryTriangle.component->material;
 	const DynArray<RawImage>& images = renderable.images;
 
-	vec3 albedoColor = material.albedoValue;
+	vec3 albedoColour = material.albedoValue;
 
 	if (material.albedoIndex != UINT32_MAX) {
 		const RawImage& albedoImage = images[material.albedoIndex];
-
-		vec2 texDim = vec2(albedoImage.dim);
-
-		// Convert from triangle UV to texture coordinates
-		vec2 scaledUV = textureUV * texDim;
-		scaledUV.x = std::fmod(scaledUV.x, texDim.x);
-		scaledUV.y = std::fmod(scaledUV.y, texDim.y);
-		scaledUV += texDim;
-		scaledUV.x = std::fmod(scaledUV.x, texDim.x);
-		scaledUV.y = std::fmod(scaledUV.y, texDim.y);
-
-		vec2i texCoord = vec2i(std::round(scaledUV.x), std::round(scaledUV.y));
-
 		if (albedoImage.bytesPerPixel == 3 ||
 		    albedoImage.bytesPerPixel == 4) {
-			Vector<uint8_t, 3> intColor = Vector<uint8_t, 3>(albedoImage.getPixelPtr(texCoord));
-			albedoColor = vec3(intColor) / 255.0f;
+			Vector<uint8_t, 3> intColor = Vector<uint8_t, 3>(sampleImage(albedoImage, textureUV));
+			albedoColour = vec3(intColor) / 255.0f;
 		}
 	}
+	// Linearize
+	albedoColour.x = std::pow(albedoColour.x, 2.2);
+	albedoColour.y = std::pow(albedoColour.y, 2.2);
+	albedoColour.z = std::pow(albedoColour.z, 2.2);
 
+	float roughness = material.roughnessValue;
+	float metallic = material.metallicValue;
+
+	if (material.roughnessIndex != UINT32_MAX) {
+		const RawImage& image = images[material.roughnessIndex];
+		uint8_t intColour = sampleImage(image, textureUV)[0];
+		roughness = intColour / 255.0f;
+	}
+	if (material.metallicIndex != UINT32_MAX) {
+		const RawImage& image = images[material.metallicIndex];
+		uint8_t intColour = sampleImage(image, textureUV)[0];
+		metallic = intColour / 255.0f;
+	}
 
 	vec3 pos = ray.origin + ray.dir * t;
 	vec3 reflectionDir = reflect(ray.dir, normal);
 
-	vec3 color = vec3(0.0f);
+	vec3 colour = vec3(0.0f);
 
-	//for (PointLight light : mStaticScene.get()->pointLights) {
-	PointLight light = mStaticScene.get()->pointLights[2];
-	{
+	for (PointLight& light : mStaticScene.get()->pointLights) {
 		vec3 toLight = light.pos - pos;
 		float toLightDist = length(toLight);
 		vec3 l = toLight / toLightDist;
-		vec3 v = normalize(-pos);
+		vec3 v = normalize(-ray.dir);
 		vec3 h = normalize(l + v);
 
 		float nDotL = dot(normal, l);
 		if (nDotL <= 0.0f) {
-
+			continue;
 		}
-		else {
-			float nDotV = dot(normal, v);
+		
+		float nDotV = dot(normal, v);
 
-			nDotV = std::max(0.001f, nDotV);
+		nDotV = std::max(0.001f, nDotV);
 
-			vec3 diffuse = albedoColor / sfz::PI();
+		// Lambert diffuse
+		vec3 diffuse = albedoColour / sfz::PI();
 
-			vec3 specular = vec3(0.0f);
+		// Cook-Torrance specular
+		// Normal distribution function
+		float nDotH = std::max(sfz::dot(normal, h), 0.0f); // max() should be superfluous here
+		float ctD = ggx(nDotH, roughness * roughness);
 
-			// Calculates light strength
-			float fallofNumerator = pow(sfz::clamp(1.0f - pow(toLightDist / light.range, 4), 0.0f, 1.0f), 2);
-			float fallofDenominator = (toLightDist * toLightDist + 1.0);
-			float falloff = fallofNumerator / fallofDenominator;
-			vec3 lighting = falloff * light.strength;
+		// Geometric self-shadowing term
+		float k = pow(roughness + 1.0, 2) / 8.0;
+		float ctG = geometricSchlick(nDotL, nDotV, k);
 
-			color += (diffuse + specular) * lighting * nDotV;
-		}
+		// Fresnel function
+		// Assume all dielectrics have a f0 of 0.04, for metals we assume f0 == albedo
+		vec3 f0 = sfz::lerp(vec3(0.04f), albedoColour, metallic);
+		vec3 ctF = fresnelSchlick(nDotL, f0);
+
+		// Calculate final Cook-Torrance specular value
+		vec3 specular = ctD * ctF * ctG / (4.0f * nDotL * nDotV);
+
+		// Calculates light strength
+		float fallofNumerator = pow(sfz::clamp(1.0f - pow(toLightDist / light.range, 4), 0.0f, 1.0f), 2);
+		float fallofDenominator = (toLightDist * toLightDist + 1.0);
+		float falloff = fallofNumerator / fallofDenominator;
+		vec3 lighting = falloff * light.strength;
+
+		colour += (diffuse + specular) * lighting * nDotL;
 	}
 
-	vec4 bouncyBounce = traceSecondaryRays({ pos, reflectionDir });
+	//vec4 bouncyBounce = traceSecondaryRays({ pos, reflectionDir });
 
-	return vec4(color, 1.0f) + bouncyBounce;
+	return vec4(colour, 1.0f);
 }
 
 } // namespace phe

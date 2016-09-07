@@ -50,6 +50,8 @@ private:
 	// Private methods
 	// --------------------------------------------------------------------------------------------
 
+	const uint8_t* sampleImage(const RawImage& image, const vec2 uv) const noexcept;
+
 	vec4 tracePrimaryRays(const Ray& ray) const noexcept;
 
 	vec4 traceSecondaryRays(const Ray& ray) const noexcept;
