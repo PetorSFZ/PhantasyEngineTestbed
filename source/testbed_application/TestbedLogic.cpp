@@ -115,17 +115,6 @@ UpdateOp TestbedLogic::update(GameScreen& screen, UpdateState& state) noexcept
 
 	screen.cam.setDir(screen.cam.dir(), vec3(0.0f, 1.0f, 0.0f));
 
-
-
-	// Update renderer matrices
-	screen.matrices.headMatrix = screen.cam.viewMatrix();
-	screen.matrices.projMatrix = screen.cam.projMatrix();
-	screen.matrices.position = screen.cam.pos();
-	screen.matrices.forward = screen.cam.dir();
-	screen.matrices.up = screen.cam.up();
-	screen.matrices.vertFovRad = screen.cam.verticalFov() * sfz::DEG_TO_RAD();
-	screen.renderer->updateMatrices(screen.matrices);
-
 	return SCREEN_NO_OP;
 }
 

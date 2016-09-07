@@ -48,7 +48,20 @@ GameScreen::GameScreen(UniquePtr<GameLogic>&& gameLogicIn, UniquePtr<Level>&& le
 
 UpdateOp GameScreen::update(UpdateState& state)
 {
-	return gameLogic->update(*this, state);
+	UpdateOp op = gameLogic->update(*this, state);;
+
+	// Update renderer matrices
+	mMatrices.headMatrix = cam.viewMatrix();
+	mMatrices.projMatrix = cam.projMatrix();
+	mMatrices.position = cam.pos();
+	mMatrices.forward = cam.dir();
+	mMatrices.up = cam.up();
+	mMatrices.vertFovRad = cam.verticalFov() * sfz::DEG_TO_RAD();
+	if (renderer != nullptr) {
+		renderer->updateMatrices(mMatrices);
+	}
+	
+	return op;
 }
 
 void GameScreen::render(UpdateState& state)

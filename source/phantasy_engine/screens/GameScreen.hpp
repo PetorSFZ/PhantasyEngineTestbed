@@ -50,7 +50,6 @@ public:
 
 	// TODO: Come up with something better than these?
 	ViewFrustum cam;
-	CameraMatrices matrices;
 
 	// Constructors & destructors
 	// --------------------------------------------------------------------------------------------
@@ -83,6 +82,8 @@ private:
 	Framebuffer mResultFB, mGammaCorrectedFB;
 	Program mScalingShader, mGammaCorrectionShader;
 	FullscreenTriangle mFullscreenTriangle;
+
+	CameraMatrices mMatrices;
 };
 
 } // namespace phe
