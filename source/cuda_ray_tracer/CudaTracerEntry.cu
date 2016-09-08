@@ -8,6 +8,10 @@
 
 #include <math.h>
 
+namespace phe {
+
+using sfz::vec3;
+
 struct CameraDefCuda final {
 	float3 origin;
 	float3 dir;
@@ -24,7 +28,7 @@ inline __device__ float3 calculateRayDir(const CameraDefCuda& cam, float2 loc, f
 	return normalize(nonNormRayDir);
 }
 
-__global__ void cudaRayTracerKernel(cudaSurfaceObject_t surface, int2 surfaceRes, CameraDefCuda cam)
+__global__ void cudaRayTracerKernel(cudaSurfaceObject_t surface, int2 surfaceRes, CameraDefCuda cam, BVHNode* bvhNodes)
 {
 	// Calculate surface coordinates
 	int2 loc = make_int2(blockIdx.x * blockDim.x + threadIdx.x,
@@ -39,11 +43,7 @@ __global__ void cudaRayTracerKernel(cudaSurfaceObject_t surface, int2 surfaceRes
 	surf2Dwrite(data, surface, loc.x * sizeof(float4), loc.y);
 }
 
-namespace phe {
-
-using sfz::vec3;
-
-void runCudaRayTracer(cudaSurfaceObject_t surface, vec2i surfaceRes, const CameraDef& cam) noexcept
+void runCudaRayTracer(cudaSurfaceObject_t surface, vec2i surfaceRes, const CameraDef& cam, BVHNode* bvhNodes) noexcept
 {
 	// Convert camera defintion to CUDA primitives
 	CameraDefCuda camTmp;
@@ -58,7 +58,7 @@ void runCudaRayTracer(cudaSurfaceObject_t surface, vec2i surfaceRes, const Camer
 	               (surfaceRes.y + threadsPerBlock.y  - 1) / threadsPerBlock.y);
 
 	// Run cuda ray tracer kernel
-	cudaRayTracerKernel<<<numBlocks, threadsPerBlock>>>(surface, toInt2(surfaceRes), camTmp);
+	cudaRayTracerKernel<<<numBlocks, threadsPerBlock>>>(surface, toInt2(surfaceRes), camTmp, bvhNodes);
 	cudaDeviceSynchronize();
 }
 

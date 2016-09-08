@@ -10,7 +10,13 @@ namespace phe {
 BVH buildBVHFromStaticScene(const StaticScene& scene) noexcept
 {
 	// TODO: Implement
-	return BVH();
+	BVH tmp;
+
+	BVHNode node;
+	setAABB(node, vec3(1.0f, 0.0f, 1.0f), vec3(1.0f, 1.0f, 1.0f));
+	tmp.nodes.add(node);
+
+	return tmp;
 }
 
 } // namespace phe

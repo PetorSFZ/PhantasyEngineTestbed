@@ -12,6 +12,8 @@
 #include <cuda_runtime.h>
 
 #include <phantasy_engine/renderers/cpu_ray_tracer/RayTracerCommon.hpp>
+#include <phantasy_engine/renderers/cpu_ray_tracer/BVH.hpp>
+
 #include <phantasy_engine/renderers/FullscreenTriangle.hpp>
 
 #include "CudaTracerEntry.cuh"
@@ -45,6 +47,9 @@ public:
 	cudaArray_t cudaArray = 0; // Probably no need to free, since memory is owned by OpenGL
 	cudaSurfaceObject_t cudaSurface = 0;
 
+	BVH bvh;
+	BVHNode* gpuBVHNodes = nullptr;
+
 	CUDARayTracerRendererImpl() noexcept
 	{
 		
@@ -55,6 +60,8 @@ public:
 		CHECK_CUDA_ERROR(cudaDestroySurfaceObject(cudaSurface));
 		CHECK_CUDA_ERROR(cudaGraphicsUnregisterResource(cudaResource));
 		glDeleteTextures(1, &glTex);
+
+		CHECK_CUDA_ERROR(cudaFree(gpuBVHNodes));
 	}
 };
 
@@ -89,7 +96,7 @@ RenderResult CUDARayTracerRenderer::render(Framebuffer& resultFB) noexcept
 	                                  mMatrices.vertFovRad, resultRes);
 
 	// Run CUDA ray tracer
-	runCudaRayTracer(mImpl->cudaSurface, mTargetResolution, cam);
+	runCudaRayTracer(mImpl->cudaSurface, mTargetResolution, cam, mImpl->gpuBVHNodes);
 	
 	// Transfer result from Cuda texture to result framebuffer
 	glUseProgram(mImpl->transferShader.handle());
@@ -111,7 +118,15 @@ RenderResult CUDARayTracerRenderer::render(Framebuffer& resultFB) noexcept
 
 void CUDARayTracerRenderer::staticSceneChanged() noexcept
 {
+	// Build the BVH
+	BVH& bvh = mImpl->bvh;
+	bvh = buildBVHFromStaticScene(*mStaticScene.get());
 
+	// Allocate memory on GPU and copy over
+	CHECK_CUDA_ERROR(cudaFree(mImpl->gpuBVHNodes));
+	size_t numBytes = bvh.nodes.size() * sizeof(BVHNode);
+	CHECK_CUDA_ERROR(cudaMalloc(&mImpl->gpuBVHNodes, numBytes));
+	CHECK_CUDA_ERROR(cudaMemcpy(mImpl->gpuBVHNodes, bvh.nodes.data(), numBytes, cudaMemcpyHostToDevice));
 }
 
 void CUDARayTracerRenderer::targetResolutionUpdated() noexcept

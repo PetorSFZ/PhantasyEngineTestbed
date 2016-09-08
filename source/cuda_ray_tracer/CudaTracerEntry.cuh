@@ -7,12 +7,13 @@
 #include <sfz/math/Vector.hpp>
 
 #include <phantasy_engine/renderers/cpu_ray_tracer/RayTracerCommon.hpp>
+#include <phantasy_engine/renderers/cpu_ray_tracer/BVH.hpp>
 
 namespace phe {
 
 using sfz::vec2i;
 using sfz::vec3;
 
-void runCudaRayTracer(cudaSurfaceObject_t surface, vec2i surfaceRes, const CameraDef& cam) noexcept;
+void runCudaRayTracer(cudaSurfaceObject_t surface, vec2i surfaceRes, const CameraDef& cam, BVHNode* bvhNodes) noexcept;
 
 } // namespace phe
