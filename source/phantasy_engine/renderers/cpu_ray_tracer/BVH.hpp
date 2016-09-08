@@ -62,9 +62,8 @@ inline vec3 aabbMax(const BVHNode& node) noexcept
 inline bool isLeaf(const BVHNode& node) noexcept
 {
 	uint32_t val = node.indices[0];
-	val = val >> 31u;
-	val &= 1u;
-	return val == 1u;
+	val &= 0x80000000u;
+	return val != 0u;
 }
 
 inline uint32_t leftChildIndex(const BVHNode& node) noexcept
