@@ -105,6 +105,8 @@ set(PHANTASY_ENGINE_LIB_FILES
 
 	${PH_INCLUDE_DIR}/renderers/cpu_ray_tracer/AabbTree.hpp
 	 ${PH_SOURCE_DIR}/renderers/cpu_ray_tracer/AabbTree.cpp
+	${PH_INCLUDE_DIR}/renderers/cpu_ray_tracer/BVH.hpp
+	 ${PH_SOURCE_DIR}/renderers/cpu_ray_tracer/BVH.cpp
 	${PH_INCLUDE_DIR}/renderers/cpu_ray_tracer/CPURayTracerRenderer.hpp
 	 ${PH_SOURCE_DIR}/renderers/cpu_ray_tracer/CPURayTracerRenderer.cpp
 	${PH_INCLUDE_DIR}/renderers/cpu_ray_tracer/RayTracerCommon.hpp
@@ -227,6 +229,7 @@ if(PHANTASY_ENGINE_BUILD_TESTS)
 		${TESTS_DIR}/Main_Tests.cpp
 
 		${TESTS_DIR}/renderers/ViewFrustum_Tests.cpp
+		${TESTS_DIR}/renderers/cpu_ray_tracer/BVH_Tests.cpp
 	)
 	set_directory_source_group(${PHANTASY_ENGINE_TEST_FILES})
 
