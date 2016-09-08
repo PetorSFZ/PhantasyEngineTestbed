@@ -34,13 +34,59 @@ struct BVHNode final {
 
 static_assert(sizeof(BVHNode) == 32, "BVHNode is padded");
 
+// Triangle
+// ------------------------------------------------------------------------------------------------
+
+struct TrianglePosition final {
+	float po[3];
+	float p1[3];
+	float p2[3];
+};
+
+static_assert(sizeof(TrianglePosition) == 36, "TrianglePosition is padded");
+
+struct TriangleData final {
+	float n0[3];
+	float n1[3];
+	float n2[3];
+
+	float uv0[2];
+	float uv1[2];
+	float uv2[2];
+
+	uint32_t materialIndex;
+};
+
+static_assert(sizeof(TriangleData) == 64, "TriangleData is padded");
+
+struct TriangleUnused final {
+	float po[3];
+	float p1[3];
+	float p2[3];
+
+	float n0[3];
+	float n1[3];
+	float n2[3];
+
+	float uv0[2];
+	float uv1[2];
+	float uv2[2];
+
+	float padding[8];
+};
+
+static_assert(sizeof(TriangleUnused) == 128, "TriangleUnused is padded");
+
 // C++ container
 // ------------------------------------------------------------------------------------------------
 
 class BVH final {
 public:
 	DynArray<BVHNode> nodes;
-	//DynArray<Triangles>
+
+	// These arrays are supposed to be the same size, an index is valid in both lists
+	DynArray<TrianglePosition> triangles;
+	DynArray<TriangleData> triangleDatas;
 };
 
 // TODO: implement
