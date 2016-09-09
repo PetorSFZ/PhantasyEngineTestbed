@@ -9,6 +9,7 @@
 
 #include "phantasy_engine/renderers/BaseRenderer.hpp"
 #include "phantasy_engine/renderers/cpu_ray_tracer/AabbTree.hpp"
+#include "phantasy_engine/renderers/cpu_ray_tracer/BVH.hpp"
 
 namespace phe {
 
@@ -62,6 +63,7 @@ private:
 	DynArray<vec4> mTexture;
 	DynArray<std::thread> mThreads;
 	AabbTree mAabbTree;
+	BVH mBVH;
 };
 
 } // namespace phe

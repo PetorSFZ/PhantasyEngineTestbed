@@ -57,9 +57,15 @@ RenderResult CPURayTracerRenderer::render(Framebuffer& resultFB) noexcept
 					vec2 centerOffsCoord = locNormalized * 2.0f - vec2(1.0f); // [-1.0, 1.0]
 					vec3 rayDir = normalize(cam.dir + centerOffsCoord.x * cam.dX + centerOffsCoord.y * cam.dY);
 
-					// Trace ray
-					Ray ray(cam.origin, rayDir);
-					this->mTexture[x + rowStartIndex] = tracePrimaryRays(ray);
+					this->mTexture[x + rowStartIndex] = vec4(rayDir, 1.0);
+
+
+
+
+
+					// Trace ray ODL
+					//Ray ray(cam.origin, rayDir);
+					//this->mTexture[x + rowStartIndex] = tracePrimaryRays(ray);
 				}
 			}
 		} });
@@ -98,6 +104,7 @@ void CPURayTracerRenderer::staticSceneChanged() noexcept
 		time_point before = std::chrono::high_resolution_clock::now();
 
 		mAabbTree.constructFrom(mStaticScene->opaqueRenderables);
+		mBVH = buildBVHFromStaticScene(*mStaticScene.get());
 
 		time_point after = std::chrono::high_resolution_clock::now();
 		using FloatSecond = std::chrono::duration<float>;
@@ -105,7 +112,7 @@ void CPURayTracerRenderer::staticSceneChanged() noexcept
 		printf("Time spent building BVH: %.3f seconds\n", delta);
 	}
 
-	{
+	/*{
 		using time_point = std::chrono::high_resolution_clock::time_point;
 		time_point before = std::chrono::high_resolution_clock::now();
 
@@ -121,7 +128,7 @@ void CPURayTracerRenderer::staticSceneChanged() noexcept
 		if (result.intersection.intersected) {
 			printf("Test ray intersected at t=%f, %s\n", result.intersection.t, toString(origin + result.intersection.t * dir).str);
 		}
-	}
+	}*/
 }
 
 void CPURayTracerRenderer::targetResolutionUpdated() noexcept
