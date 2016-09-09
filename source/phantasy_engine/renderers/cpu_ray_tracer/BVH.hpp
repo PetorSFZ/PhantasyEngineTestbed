@@ -1,8 +1,11 @@
 // See 'LICENSE_PHANTASY_ENGINE' for copyright and contributors.
 
+#pragma once
+
 #include <cstdint>
 
 #include <sfz/containers/DynArray.hpp>
+#include <sfz/geometry/AABB.hpp>
 #include <sfz/math/Vector.hpp>
 
 #include "phantasy_engine/level/StaticScene.hpp"
@@ -37,13 +40,13 @@ static_assert(sizeof(BVHNode) == 32, "BVHNode is padded");
 // Triangle
 // ------------------------------------------------------------------------------------------------
 
-struct TrianglePosition final {
-	float p0[3];
-	float p1[3];
-	float p2[3];
+struct TriangleVertices final {
+	float v0[3];
+	float v1[3];
+	float v2[3];
 };
 
-static_assert(sizeof(TrianglePosition) == 36, "TrianglePosition is padded");
+static_assert(sizeof(TriangleVertices) == 36, "TrianglePosition is padded");
 
 struct TriangleData final {
 	float n0[3];
@@ -87,15 +90,35 @@ static_assert(sizeof(TriangleUnused) == 128, "TriangleUnused is padded");
 
 class BVH final {
 public:
+
+	// Members
+	// --------------------------------------------------------------------------------------------
+
 	DynArray<BVHNode> nodes;
 
 	// These arrays are supposed to be the same size, an index is valid in both lists
-	DynArray<TrianglePosition> triangles;
+	DynArray<TriangleVertices> triangles;
 	DynArray<TriangleData> triangleDatas;
-};
 
-// TODO: implement
-BVH buildBVHFromStaticScene(const StaticScene& scene) noexcept;
+	// Methods
+	// --------------------------------------------------------------------------------------------
+
+	void buildStaticFrom(const StaticScene& scene) noexcept;
+	void buildStaticFrom(const DynArray<TriangleVertices>& triangles) noexcept;
+
+private:
+
+	// Private methods
+	// --------------------------------------------------------------------------------------------
+
+	void fillStaticNode(
+		uint32_t nodeInd,
+		uint32_t depth,
+		const DynArray<uint32_t>& triangleInds,
+		const DynArray<TriangleVertices>& inTriangles,
+		const DynArray<sfz::AABB>& inTriangleAabbs) noexcept;
+
+};
 
 // C++ getters
 // ------------------------------------------------------------------------------------------------
@@ -162,6 +185,20 @@ inline void setLeaf(BVHNode& node, uint32_t numTriangles, uint32_t triangleListI
 {
 	node.indices[0] = numTriangles | 0x80000000u;
 	node.indices[1] = triangleListIndex;
+}
+
+inline void setFloat3(float arr[], const vec3& vec) noexcept
+{
+	arr[0] = vec.x;
+	arr[1] = vec.y;
+	arr[2] = vec.z;
+}
+
+inline void setTriangle(TriangleVertices& triangle, const vec3& p0, const vec3& p1, const vec3& p2) noexcept
+{
+	setFloat3(triangle.v0, p0);
+	setFloat3(triangle.v1, p1);
+	setFloat3(triangle.v2, p2);
 }
 
 } // namespace phe

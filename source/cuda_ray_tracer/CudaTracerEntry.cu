@@ -28,7 +28,7 @@ inline __device__ float3 calculateRayDir(const CameraDefCuda& cam, float2 loc, f
 	return normalize(nonNormRayDir);
 }
 
-__global__ void cudaRayTracerKernel(cudaSurfaceObject_t surface, int2 surfaceRes, CameraDefCuda cam, BVHNode* bvhNodes, TrianglePosition* triangles)
+__global__ void cudaRayTracerKernel(cudaSurfaceObject_t surface, int2 surfaceRes, CameraDefCuda cam, BVHNode* bvhNodes, TriangleVertices* triangles)
 {
 	// Calculate surface coordinates
 	int2 loc = make_int2(blockIdx.x * blockDim.x + threadIdx.x,
@@ -43,7 +43,7 @@ __global__ void cudaRayTracerKernel(cudaSurfaceObject_t surface, int2 surfaceRes
 	surf2Dwrite(data, surface, loc.x * sizeof(float4), loc.y);
 }
 
-void runCudaRayTracer(cudaSurfaceObject_t surface, vec2i surfaceRes, const CameraDef& cam, BVHNode* bvhNodes, TrianglePosition* triangles) noexcept
+void runCudaRayTracer(cudaSurfaceObject_t surface, vec2i surfaceRes, const CameraDef& cam, BVHNode* bvhNodes, TriangleVertices* triangles) noexcept
 {
 	// Convert camera defintion to CUDA primitives
 	CameraDefCuda camTmp;

@@ -44,12 +44,12 @@ struct TriangleHit final {
 };
 
 // See page 750 in Real-Time Rendering 3
-inline TriangleHit intersects(const TrianglePosition& tri, vec3 origin, vec3 dir) noexcept
+inline TriangleHit intersects(const TriangleVertices& tri, vec3 origin, vec3 dir) noexcept
 {
 	const float EPS = 0.00001f;
-	vec3 p0 = vec3(tri.p0);
-	vec3 p1 = vec3(tri.p1);
-	vec3 p2 = vec3(tri.p2);
+	vec3 p0 = vec3(tri.v0);
+	vec3 p1 = vec3(tri.v1);
+	vec3 p2 = vec3(tri.v2);
 
 	vec3 e1 = p1 - p0;
 	vec3 e2 = p2 - p0;
@@ -84,7 +84,7 @@ struct RayCastResult final {
 	float v = FLT_MAX;
 };
 
-static RayCastResult castRay(BVHNode* nodes, TrianglePosition* triangles, const Ray& ray, float tMin = 0.0001f, float tMax = FLT_MAX) noexcept
+static RayCastResult castRay(BVHNode* nodes, TriangleVertices* triangles, const Ray& ray, float tMin = 0.0001f, float tMax = FLT_MAX) noexcept
 {
 	// Create local stack
 	const uint32_t STACK_MAX_SIZE = 196u;
@@ -106,10 +106,10 @@ static RayCastResult castRay(BVHNode* nodes, TrianglePosition* triangles, const 
 		// Node is a leaf
 		if (isLeaf(node)) {
 			uint32_t triCount = numTriangles(node);
-			TrianglePosition* triList = triangles + triangleListIndex(node);
+			TriangleVertices* triList = triangles + triangleListIndex(node);
 
 			for (uint32_t i = 0; i < triCount; i++) {
-				TrianglePosition& tri = triList[i];
+				TriangleVertices& tri = triList[i];
 				TriangleHit hit = intersects(tri, ray.origin, ray.dir);
 
 				if (hit.hit && hit.t < closest.t && tMin <= hit.t && hit.t <= tMax) {
@@ -185,11 +185,11 @@ RenderResult CPURayTracerRenderer::render(Framebuffer& resultFB) noexcept
 					vec3 rayDir = normalize(cam.dir + centerOffsCoord.x * cam.dX + centerOffsCoord.y * cam.dY);
 					Ray ray(cam.origin, rayDir);
 
-					BVHNode* node = this->mBVH.nodes.data();
-					TrianglePosition* triangles = this->mBVH.triangles.data();
+					BVHNode* nodes = this->mBVH.nodes.data();
+					TriangleVertices* triangles = this->mBVH.triangles.data();
 					
 					// Ray cast against BVH
-					RayCastResult hit = castRay(this->mBVH.nodes.data(), this->mBVH.triangles.data(), ray);
+					RayCastResult hit = castRay(nodes, triangles, ray);
 					if (hit.index == ~0u) {
 						this->mTexture[x + rowStartIndex] = vec4(0.0f);
 						continue;
@@ -239,8 +239,8 @@ void CPURayTracerRenderer::staticSceneChanged() noexcept
 		using time_point = std::chrono::high_resolution_clock::time_point;
 		time_point before = std::chrono::high_resolution_clock::now();
 
-		mAabbTree.constructFrom(mStaticScene->opaqueRenderables);
-		mBVH = buildBVHFromStaticScene(*mStaticScene.get());
+		//mAabbTree.constructFrom(mStaticScene->opaqueRenderables);
+		mBVH.buildStaticFrom(*mStaticScene.get());
 
 		time_point after = std::chrono::high_resolution_clock::now();
 		using FloatSecond = std::chrono::duration<float>;
@@ -303,7 +303,12 @@ const uint8_t* CPURayTracerRenderer::sampleImage(const RawImage& image, const ve
 	scaledUV.x = std::fmod(scaledUV.x, texDim.x);
 	scaledUV.y = std::fmod(scaledUV.y, texDim.y);
 
-	vec2i texCoord = vec2i(std::round(scaledUV.x), std::round(scaledUV.y));
+	vec2i texCoord = vec2i(std::floor(scaledUV.x), std::floor(scaledUV.y));
+
+	sfz_assert_debug(texCoord.x >= 0);
+	sfz_assert_debug(texCoord.y >= 0);
+	sfz_assert_debug(texCoord.x < image.dim.x);
+	sfz_assert_debug(texCoord.y < image.dim.y);
 
 	return image.getPixelPtr(texCoord);
 }
@@ -374,39 +379,39 @@ vec4 CPURayTracerRenderer::tracePrimaryRays(const Ray& ray) const noexcept
 	const Material& material = result.rawGeometryTriangle.component->material;
 	const DynArray<RawImage>& images = renderable.images;
 
-	vec3 albedoColour = material.albedoValue;
+	vec3 albedoColor = material.albedoValue;
 
 	if (material.albedoIndex != UINT32_MAX) {
 		const RawImage& albedoImage = images[material.albedoIndex];
 		if (albedoImage.bytesPerPixel == 3 ||
 		    albedoImage.bytesPerPixel == 4) {
 			Vector<uint8_t, 3> intColor = Vector<uint8_t, 3>(sampleImage(albedoImage, textureUV));
-			albedoColour = vec3(intColor) / 255.0f;
+			albedoColor = vec3(intColor) / 255.0f;
 		}
 	}
 	// Linearize
-	albedoColour.x = std::pow(albedoColour.x, 2.2);
-	albedoColour.y = std::pow(albedoColour.y, 2.2);
-	albedoColour.z = std::pow(albedoColour.z, 2.2);
+	albedoColor.x = std::pow(albedoColor.x, 2.2);
+	albedoColor.y = std::pow(albedoColor.y, 2.2);
+	albedoColor.z = std::pow(albedoColor.z, 2.2);
 
 	float roughness = material.roughnessValue;
 	float metallic = material.metallicValue;
 
 	if (material.roughnessIndex != UINT32_MAX) {
 		const RawImage& image = images[material.roughnessIndex];
-		uint8_t intColour = sampleImage(image, textureUV)[0];
-		roughness = intColour / 255.0f;
+		uint8_t intColor = sampleImage(image, textureUV)[0];
+		roughness = intColor / 255.0f;
 	}
 	if (material.metallicIndex != UINT32_MAX) {
 		const RawImage& image = images[material.metallicIndex];
-		uint8_t intColour = sampleImage(image, textureUV)[0];
-		metallic = intColour / 255.0f;
+		uint8_t intColor = sampleImage(image, textureUV)[0];
+		metallic = intColor / 255.0f;
 	}
 
 	vec3 pos = ray.origin + ray.dir * t;
 	vec3 reflectionDir = reflect(ray.dir, normal);
 
-	vec3 colour = vec3(0.0f);
+	vec3 color = vec3(0.0f);
 
 	for (PointLight& light : mStaticScene.get()->pointLights) {
 		vec3 toLight = light.pos - pos;
@@ -425,7 +430,7 @@ vec4 CPURayTracerRenderer::tracePrimaryRays(const Ray& ray) const noexcept
 		nDotV = std::max(0.001f, nDotV);
 
 		// Lambert diffuse
-		vec3 diffuse = albedoColour / sfz::PI();
+		vec3 diffuse = albedoColor / sfz::PI();
 
 		// Cook-Torrance specular
 		// Normal distribution function
@@ -438,7 +443,7 @@ vec4 CPURayTracerRenderer::tracePrimaryRays(const Ray& ray) const noexcept
 
 		// Fresnel function
 		// Assume all dielectrics have a f0 of 0.04, for metals we assume f0 == albedo
-		vec3 f0 = sfz::lerp(vec3(0.04f), albedoColour, metallic);
+		vec3 f0 = sfz::lerp(vec3(0.04f), albedoColor, metallic);
 		vec3 ctF = fresnelSchlick(nDotL, f0);
 
 		// Calculate final Cook-Torrance specular value
@@ -450,12 +455,12 @@ vec4 CPURayTracerRenderer::tracePrimaryRays(const Ray& ray) const noexcept
 		float falloff = fallofNumerator / fallofDenominator;
 		vec3 lighting = falloff * light.strength;
 
-		colour += (diffuse + specular) * lighting * nDotL;
+		color += (diffuse + specular) * lighting * nDotL;
 	}
 
 	//vec4 bouncyBounce = traceSecondaryRays({ pos, reflectionDir });
 
-	return vec4(colour, 1.0f);
+	return vec4(color, 1.0f);
 }
 
 } // namespace phe

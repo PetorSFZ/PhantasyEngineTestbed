@@ -14,6 +14,6 @@ namespace phe {
 using sfz::vec2i;
 using sfz::vec3;
 
-void runCudaRayTracer(cudaSurfaceObject_t surface, vec2i surfaceRes, const CameraDef& cam, BVHNode* bvhNodes, TrianglePosition* triangles) noexcept;
+void runCudaRayTracer(cudaSurfaceObject_t surface, vec2i surfaceRes, const CameraDef& cam, BVHNode* bvhNodes, TriangleVertices* triangles) noexcept;
 
 } // namespace phe
