@@ -15,6 +15,133 @@ namespace phe {
 
 using namespace sfz;
 
+// Statics
+// ------------------------------------------------------------------------------------------------
+
+struct AABBHit final {
+	bool hit;
+	float t;
+};
+
+static AABBHit intersects(const Ray& ray, const vec3& min, const vec3& max) noexcept
+{
+	vec3 t1 = (min - ray.origin) * ray.invDir;
+	vec3 t2 = (max - ray.origin) * ray.invDir;
+
+	float tmin = sfz::maxElement(sfz::min(t1, t2));
+	float tmax = sfz::minElement(sfz::max(t1, t2));
+
+	AABBHit tmp;
+	tmp.hit = tmax >= tmin;
+	tmp.t = tmin;
+	return tmp;
+}
+
+// DONT CHANGE STUPIDS
+struct TriangleHit final {
+	bool hit;
+	float t, u, v;
+};
+
+// See page 750 in Real-Time Rendering 3
+inline TriangleHit intersects(const TrianglePosition& tri, vec3 origin, vec3 dir) noexcept
+{
+	const float EPS = 0.00001f;
+	vec3 p0 = vec3(tri.p0);
+	vec3 p1 = vec3(tri.p1);
+	vec3 p2 = vec3(tri.p2);
+
+	vec3 e1 = p1 - p0;
+	vec3 e2 = p2 - p0;
+	vec3 q = cross(dir, e2);
+	float a = dot(e1, q);
+	if (-EPS < a && a < EPS) return {false, 0.0f, 0.0f, 0.0f};
+
+	// Backface culling here?
+	// dot(cross(e1, e2), dir) <= 0.0 ??
+
+	float f = 1.0f / a;
+	vec3 s = origin - p0;
+	float u = f * dot(s, q);
+	if (u < 0.0f) return {false, 0.0f, 0.0f, 0.0f};
+
+	vec3 r = cross(s, e1);
+	float v = f * dot(dir, r);
+	if (v < 0.0f || (u + v) > 1.0f) return {false, 0.0f, 0.0f, 0.0f};
+
+	float t = f * dot(e2, r);
+	return {true, u, v, t};
+}
+
+struct RayCastResult final {
+	uint32_t index = ~0u;
+	
+	// Amount to go in ray direction
+	float t = FLT_MAX;
+
+	// Hit position on triangle
+	float u = FLT_MAX;
+	float v = FLT_MAX;
+};
+
+static RayCastResult castRay(BVHNode* nodes, TrianglePosition* triangles, const Ray& ray, float tMin = 0.0001f, float tMax = FLT_MAX) noexcept
+{
+	// Create local stack
+	const uint32_t STACK_MAX_SIZE = 196u;
+	uint32_t stack[STACK_MAX_SIZE];
+	for (uint32_t& s : stack) s = ~0u;
+	
+	// Place initial node on stack
+	stack[0] = 0u;
+	uint32_t stackSize = 1u;
+
+	// Traverse through the tree
+	RayCastResult closest;
+	while (stackSize > 0u) {
+		
+		// Retrieve node on top of stack
+		stackSize -= 1;
+		BVHNode node = nodes[stack[stackSize]];
+
+		// Node is a leaf
+		if (isLeaf(node)) {
+			uint32_t triCount = numTriangles(node);
+			TrianglePosition* triList = triangles + triangleListIndex(node);
+
+			for (uint32_t i = 0; i < triCount; i++) {
+				TrianglePosition& tri = triList[i];
+				TriangleHit hit = intersects(tri, ray.origin, ray.dir);
+
+				if (hit.hit && hit.t < closest.t && tMin <= hit.t && hit.t <= tMax) {
+					closest.index = (triList - triangles) + i;
+					closest.t = hit.t;
+					closest.u = hit.u;
+					closest.v = hit.v;
+
+					// Possible early exit
+					// if (hit.t == tMin) return closest;
+				}
+			
+			}
+
+		}
+
+		// Node is a not leaf
+		else {
+			AABBHit hit = intersects(ray, aabbMin(node), aabbMax(node));
+			if (hit.hit && hit.t <= closest.t && hit.t <= tMax) {
+				
+				stack[stackSize] = leftChildIndex(node);
+				stack[stackSize + 1] = rightChildIndex(node);
+				stackSize += 2;
+			}
+		}
+
+	}
+
+	return closest;
+}
+
 // CPURayTracerRenderer: Constructors & destructors
 // ------------------------------------------------------------------------------------------------
 
@@ -56,15 +183,24 @@ RenderResult CPURayTracerRenderer::render(Framebuffer& resultFB) noexcept
 					vec2 locNormalized = loc / resultRes; // [0, 1]
 					vec2 centerOffsCoord = locNormalized * 2.0f - vec2(1.0f); // [-1.0, 1.0]
 					vec3 rayDir = normalize(cam.dir + centerOffsCoord.x * cam.dX + centerOffsCoord.y * cam.dY);
+					Ray ray(cam.origin, rayDir);
 
-					this->mTexture[x + rowStartIndex] = vec4(rayDir, 1.0);
+					BVHNode* node = this->mBVH.nodes.data();
+					TrianglePosition* triangles = this->mBVH.triangles.data();
+					
+					// Ray cast against BVH
+					RayCastResult hit = castRay(this->mBVH.nodes.data(), this->mBVH.triangles.data(), ray);
+					if (hit.index == ~0u) {
+						this->mTexture[x + rowStartIndex] = vec4(0.0f);
+						continue;
+					}
 
-
-
+					// Draw depth
+					this->mTexture[x + rowStartIndex] = vec4(vec3(hit.t / 10.0f), 1.0);
 
 
 					// Trace ray ODL
-					//Ray ray(cam.origin, rayDir);
+					//
 					//this->mTexture[x + rowStartIndex] = tracePrimaryRays(ray);
 				}
 			}

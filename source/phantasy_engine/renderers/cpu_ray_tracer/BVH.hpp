@@ -38,7 +38,7 @@ static_assert(sizeof(BVHNode) == 32, "BVHNode is padded");
 // ------------------------------------------------------------------------------------------------
 
 struct TrianglePosition final {
-	float po[3];
+	float p0[3];
 	float p1[3];
 	float p2[3];
 };
