@@ -113,7 +113,8 @@ void BVH::fillStaticNode(
 {
 	BVHNode& node = nodes[nodeInd];
 	sfz::AABB aabb = createAabbUsingExisting(triangleInds, inTriangleAabbs);
-	setAABB(node, aabb.min, aabb.max);
+	node.min = aabb.min;
+	node.max = aabb.max;
 
 	if (triangleInds.size() <= 3) {
 		uint32_t firstTriangleIndex = triangles.size();
@@ -121,7 +122,7 @@ void BVH::fillStaticNode(
 			const TriangleVertices& triangle = inTriangles[triangleInd];
 			triangles.add(triangle);
 		}
-		setLeaf(node, triangleInds.size(), firstTriangleIndex);
+		node.setLeaf(triangleInds.size(), firstTriangleIndex);
 		return;
 	}
 
@@ -186,10 +187,10 @@ breakNestedFor:
 	nodes.add(BVHNode());
 	nodes.add(BVHNode());
 
-	setInner(nodes[nodeInd], nodes.size() - 2, nodes.size() - 1);
+	nodes[nodeInd].setInner(nodes.size() - 2, nodes.size() - 1);
 
-	fillStaticNode(leftChildIndex(nodes[nodeInd]), depth + 1, leftTriangles, inTriangles, inTriangleAabbs);
-	fillStaticNode(rightChildIndex(nodes[nodeInd]), depth + 1, rightTriangles, inTriangles, inTriangleAabbs);
+	fillStaticNode(nodes[nodeInd].leftChildIndex(), depth + 1, leftTriangles, inTriangles, inTriangleAabbs);
+	fillStaticNode(nodes[nodeInd].rightChildIndex(), depth + 1, rightTriangles, inTriangles, inTriangleAabbs);
 }
 
 } // namespace phe

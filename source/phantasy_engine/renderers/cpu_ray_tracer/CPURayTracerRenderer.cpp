@@ -104,9 +104,9 @@ static RayCastResult castRay(BVHNode* nodes, TriangleVertices* triangles, const 
 		BVHNode node = nodes[stack[stackSize]];
 
 		// Node is a leaf
-		if (isLeaf(node)) {
-			uint32_t triCount = numTriangles(node);
-			TriangleVertices* triList = triangles + triangleListIndex(node);
+		if (node.isLeaf()) {
+			uint32_t triCount = node.numTriangles();
+			TriangleVertices* triList = triangles + node.triangleListIndex();
 
 			for (uint32_t i = 0; i < triCount; i++) {
 				TriangleVertices& tri = triList[i];
@@ -128,11 +128,11 @@ static RayCastResult castRay(BVHNode* nodes, TriangleVertices* triangles, const 
 
 		// Node is a not leaf
 		else {
-			AABBHit hit = intersects(ray, aabbMin(node), aabbMax(node));
+			AABBHit hit = intersects(ray, node.min, node.max);
 			if (hit.hit && hit.t <= closest.t && hit.t <= tMax) {
 				
-				stack[stackSize] = leftChildIndex(node);
-				stack[stackSize + 1] = rightChildIndex(node);
+				stack[stackSize] = node.leftChildIndex();
+				stack[stackSize + 1] = node.rightChildIndex();
 				stackSize += 2;
 			}
 		}
