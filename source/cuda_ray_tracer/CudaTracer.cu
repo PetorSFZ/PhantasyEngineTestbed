@@ -1,6 +1,6 @@
 // See 'LICENSE_PHANTASY_ENGINE' for copyright and contributors.
 
-#include "CudaTracerEntry.cuh"
+#include "CudaTracer.cuh"
 
 #include <sfz/math/Vector.hpp>
 

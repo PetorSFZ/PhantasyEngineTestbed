@@ -16,7 +16,7 @@
 
 #include <phantasy_engine/renderers/FullscreenTriangle.hpp>
 
-#include "CudaTracerEntry.cuh"
+#include "CudaTracer.cuh"
 
 // CUDA helpers
 // ------------------------------------------------------------------------------------------------
