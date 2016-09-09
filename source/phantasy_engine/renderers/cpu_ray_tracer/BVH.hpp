@@ -72,7 +72,12 @@ struct TriangleUnused final {
 	float uv1[2];
 	float uv2[2];
 
-	float padding[8];
+	float albedoValue[3];
+	uint32_t albedoTexIndex;
+	float roughness;
+	uint32_t roughnessTexIndex;
+	float metallic;
+	uint32_t metallicTexIndex;
 };
 
 static_assert(sizeof(TriangleUnused) == 128, "TriangleUnused is padded");
