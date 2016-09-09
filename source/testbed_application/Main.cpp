@@ -85,9 +85,7 @@ int main(int, char**)
 		using time_point = std::chrono::high_resolution_clock::time_point;
 		time_point before = std::chrono::high_resolution_clock::now();
 
-		Renderable sponza = assimpLoadSponza(modelsPath.str, "sponzaPBR/sponzaPBR.obj");
-		modelToWorldSpace(sponza, scalingMatrix4(0.05f));
-		level->staticScene->opaqueRenderables.add(std::move(sponza));
+		assimpLoadSponza(modelsPath.str, "sponzaPBR/sponzaPBR.obj", *level->staticScene, scalingMatrix4(0.05f));
 
 		time_point after = std::chrono::high_resolution_clock::now();
 		using FloatSecond = std::chrono::duration<float>;
@@ -111,7 +109,6 @@ int main(int, char**)
 		}
 	}
 	else {
-		Renderable testRenderable;
 		RenderableComponent testComponent;
 		Vertex v1;
 		v1.pos ={-0.5f, 2.0f, -2.0f};
@@ -132,8 +129,7 @@ int main(int, char**)
 		testComponent.geometry.indices.add(indices, 3);
 		testComponent.glModel.load(testComponent.geometry);
 
-		testRenderable.components.add(std::move(testComponent));
-		level->staticScene->opaqueRenderables.add(std::move(testRenderable));
+		level->staticScene->opaqueComponents.add(std::move(testComponent));
 	}
 
 	// Run gameloop

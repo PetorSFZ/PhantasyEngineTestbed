@@ -97,7 +97,7 @@ void CPURayTracerRenderer::staticSceneChanged() noexcept
 		using time_point = std::chrono::high_resolution_clock::time_point;
 		time_point before = std::chrono::high_resolution_clock::now();
 
-		mAabbTree.constructFrom(mStaticScene->opaqueRenderables);
+		mAabbTree.constructFrom(mStaticScene->opaqueComponents);
 
 		time_point after = std::chrono::high_resolution_clock::now();
 		using FloatSecond = std::chrono::duration<float>;
@@ -227,9 +227,8 @@ vec4 CPURayTracerRenderer::tracePrimaryRays(const Ray& ray) const noexcept
 	vec3 normal = normalize(n0 + (n1 - n0) * u + (n2 - n0) * v);
 	vec2 textureUV = uv0 + (uv1 - uv0) * u + (uv2 - uv0) * v;
 
-	const Renderable& renderable = *result.rawGeometryTriangle.renderable;
 	const Material& material = result.rawGeometryTriangle.component->material;
-	const DynArray<RawImage>& images = renderable.images;
+	const DynArray<RawImage>& images = mStaticScene->images;
 
 	vec3 albedoColour = material.albedoValue;
 

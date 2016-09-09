@@ -165,32 +165,28 @@ breakNestedFor:
 	fillNode(nodes[nodeInd].right, nodes, rightTriangles, depth + 1);
 }
 
-void AabbTree::constructFrom(const DynArray<Renderable>& renderables) noexcept
+void AabbTree::constructFrom(const DynArray<RenderableComponent>& components) noexcept
 {
 	DynArray<Triangle> tmpTriangles;
+	for (const RenderableComponent& component : components) {
+		const RawGeometry& rawGeometry = component.geometry;
 
-	for (const Renderable& renderable : renderables) {
-		for (const RenderableComponent& component : renderable.components) {
-			const RawGeometry& rawGeometry = component.geometry;
+		uint32_t newSize = tmpTriangles.size() + rawGeometry.indices.size() / 3;
+		tmpTriangles.ensureCapacity(newSize);
 
-			uint32_t newSize = tmpTriangles.size() + rawGeometry.indices.size() / 3;
-			tmpTriangles.ensureCapacity(newSize);
-
-			const DynArray<Vertex>& vertices = rawGeometry.vertices;
-			for (uint32_t i = 0; i < rawGeometry.indices.size() - 2; i += 3) {
-				tmpTriangles.add({
-					vertices[rawGeometry.indices[i]].pos,
-					vertices[rawGeometry.indices[i + 1]].pos,
-					vertices[rawGeometry.indices[i + 2]].pos
-				});
-				rawGeometrytriangles.add({
-					&renderable,
-					&component,
-					&vertices[rawGeometry.indices[i]],
-					&vertices[rawGeometry.indices[i + 1]],
-					&vertices[rawGeometry.indices[i + 2]]
-				});
-			}
+		const DynArray<Vertex>& vertices = rawGeometry.vertices;
+		for (uint32_t i = 0; i < rawGeometry.indices.size() - 2; i += 3) {
+			tmpTriangles.add({
+				vertices[rawGeometry.indices[i]].pos,
+				vertices[rawGeometry.indices[i + 1]].pos,
+				vertices[rawGeometry.indices[i + 2]].pos
+			});
+			rawGeometrytriangles.add({
+				&component,
+				&vertices[rawGeometry.indices[i]],
+				&vertices[rawGeometry.indices[i + 1]],
+				&vertices[rawGeometry.indices[i + 2]]
+			});
 		}
 	}
 

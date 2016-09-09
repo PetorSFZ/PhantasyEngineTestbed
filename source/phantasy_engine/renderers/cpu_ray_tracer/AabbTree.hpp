@@ -23,7 +23,6 @@ struct Triangle {
 };
 
 struct RawGeometryTriangle {
-	const Renderable* renderable;
 	const RenderableComponent* component;
 	const Vertex* v0;
 	const Vertex* v1;
@@ -58,7 +57,7 @@ class AabbTree {
 public:
 	AabbTree() noexcept = default;
 
-	void constructFrom(const DynArray<Renderable>& renderables) noexcept;
+	void constructFrom(const DynArray<RenderableComponent>& renderableComponents) noexcept;
 	void constructFrom(DynArray<Triangle> triangles) noexcept;
 
 	/// Find the closest triangle that intersects with the ray, making use of the constructed BVH.
