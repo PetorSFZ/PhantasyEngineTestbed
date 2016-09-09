@@ -27,4 +27,4 @@ struct Ray
 
 } // namespace phe
 
-#include "phantasy_engine/geometry/Ray.inl"
+#include "phantasy_engine/ray_tracer_common/Ray.inl"
