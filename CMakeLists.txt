@@ -93,7 +93,6 @@ set(PHANTASY_ENGINE_LIB_FILES
 
 	${PH_INCLUDE_DIR}/ray_tracer_common/RayTracerCommonSharedHeader.hpp
 	${PH_INCLUDE_DIR}/ray_tracer_common/Ray.hpp
-	${PH_INCLUDE_DIR}/ray_tracer_common/Ray.inl
 
 	${PH_INCLUDE_DIR}/Renderers.hpp
 	${PH_INCLUDE_DIR}/renderers/BaseRenderer.hpp

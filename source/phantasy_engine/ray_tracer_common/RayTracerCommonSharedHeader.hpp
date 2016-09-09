@@ -2,8 +2,7 @@
 
 #pragma once
 
-//
-// ------------------------------------------------------------------------------------------------
+namespace phe {
 
 // This is the shared header for all ray_tracer_common files. It's job is to include things from
 // both CUDA and C++ and wrap them in a way that makes it possible to run the code on both C++
@@ -15,6 +14,8 @@
 // ------------------------------------------------------------------------------------------------
 
 #if !defined(__CUDAC__)
+
+#define PHE_CUDA_AVAILABLE inline
 
 // Vectors
 #include <sfz/math/Vector.hpp>
@@ -32,6 +33,9 @@ using vec4i_t = sfz::vec4i;
 
 #if defined(__CUDACC__)
 
+#define PHE_CUDA_AVAILABLE inline __host__ __device__
+
+// Vectors
 using vec2_t = float2;
 using vec3_t = float3;
 using vec4_t = float4;
@@ -48,3 +52,5 @@ using vec4i_t = int4;
 #else
 
 #endif
+
+} // namespace phe

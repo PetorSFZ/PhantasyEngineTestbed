@@ -2,29 +2,38 @@
 
 #pragma once
 
-#include <sfz/math/Vector.hpp>
+#include "phantasy_engine/ray_tracer_common/RayTracerCommonSharedHeader.hpp"
 
 namespace phe {
 
-using sfz::vec3;
+struct Ray {
+	vec3_t origin;
+	vec3_t dir;
+	vec3_t invDir;
 
-struct Ray
-{
 	Ray() noexcept = default;
 	Ray(const Ray&) noexcept = default;
 	Ray& operator= (const Ray&) noexcept = default;
 	~Ray() noexcept = default;
 
-	inline Ray(const vec3& origin, const vec3& direction) noexcept;
+	PHE_CUDA_AVAILABLE Ray(const vec3_t& originIn, const vec3_t& directionIn) noexcept
+	{
+		this->origin = originIn;
+		this->dir = directionIn;
+	}
 
-	inline void setOrigin(const vec3& origin) noexcept;
-	inline void setDir(const vec3& dir) noexcept;
+	PHE_CUDA_AVAILABLE void setOrigin(const vec3_t& originIn) noexcept
+	{
+		this->origin = originIn;
+	}
 
-	vec3 origin;
-	vec3 dir;
-	vec3 invDir;
+	PHE_CUDA_AVAILABLE void setDir(const vec3_t& dirIn) noexcept
+	{
+		this->dir = dirIn;
+		this->invDir.x = 1.0f / dirIn.x;
+		this->invDir.y = 1.0f / dirIn.y;
+		this->invDir.z = 1.0f / dirIn.z;
+	}
 };
 
 } // namespace phe
-
-#include "phantasy_engine/ray_tracer_common/Ray.inl"
