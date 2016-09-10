@@ -21,8 +21,8 @@ struct Ray {
 
 	SFZ_CUDA_CALLABLE Ray(const vec3& originIn, const vec3& directionIn) noexcept
 	{
-		this->origin = originIn;
-		this->dir = directionIn;
+		setOrigin(originIn);
+		setDir(directionIn);
 	}
 
 	SFZ_CUDA_CALLABLE void setOrigin(const vec3& originIn) noexcept
