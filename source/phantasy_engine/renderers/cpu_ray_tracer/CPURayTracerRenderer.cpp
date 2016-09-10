@@ -37,42 +37,6 @@ static AABBHit intersects(const Ray& ray, const vec3& min, const vec3& max) noex
 	return tmp;
 }
 
-// DONT CHANGE STUPIDS
-struct TriangleHit final {
-	bool hit;
-	float t, u, v;
-};
-
-// See page 750 in Real-Time Rendering 3
-inline TriangleHit intersects(const TriangleVertices& tri, vec3 origin, vec3 dir) noexcept
-{
-	const float EPS = 0.00001f;
-	vec3 p0 = vec3(tri.v0);
-	vec3 p1 = vec3(tri.v1);
-	vec3 p2 = vec3(tri.v2);
-
-	vec3 e1 = p1 - p0;
-	vec3 e2 = p2 - p0;
-	vec3 q = cross(dir, e2);
-	float a = dot(e1, q);
-	if (-EPS < a && a < EPS) return {false, 0.0f, 0.0f, 0.0f};
-
-	// Backface culling here?
-	// dot(cross(e1, e2), dir) <= 0.0 ??
-
-	float f = 1.0f / a;
-	vec3 s = origin - p0;
-	float u = f * dot(s, q);
-	if (u < 0.0f) return {false, 0.0f, 0.0f, 0.0f};
-
-	vec3 r = cross(s, e1);
-	float v = f * dot(dir, r);
-	if (v < 0.0f || (u + v) > 1.0f) return {false, 0.0f, 0.0f, 0.0f};
-
-	float t = f * dot(e2, r);
-	return {true, u, v, t};
-}
-
 struct RayCastResult final {
 	uint32_t index = ~0u;
 	

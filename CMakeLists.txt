@@ -93,6 +93,7 @@ set(PHANTASY_ENGINE_LIB_FILES
 
 	${PH_INCLUDE_DIR}/ray_tracer_common/Ray.hpp
 	${PH_INCLUDE_DIR}/ray_tracer_common/BVHNode.hpp
+	${PH_INCLUDE_DIR}/ray_tracer_common/Triangle.hpp
 
 	${PH_INCLUDE_DIR}/Renderers.hpp
 	${PH_INCLUDE_DIR}/renderers/BaseRenderer.hpp

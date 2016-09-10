@@ -64,12 +64,11 @@ void BVH::buildStaticFrom(const StaticScene& scene) noexcept
 				inTriangles.ensureCapacity(newSize);
 
 				for (uint32_t i = 0; i < rawGeometry.indices.size() - 2; i += 3) {
-					inTriangles.add(TriangleVertices());
-					setTriangle(inTriangles.last(),
+					inTriangles.add({
 						rawGeometry.vertices[rawGeometry.indices[i]].pos,
 						rawGeometry.vertices[rawGeometry.indices[i + 1]].pos,
 						rawGeometry.vertices[rawGeometry.indices[i + 2]].pos
-					);
+					});
 				}
 			}
 		}
