@@ -12,8 +12,6 @@
 #include <cuda_runtime.h>
 
 #include <phantasy_engine/RayTracerCommon.hpp>
-#include <phantasy_engine/renderers/cpu_ray_tracer/BVH.hpp> // TODO: REMOVE
-
 #include <phantasy_engine/renderers/FullscreenTriangle.hpp>
 
 #include "CudaTracer.cuh"

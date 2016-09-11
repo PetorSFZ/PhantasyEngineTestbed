@@ -45,6 +45,8 @@ __global__ void cudaRayTracerKernel(cudaSurfaceObject_t surface, vec2i surfaceRe
 		return;
 	}
 
+	
+
 	// Draw depth
 	writeSurface(surface, loc, vec4(vec3(hit.t / 10.0f), 1.0));
 }

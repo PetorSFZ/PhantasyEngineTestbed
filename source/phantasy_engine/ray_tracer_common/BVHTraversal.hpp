@@ -10,6 +10,9 @@
 
 namespace phe {
 
+// Traversing BVH
+// ------------------------------------------------------------------------------------------------
+
 struct RayCastResult final {
 	uint32_t triangleIndex = ~0u;
 	
@@ -22,7 +25,8 @@ struct RayCastResult final {
 };
 
 template<size_t STACK_MAX_SIZE = 196u>
-SFZ_CUDA_CALLABLE RayCastResult castRay(BVHNode* nodes, TriangleVertices* triangles, const Ray& ray, float tMin = 0.0001f, float tMax = FLT_MAX) noexcept
+SFZ_CUDA_CALLABLE RayCastResult castRay(const BVHNode* nodes, const TriangleVertices* triangles,
+                                        const Ray& ray, float tMin = 0.0001f, float tMax = FLT_MAX) noexcept
 {
 	// Create local stack
 	uint32_t stack[STACK_MAX_SIZE];
@@ -43,10 +47,10 @@ SFZ_CUDA_CALLABLE RayCastResult castRay(BVHNode* nodes, TriangleVertices* triang
 		// Node is a leaf
 		if (node.isLeaf()) {
 			uint32_t triCount = node.numTriangles();
-			TriangleVertices* triList = triangles + node.triangleListIndex();
+			const TriangleVertices* triList = triangles + node.triangleListIndex();
 
 			for (uint32_t i = 0; i < triCount; i++) {
-				TriangleVertices& tri = triList[i];
+				const TriangleVertices& tri = triList[i];
 				TriangleHit hit = intersects(tri, ray.origin, ray.dir);
 
 				if (hit.hit && hit.t < closest.t && tMin <= hit.t && hit.t <= tMax) {
@@ -74,6 +78,41 @@ SFZ_CUDA_CALLABLE RayCastResult castRay(BVHNode* nodes, TriangleVertices* triang
 	}
 
 	return closest;
+}
+
+// Interpreting result
+// ------------------------------------------------------------------------------------------------
+
+struct HitInfo final {
+	vec3 pos;
+	vec3 normal;
+	vec2 uv;
+};
+
+SFZ_CUDA_CALLABLE HitInfo interpretHit(const TriangleData* triDatas, const RayCastResult& result,
+                                       const Ray& ray) noexcept
+{
+	const TriangleData& data = triDatas[result.triangleIndex];
+	float u = result.u;
+	float v = result.v;
+
+	// Retrieving position
+	HitInfo info;
+	info.pos = ray.origin + result.t * ray.dir;
+	
+	// Interpolating normal
+	vec3 n0 = data.n0;
+	vec3 n1 = data.n1;
+	vec3 n2 = data.n2;
+	info.normal = normalize(n0 + (n1 - n0) * u + (n2 - n0) * v); // TODO: Wrong
+
+	// Interpolating uv coordinate
+	vec2 uv0 = data.uv0;
+	vec2 uv1 = data.uv1;
+	vec2 uv2 = data.uv2;
+	info.uv = uv0 + (uv1 - uv0) * u + (uv2 - uv0) * v; // TODO: Wrong
+
+	return info;
 }
 
 } // namespace phe

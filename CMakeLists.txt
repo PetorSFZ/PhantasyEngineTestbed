@@ -92,6 +92,8 @@ set(PHANTASY_ENGINE_LIB_FILES
 	 ${PH_SOURCE_DIR}/config/Setting.cpp
 
 	${PH_INCLUDE_DIR}/RayTracerCommon.hpp
+	${PH_INCLUDE_DIR}/ray_tracer_common/BVH.hpp
+	 ${PH_SOURCE_DIR}/ray_tracer_common/BVH.cpp
 	${PH_INCLUDE_DIR}/ray_tracer_common/BVHNode.hpp
 	${PH_INCLUDE_DIR}/ray_tracer_common/BVHTraversal.hpp
 	${PH_INCLUDE_DIR}/ray_tracer_common/GenerateRays.hpp
@@ -111,8 +113,6 @@ set(PHANTASY_ENGINE_LIB_FILES
 
 	${PH_INCLUDE_DIR}/renderers/cpu_ray_tracer/AabbTree.hpp
 	 ${PH_SOURCE_DIR}/renderers/cpu_ray_tracer/AabbTree.cpp
-	${PH_INCLUDE_DIR}/renderers/cpu_ray_tracer/BVH.hpp
-	 ${PH_SOURCE_DIR}/renderers/cpu_ray_tracer/BVH.cpp
 	${PH_INCLUDE_DIR}/renderers/cpu_ray_tracer/CPURayTracerRenderer.hpp
 	 ${PH_SOURCE_DIR}/renderers/cpu_ray_tracer/CPURayTracerRenderer.cpp
 

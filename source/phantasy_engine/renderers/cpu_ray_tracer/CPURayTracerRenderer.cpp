@@ -65,6 +65,7 @@ RenderResult CPURayTracerRenderer::render(Framebuffer& resultFB) noexcept
 
 					BVHNode* nodes = this->mBVH.nodes.data();
 					TriangleVertices* triangles = this->mBVH.triangles.data();
+					TriangleData* datas = this->mBVH.triangleDatas.data();
 					
 					// Ray cast against BVH
 					RayCastResult hit = castRay(nodes, triangles, ray);
@@ -73,8 +74,10 @@ RenderResult CPURayTracerRenderer::render(Framebuffer& resultFB) noexcept
 						continue;
 					}
 
+					HitInfo info = interpretHit(datas, hit, ray);
+
 					// Draw depth
-					this->mTexture[x + rowStartIndex] = vec4(vec3(hit.t / 10.0f), 1.0);
+					this->mTexture[x + rowStartIndex] = vec4(info.normal, 1.0);
 
 
 					// Trace ray ODL

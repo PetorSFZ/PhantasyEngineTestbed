@@ -8,7 +8,7 @@
 #include <sfz/math/Vector.hpp>
 
 #include "phantasy_engine/renderers/BaseRenderer.hpp"
-#include "phantasy_engine/renderers/cpu_ray_tracer/BVH.hpp"
+#include "phantasy_engine/ray_tracer_common/BVH.hpp"
 
 namespace phe {
 

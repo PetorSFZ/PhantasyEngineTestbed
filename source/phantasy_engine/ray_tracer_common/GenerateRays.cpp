@@ -4,6 +4,7 @@
 
 #include <cmath>
 
+#include <sfz/Assert.hpp>
 #include <sfz/math/MathHelpers.hpp>
 
 namespace phe {
@@ -12,12 +13,12 @@ CameraDef generateCameraDef(vec3 camPos, vec3 camDir, vec3 camUp, float vertFovR
 {
 	camDir = normalize(camDir);
 	camUp = normalize(camUp);
-	sfz_assert_debug(approxEqual(dot(camDir, camUp), 0.0f));
+	sfz_assert_debug(sfz::approxEqual(dot(camDir, camUp), 0.0f));
 
 	// Calculate camRight
 	vec3 camRight = normalize(cross(camDir, camUp));
-	sfz_assert_debug(approxEqual(dot(camDir, camRight), 0.0f));
-	sfz_assert_debug(approxEqual(dot(camUp, camRight), 0.0f));
+	sfz_assert_debug(sfz::approxEqual(dot(camDir, camRight), 0.0f));
+	sfz_assert_debug(sfz::approxEqual(dot(camUp, camRight), 0.0f));
 
 	// Calculate offset variables
 	float aspect = res.x / res.y;

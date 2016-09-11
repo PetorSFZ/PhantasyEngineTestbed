@@ -39,20 +39,8 @@ public:
 	// --------------------------------------------------------------------------------------------
 
 	void buildStaticFrom(const StaticScene& scene) noexcept;
-	void buildStaticFrom(const DynArray<TriangleVertices>& triangles) noexcept;
-
-private:
-
-	// Private methods
-	// --------------------------------------------------------------------------------------------
-
-	void fillStaticNode(
-		uint32_t nodeInd,
-		uint32_t depth,
-		const DynArray<uint32_t>& triangleInds,
-		const DynArray<TriangleVertices>& inTriangles,
-		const DynArray<sfz::AABB>& inTriangleAabbs) noexcept;
-
+	void buildStaticFrom(const DynArray<TriangleVertices>& triangles,
+	                     const DynArray<TriangleData>& triangleDatas) noexcept;
 };
 
 } // namespace phe
