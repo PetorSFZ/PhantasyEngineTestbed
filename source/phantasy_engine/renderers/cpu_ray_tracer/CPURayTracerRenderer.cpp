@@ -76,7 +76,6 @@ RenderResult CPURayTracerRenderer::render(Framebuffer& resultFB) noexcept
 
 					HitInfo info = interpretHit(datas, hit, ray);
 
-					// Draw depth
 					this->mTexture[x + rowStartIndex] = vec4(info.normal, 1.0);
 
 

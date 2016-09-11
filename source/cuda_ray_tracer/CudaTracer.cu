@@ -27,7 +27,9 @@ inline __device__ vec3 calculateRayDir(const CameraDef& cam, vec2 loc, vec2 surf
 	return normalize(nonNormRayDir);
 }
 
-__global__ void cudaRayTracerKernel(cudaSurfaceObject_t surface, vec2i surfaceRes, CameraDef cam, BVHNode* bvhNodes, TriangleVertices* triangles)
+__global__ void cudaRayTracerKernel(cudaSurfaceObject_t surface, vec2i surfaceRes, CameraDef cam,
+                                    const BVHNode* bvhNodes, const TriangleVertices* triangles,
+                                    const TriangleData* triangleDatas)
 {
 	// Calculate surface coordinates
 	vec2i loc = vec2i(blockIdx.x * blockDim.x + threadIdx.x,
@@ -45,13 +47,13 @@ __global__ void cudaRayTracerKernel(cudaSurfaceObject_t surface, vec2i surfaceRe
 		return;
 	}
 
-	
-
-	// Draw depth
-	writeSurface(surface, loc, vec4(vec3(hit.t / 10.0f), 1.0));
+	HitInfo info = interpretHit(triangleDatas, hit, ray);
+	writeSurface(surface, loc, vec4(info.normal, 1.0));
 }
 
-void runCudaRayTracer(cudaSurfaceObject_t surface, vec2i surfaceRes, const CameraDef& cam, BVHNode* bvhNodes, TriangleVertices* triangles) noexcept
+void runCudaRayTracer(cudaSurfaceObject_t surface, vec2i surfaceRes, const CameraDef& cam,
+                      const BVHNode* bvhNodes, const TriangleVertices* triangles,
+                      const TriangleData* triangleDatas) noexcept
 {	
 	// Calculate number of threads and blocks to run
 	dim3 threadsPerBlock(16, 16);
@@ -59,7 +61,7 @@ void runCudaRayTracer(cudaSurfaceObject_t surface, vec2i surfaceRes, const Camer
 	               (surfaceRes.y + threadsPerBlock.y  - 1) / threadsPerBlock.y);
 
 	// Run cuda ray tracer kernel
-	cudaRayTracerKernel<<<numBlocks, threadsPerBlock>>>(surface, surfaceRes, cam, bvhNodes, triangles);
+	cudaRayTracerKernel<<<numBlocks, threadsPerBlock>>>(surface, surfaceRes, cam, bvhNodes, triangles, triangleDatas);
 	cudaDeviceSynchronize();
 }
 

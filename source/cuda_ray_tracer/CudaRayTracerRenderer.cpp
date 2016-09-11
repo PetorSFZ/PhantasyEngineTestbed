@@ -48,6 +48,7 @@ public:
 	BVH bvh;
 	BVHNode* gpuBVHNodes = nullptr;
 	TriangleVertices* gpuTriangleVertices = nullptr;
+	TriangleData* gpuTriangleDatas = nullptr;
 
 	CUDARayTracerRendererImpl() noexcept
 	{
@@ -61,6 +62,8 @@ public:
 		glDeleteTextures(1, &glTex);
 
 		CHECK_CUDA_ERROR(cudaFree(gpuBVHNodes));
+		CHECK_CUDA_ERROR(cudaFree(gpuTriangleVertices));
+		CHECK_CUDA_ERROR(cudaFree(gpuTriangleDatas));
 	}
 };
 
@@ -95,7 +98,8 @@ RenderResult CUDARayTracerRenderer::render(Framebuffer& resultFB) noexcept
 	                                  mMatrices.vertFovRad, resultRes);
 
 	// Run CUDA ray tracer
-	runCudaRayTracer(mImpl->cudaSurface, mTargetResolution, cam, mImpl->gpuBVHNodes, mImpl->gpuTriangleVertices);
+	runCudaRayTracer(mImpl->cudaSurface, mTargetResolution, cam, mImpl->gpuBVHNodes,
+	                 mImpl->gpuTriangleVertices, mImpl->gpuTriangleDatas);
 	
 	// Transfer result from Cuda texture to result framebuffer
 	glUseProgram(mImpl->transferShader.handle());
@@ -127,11 +131,17 @@ void CUDARayTracerRenderer::staticSceneChanged() noexcept
 	CHECK_CUDA_ERROR(cudaMalloc(&mImpl->gpuBVHNodes, numBVHNodesBytes));
 	CHECK_CUDA_ERROR(cudaMemcpy(mImpl->gpuBVHNodes, bvh.nodes.data(), numBVHNodesBytes, cudaMemcpyHostToDevice));
 
-	// Copy Triangle positions to GPU
+	// Copy triangle positions to GPU
 	CHECK_CUDA_ERROR(cudaFree(mImpl->gpuTriangleVertices));
 	size_t numTrianglePosBytes = bvh.triangles.size() * sizeof(TriangleVertices);
 	CHECK_CUDA_ERROR(cudaMalloc(&mImpl->gpuTriangleVertices, numTrianglePosBytes));
 	CHECK_CUDA_ERROR(cudaMemcpy(mImpl->gpuTriangleVertices, mImpl->bvh.triangles.data(), numTrianglePosBytes, cudaMemcpyHostToDevice));
+
+	// Copy Triangle datas to GPU
+	CHECK_CUDA_ERROR(cudaFree(mImpl->gpuTriangleDatas));
+	size_t numTriangleDatasBytes = bvh.triangleDatas.size() * sizeof(TriangleData);
+	CHECK_CUDA_ERROR(cudaMalloc(&mImpl->gpuTriangleDatas, numTriangleDatasBytes));
+	CHECK_CUDA_ERROR(cudaMemcpy(mImpl->gpuTriangleDatas, mImpl->bvh.triangleDatas.data(), numTriangleDatasBytes, cudaMemcpyHostToDevice));
 }
 
 void CUDARayTracerRenderer::targetResolutionUpdated() noexcept
