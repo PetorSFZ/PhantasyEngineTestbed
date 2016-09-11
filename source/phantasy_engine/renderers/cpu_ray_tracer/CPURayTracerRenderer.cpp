@@ -15,6 +15,97 @@ namespace phe {
 
 using namespace sfz;
 
+// Statics
+// ------------------------------------------------------------------------------------------------
+
+struct AABBHit final {
+	bool hit;
+	float t;
+};
+
+static AABBHit intersects(const Ray& ray, const vec3& min, const vec3& max) noexcept
+{
+	vec3 t1 = (min - ray.origin) * ray.invDir;
+	vec3 t2 = (max - ray.origin) * ray.invDir;
+
+	float tmin = sfz::maxElement(sfz::min(t1, t2));
+	float tmax = sfz::minElement(sfz::max(t1, t2));
+
+	AABBHit tmp;
+	tmp.hit = tmax >= tmin;
+	tmp.t = tmin;
+	return tmp;
+}
+
+struct RayCastResult final {
+	uint32_t index = ~0u;
+	
+	// Amount to go in ray direction
+	float t = FLT_MAX;
+
+	// Hit position on triangle
+	float u = FLT_MAX;
+	float v = FLT_MAX;
+};
+
+static RayCastResult castRay(BVHNode* nodes, TriangleVertices* triangles, const Ray& ray, float tMin = 0.0001f, float tMax = FLT_MAX) noexcept
+{
+	// Create local stack
+	const uint32_t STACK_MAX_SIZE = 196u;
+	uint32_t stack[STACK_MAX_SIZE];
+	for (uint32_t& s : stack) s = ~0u;
+	
+	// Place initial node on stack
+	stack[0] = 0u;
+	uint32_t stackSize = 1u;
+
+	// Traverse through the tree
+	RayCastResult closest;
+	while (stackSize > 0u) {
+		
+		// Retrieve node on top of stack
+		stackSize -= 1;
+		BVHNode node = nodes[stack[stackSize]];
+
+		// Node is a leaf
+		if (node.isLeaf()) {
+			uint32_t triCount = node.numTriangles();
+			TriangleVertices* triList = triangles + node.triangleListIndex();
+
+			for (uint32_t i = 0; i < triCount; i++) {
+				TriangleVertices& tri = triList[i];
+				TriangleHit hit = intersects(tri, ray.origin, ray.dir);
+
+				if (hit.hit && hit.t < closest.t && tMin <= hit.t && hit.t <= tMax) {
+					closest.index = (triList - triangles) + i;
+					closest.t = hit.t;
+					closest.u = hit.u;
+					closest.v = hit.v;
+
+					// Possible early exit
+					// if (hit.t == tMin) return closest;
+				}
+			
+			}
+
+		}
+
+		// Node is a not leaf
+		else {
+			AABBHit hit = intersects(ray, node.min, node.max);
+			if (hit.hit && hit.t <= closest.t && hit.t <= tMax) {
+				
+				stack[stackSize] = node.leftChildIndex();
+				stack[stackSize + 1] = node.rightChildIndex();
+				stackSize += 2;
+			}
+		}
+
+	}
+
+	return closest;
+}
+
 // CPURayTracerRenderer: Constructors & destructors
 // ------------------------------------------------------------------------------------------------
 
@@ -56,10 +147,25 @@ RenderResult CPURayTracerRenderer::render(Framebuffer& resultFB) noexcept
 					vec2 locNormalized = loc / resultRes; // [0, 1]
 					vec2 centerOffsCoord = locNormalized * 2.0f - vec2(1.0f); // [-1.0, 1.0]
 					vec3 rayDir = normalize(cam.dir + centerOffsCoord.x * cam.dX + centerOffsCoord.y * cam.dY);
-
-					// Trace ray
 					Ray ray(cam.origin, rayDir);
-					this->mTexture[x + rowStartIndex] = tracePrimaryRays(ray);
+
+					BVHNode* nodes = this->mBVH.nodes.data();
+					TriangleVertices* triangles = this->mBVH.triangles.data();
+					
+					// Ray cast against BVH
+					RayCastResult hit = castRay(nodes, triangles, ray);
+					if (hit.index == ~0u) {
+						this->mTexture[x + rowStartIndex] = vec4(0.0f);
+						continue;
+					}
+
+					// Draw depth
+					this->mTexture[x + rowStartIndex] = vec4(vec3(hit.t / 10.0f), 1.0);
+
+
+					// Trace ray ODL
+					//
+					//this->mTexture[x + rowStartIndex] = tracePrimaryRays(ray);
 				}
 			}
 		} });
@@ -97,7 +203,8 @@ void CPURayTracerRenderer::staticSceneChanged() noexcept
 		using time_point = std::chrono::high_resolution_clock::time_point;
 		time_point before = std::chrono::high_resolution_clock::now();
 
-		mAabbTree.constructFrom(mStaticScene->opaqueComponents);
+		//mAabbTree.constructFrom(mStaticScene->opaqueRenderables);
+		mBVH.buildStaticFrom(*mStaticScene.get());
 
 		time_point after = std::chrono::high_resolution_clock::now();
 		using FloatSecond = std::chrono::duration<float>;
@@ -105,7 +212,7 @@ void CPURayTracerRenderer::staticSceneChanged() noexcept
 		printf("Time spent building BVH: %.3f seconds\n", delta);
 	}
 
-	{
+	/*{
 		using time_point = std::chrono::high_resolution_clock::time_point;
 		time_point before = std::chrono::high_resolution_clock::now();
 
@@ -121,7 +228,7 @@ void CPURayTracerRenderer::staticSceneChanged() noexcept
 		if (result.intersection.intersected) {
 			printf("Test ray intersected at t=%f, %s\n", result.intersection.t, toString(origin + result.intersection.t * dir).str);
 		}
-	}
+	}*/
 }
 
 void CPURayTracerRenderer::targetResolutionUpdated() noexcept
@@ -160,7 +267,12 @@ const uint8_t* CPURayTracerRenderer::sampleImage(const RawImage& image, const ve
 	scaledUV.x = std::fmod(scaledUV.x, texDim.x);
 	scaledUV.y = std::fmod(scaledUV.y, texDim.y);
 
-	vec2i texCoord = vec2i(std::round(scaledUV.x), std::round(scaledUV.y));
+	vec2i texCoord = vec2i(std::floor(scaledUV.x), std::floor(scaledUV.y));
+
+	sfz_assert_debug(texCoord.x >= 0);
+	sfz_assert_debug(texCoord.y >= 0);
+	sfz_assert_debug(texCoord.x < image.dim.x);
+	sfz_assert_debug(texCoord.y < image.dim.y);
 
 	return image.getPixelPtr(texCoord);
 }
@@ -230,39 +342,39 @@ vec4 CPURayTracerRenderer::tracePrimaryRays(const Ray& ray) const noexcept
 	const Material& material = result.rawGeometryTriangle.component->material;
 	const DynArray<RawImage>& images = mStaticScene->images;
 
-	vec3 albedoColour = material.albedoValue;
+	vec3 albedoColor = material.albedoValue;
 
 	if (material.albedoIndex != UINT32_MAX) {
 		const RawImage& albedoImage = images[material.albedoIndex];
 		if (albedoImage.bytesPerPixel == 3 ||
 		    albedoImage.bytesPerPixel == 4) {
 			Vector<uint8_t, 3> intColor = Vector<uint8_t, 3>(sampleImage(albedoImage, textureUV));
-			albedoColour = vec3(intColor) / 255.0f;
+			albedoColor = vec3(intColor) / 255.0f;
 		}
 	}
 	// Linearize
-	albedoColour.x = std::pow(albedoColour.x, 2.2);
-	albedoColour.y = std::pow(albedoColour.y, 2.2);
-	albedoColour.z = std::pow(albedoColour.z, 2.2);
+	albedoColor.x = std::pow(albedoColor.x, 2.2);
+	albedoColor.y = std::pow(albedoColor.y, 2.2);
+	albedoColor.z = std::pow(albedoColor.z, 2.2);
 
 	float roughness = material.roughnessValue;
 	float metallic = material.metallicValue;
 
 	if (material.roughnessIndex != UINT32_MAX) {
 		const RawImage& image = images[material.roughnessIndex];
-		uint8_t intColour = sampleImage(image, textureUV)[0];
-		roughness = intColour / 255.0f;
+		uint8_t intColor = sampleImage(image, textureUV)[0];
+		roughness = intColor / 255.0f;
 	}
 	if (material.metallicIndex != UINT32_MAX) {
 		const RawImage& image = images[material.metallicIndex];
-		uint8_t intColour = sampleImage(image, textureUV)[0];
-		metallic = intColour / 255.0f;
+		uint8_t intColor = sampleImage(image, textureUV)[0];
+		metallic = intColor / 255.0f;
 	}
 
 	vec3 pos = ray.origin + ray.dir * t;
 	vec3 reflectionDir = reflect(ray.dir, normal);
 
-	vec3 colour = vec3(0.0f);
+	vec3 color = vec3(0.0f);
 
 	for (PointLight& light : mStaticScene.get()->pointLights) {
 		vec3 toLight = light.pos - pos;
@@ -281,7 +393,7 @@ vec4 CPURayTracerRenderer::tracePrimaryRays(const Ray& ray) const noexcept
 		nDotV = std::max(0.001f, nDotV);
 
 		// Lambert diffuse
-		vec3 diffuse = albedoColour / sfz::PI();
+		vec3 diffuse = albedoColor / sfz::PI();
 
 		// Cook-Torrance specular
 		// Normal distribution function
@@ -294,7 +406,7 @@ vec4 CPURayTracerRenderer::tracePrimaryRays(const Ray& ray) const noexcept
 
 		// Fresnel function
 		// Assume all dielectrics have a f0 of 0.04, for metals we assume f0 == albedo
-		vec3 f0 = sfz::lerp(vec3(0.04f), albedoColour, metallic);
+		vec3 f0 = sfz::lerp(vec3(0.04f), albedoColor, metallic);
 		vec3 ctF = fresnelSchlick(nDotL, f0);
 
 		// Calculate final Cook-Torrance specular value
@@ -306,12 +418,12 @@ vec4 CPURayTracerRenderer::tracePrimaryRays(const Ray& ray) const noexcept
 		float falloff = fallofNumerator / fallofDenominator;
 		vec3 lighting = falloff * light.strength;
 
-		colour += (diffuse + specular) * lighting * nDotL;
+		color += (diffuse + specular) * lighting * nDotL;
 	}
 
 	//vec4 bouncyBounce = traceSecondaryRays({ pos, reflectionDir });
 
-	return vec4(colour, 1.0f);
+	return vec4(color, 1.0f);
 }
 
 } // namespace phe

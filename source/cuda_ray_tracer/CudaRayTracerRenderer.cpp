@@ -16,7 +16,7 @@
 
 #include <phantasy_engine/renderers/FullscreenTriangle.hpp>
 
-#include "CudaTracerEntry.cuh"
+#include "CudaTracer.cuh"
 
 // CUDA helpers
 // ------------------------------------------------------------------------------------------------
@@ -49,6 +49,7 @@ public:
 
 	BVH bvh;
 	BVHNode* gpuBVHNodes = nullptr;
+	TriangleVertices* gpuTriangleVertices = nullptr;
 
 	CUDARayTracerRendererImpl() noexcept
 	{
@@ -96,7 +97,7 @@ RenderResult CUDARayTracerRenderer::render(Framebuffer& resultFB) noexcept
 	                                  mMatrices.vertFovRad, resultRes);
 
 	// Run CUDA ray tracer
-	runCudaRayTracer(mImpl->cudaSurface, mTargetResolution, cam, mImpl->gpuBVHNodes);
+	runCudaRayTracer(mImpl->cudaSurface, mTargetResolution, cam, mImpl->gpuBVHNodes, mImpl->gpuTriangleVertices);
 	
 	// Transfer result from Cuda texture to result framebuffer
 	glUseProgram(mImpl->transferShader.handle());
@@ -120,13 +121,19 @@ void CUDARayTracerRenderer::staticSceneChanged() noexcept
 {
 	// Build the BVH
 	BVH& bvh = mImpl->bvh;
-	bvh = buildBVHFromStaticScene(*mStaticScene.get());
+	bvh.buildStaticFrom(*mStaticScene.get());
 
-	// Allocate memory on GPU and copy over
+	// Copy BVHNodes to GPU
 	CHECK_CUDA_ERROR(cudaFree(mImpl->gpuBVHNodes));
-	size_t numBytes = bvh.nodes.size() * sizeof(BVHNode);
-	CHECK_CUDA_ERROR(cudaMalloc(&mImpl->gpuBVHNodes, numBytes));
-	CHECK_CUDA_ERROR(cudaMemcpy(mImpl->gpuBVHNodes, bvh.nodes.data(), numBytes, cudaMemcpyHostToDevice));
+	size_t numBVHNodesBytes = bvh.nodes.size() * sizeof(BVHNode);
+	CHECK_CUDA_ERROR(cudaMalloc(&mImpl->gpuBVHNodes, numBVHNodesBytes));
+	CHECK_CUDA_ERROR(cudaMemcpy(mImpl->gpuBVHNodes, bvh.nodes.data(), numBVHNodesBytes, cudaMemcpyHostToDevice));
+
+	// Copy Triangle positions to GPU
+	CHECK_CUDA_ERROR(cudaFree(mImpl->gpuTriangleVertices));
+	size_t numTrianglePosBytes = bvh.triangles.size() * sizeof(TriangleVertices);
+	CHECK_CUDA_ERROR(cudaMalloc(&mImpl->gpuTriangleVertices, numTrianglePosBytes));
+	CHECK_CUDA_ERROR(cudaMemcpy(mImpl->gpuTriangleVertices, mImpl->bvh.triangles.data(), numTrianglePosBytes, cudaMemcpyHostToDevice));
 }
 
 void CUDARayTracerRenderer::targetResolutionUpdated() noexcept

@@ -91,8 +91,9 @@ set(PHANTASY_ENGINE_LIB_FILES
 	${PH_INCLUDE_DIR}/config/Setting.hpp
 	 ${PH_SOURCE_DIR}/config/Setting.cpp
 
-	${PH_INCLUDE_DIR}/geometry/Ray.hpp
-	${PH_INCLUDE_DIR}/geometry/Ray.inl
+	${PH_INCLUDE_DIR}/ray_tracer_common/Ray.hpp
+	${PH_INCLUDE_DIR}/ray_tracer_common/BVHNode.hpp
+	${PH_INCLUDE_DIR}/ray_tracer_common/Triangle.hpp
 
 	${PH_INCLUDE_DIR}/Renderers.hpp
 	${PH_INCLUDE_DIR}/renderers/BaseRenderer.hpp
@@ -168,9 +169,9 @@ if(CUDA_TRACER)
 	set(CUDA_RAY_TRACER_FILES
 		${CT_INCLUDE_DIR}/CudaRayTracerRenderer.hpp
 		 ${CT_SOURCE_DIR}/CudaRayTracerRenderer.cpp
-		${CT_INCLUDE_DIR}/CudaTracerEntry.cuh
-		 ${CT_SOURCE_DIR}/CudaTracerEntry.cu
-		${CT_INCLUDE_DIR}/CudaVectorHelpers.cuh)
+		${CT_INCLUDE_DIR}/CudaSfzVectorCompatibility.cuh
+		${CT_INCLUDE_DIR}/CudaTracer.cuh
+		 ${CT_SOURCE_DIR}/CudaTracer.cu)
 	set_directory_source_group(${CUDA_RAY_TRACER_FILES})
 
 	# CUDA Ray Tracer Library

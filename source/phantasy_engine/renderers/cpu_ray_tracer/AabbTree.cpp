@@ -2,7 +2,7 @@
 
 #include "phantasy_engine/renderers/cpu_ray_tracer/AabbTree.hpp"
 
-#include "phantasy_engine/geometry/Ray.hpp"
+#include "phantasy_engine/ray_tracer_common/Ray.hpp"
 
 namespace phe {
 
