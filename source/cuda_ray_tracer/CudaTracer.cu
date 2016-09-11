@@ -12,6 +12,12 @@ namespace phe {
 
 using namespace sfz;
 
+inline __device__ void writeSurface(const cudaSurfaceObject_t& surface, vec2i loc, const vec4& data) noexcept
+{
+	float4 dataFloat4 = toFloat4(data);
+	surf2Dwrite(dataFloat4, surface, loc.x * sizeof(float4), loc.y);
+}
+
 inline __device__ vec3 calculateRayDir(const CameraDef& cam, vec2 loc, vec2 surfaceRes) noexcept
 {
 	vec2 locNormalized = loc / surfaceRes; // [0, 1]
@@ -30,10 +36,17 @@ __global__ void cudaRayTracerKernel(cudaSurfaceObject_t surface, vec2i surfaceRe
 
 	// Calculate ray direction
 	vec3 rayDir = calculateRayDir(cam, vec2(loc), vec2(surfaceRes));
+	Ray ray(cam.origin, rayDir);
 
-	// Write ray dir to texture for now
-	float4 data = make_float4(rayDir.x, rayDir.y, rayDir.z, 1.0f);
-	surf2Dwrite(data, surface, loc.x * sizeof(float4), loc.y);
+	// Ray cast against BVH
+	RayCastResult hit = castRay(bvhNodes, triangles, ray);
+	if (hit.triangleIndex == ~0u) {
+		writeSurface(surface, loc, vec4(0.0f));
+		return;
+	}
+
+	// Draw depth
+	writeSurface(surface, loc, vec4(vec3(hit.t / 10.0f), 1.0));
 }
 
 void runCudaRayTracer(cudaSurfaceObject_t surface, vec2i surfaceRes, const CameraDef& cam, BVHNode* bvhNodes, TriangleVertices* triangles) noexcept
