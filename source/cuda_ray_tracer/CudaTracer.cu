@@ -28,8 +28,7 @@ inline __device__ vec3 calculateRayDir(const CameraDef& cam, vec2 loc, vec2 surf
 }
 
 __global__ void cudaRayTracerKernel(cudaSurfaceObject_t surface, vec2i surfaceRes, CameraDef cam,
-                                    const BVHNode* bvhNodes, const TriangleVertices* triangles,
-                                    const TriangleData* triangleDatas)
+                                    StaticSceneCuda staticScene)
 {
 	// Calculate surface coordinates
 	vec2i loc = vec2i(blockIdx.x * blockDim.x + threadIdx.x,
@@ -41,19 +40,21 @@ __global__ void cudaRayTracerKernel(cudaSurfaceObject_t surface, vec2i surfaceRe
 	Ray ray(cam.origin, rayDir);
 
 	// Ray cast against BVH
-	RayCastResult hit = castRay(bvhNodes, triangles, ray);
+	RayCastResult hit = castRay(staticScene.bvhNodes, staticScene.triangleVertices, ray);
 	if (hit.triangleIndex == ~0u) {
 		writeSurface(surface, loc, vec4(0.0f));
 		return;
 	}
 
-	HitInfo info = interpretHit(triangleDatas, hit, ray);
-	writeSurface(surface, loc, vec4(info.normal, 1.0));
+	HitInfo info = interpretHit(staticScene.triangleDatas, hit, ray);
+	vec3 lightPos = staticScene.pointLights[0].pos;
+	vec3 l = -normalize(info.pos - lightPos);
+
+	writeSurface(surface, loc, vec4(vec3(dot(l, info.normal)), 1.0));
 }
 
 void runCudaRayTracer(cudaSurfaceObject_t surface, vec2i surfaceRes, const CameraDef& cam,
-                      const BVHNode* bvhNodes, const TriangleVertices* triangles,
-                      const TriangleData* triangleDatas) noexcept
+                      const StaticSceneCuda& staticScene) noexcept
 {	
 	// Calculate number of threads and blocks to run
 	dim3 threadsPerBlock(16, 16);
@@ -61,7 +62,7 @@ void runCudaRayTracer(cudaSurfaceObject_t surface, vec2i surfaceRes, const Camer
 	               (surfaceRes.y + threadsPerBlock.y  - 1) / threadsPerBlock.y);
 
 	// Run cuda ray tracer kernel
-	cudaRayTracerKernel<<<numBlocks, threadsPerBlock>>>(surface, surfaceRes, cam, bvhNodes, triangles, triangleDatas);
+	cudaRayTracerKernel<<<numBlocks, threadsPerBlock>>>(surface, surfaceRes, cam, staticScene);
 	cudaDeviceSynchronize();
 }
 
