@@ -9,7 +9,7 @@
 #include <sfz/math/Matrix.hpp>
 #include <sfz/math/MatrixSupport.hpp>
 
-#include "phantasy_engine/renderers/cpu_ray_tracer/RayTracerCommon.hpp"
+#include "phantasy_engine/RayTracerCommon.hpp"
 
 namespace phe {
 
@@ -18,93 +18,7 @@ using namespace sfz;
 // Statics
 // ------------------------------------------------------------------------------------------------
 
-struct AABBHit final {
-	bool hit;
-	float t;
-};
 
-static AABBHit intersects(const Ray& ray, const vec3& min, const vec3& max) noexcept
-{
-	vec3 t1 = (min - ray.origin) * ray.invDir;
-	vec3 t2 = (max - ray.origin) * ray.invDir;
-
-	float tmin = sfz::maxElement(sfz::min(t1, t2));
-	float tmax = sfz::minElement(sfz::max(t1, t2));
-
-	AABBHit tmp;
-	tmp.hit = tmax >= tmin;
-	tmp.t = tmin;
-	return tmp;
-}
-
-struct RayCastResult final {
-	uint32_t index = ~0u;
-	
-	// Amount to go in ray direction
-	float t = FLT_MAX;
-
-	// Hit position on triangle
-	float u = FLT_MAX;
-	float v = FLT_MAX;
-};
-
-static RayCastResult castRay(BVHNode* nodes, TriangleVertices* triangles, const Ray& ray, float tMin = 0.0001f, float tMax = FLT_MAX) noexcept
-{
-	// Create local stack
-	const uint32_t STACK_MAX_SIZE = 196u;
-	uint32_t stack[STACK_MAX_SIZE];
-	for (uint32_t& s : stack) s = ~0u;
-	
-	// Place initial node on stack
-	stack[0] = 0u;
-	uint32_t stackSize = 1u;
-
-	// Traverse through the tree
-	RayCastResult closest;
-	while (stackSize > 0u) {
-		
-		// Retrieve node on top of stack
-		stackSize -= 1;
-		BVHNode node = nodes[stack[stackSize]];
-
-		// Node is a leaf
-		if (node.isLeaf()) {
-			uint32_t triCount = node.numTriangles();
-			TriangleVertices* triList = triangles + node.triangleListIndex();
-
-			for (uint32_t i = 0; i < triCount; i++) {
-				TriangleVertices& tri = triList[i];
-				TriangleHit hit = intersects(tri, ray.origin, ray.dir);
-
-				if (hit.hit && hit.t < closest.t && tMin <= hit.t && hit.t <= tMax) {
-					closest.index = (triList - triangles) + i;
-					closest.t = hit.t;
-					closest.u = hit.u;
-					closest.v = hit.v;
-
-					// Possible early exit
-					// if (hit.t == tMin) return closest;
-				}
-			
-			}
-
-		}
-
-		// Node is a not leaf
-		else {
-			AABBHit hit = intersects(ray, node.min, node.max);
-			if (hit.hit && hit.t <= closest.t && hit.t <= tMax) {
-				
-				stack[stackSize] = node.leftChildIndex();
-				stack[stackSize + 1] = node.rightChildIndex();
-				stackSize += 2;
-			}
-		}
-
-	}
-
-	return closest;
-}
 
 // CPURayTracerRenderer: Constructors & destructors
 // ------------------------------------------------------------------------------------------------
@@ -154,7 +68,7 @@ RenderResult CPURayTracerRenderer::render(Framebuffer& resultFB) noexcept
 					
 					// Ray cast against BVH
 					RayCastResult hit = castRay(nodes, triangles, ray);
-					if (hit.index == ~0u) {
+					if (hit.triangleIndex == ~0u) {
 						this->mTexture[x + rowStartIndex] = vec4(0.0f);
 						continue;
 					}
@@ -197,13 +111,10 @@ RenderResult CPURayTracerRenderer::render(Framebuffer& resultFB) noexcept
 
 void CPURayTracerRenderer::staticSceneChanged() noexcept
 {
-	mAabbTree = AabbTree();
-
 	{
 		using time_point = std::chrono::high_resolution_clock::time_point;
 		time_point before = std::chrono::high_resolution_clock::now();
 
-		//mAabbTree.constructFrom(mStaticScene->opaqueRenderables);
 		mBVH.buildStaticFrom(*mStaticScene.get());
 
 		time_point after = std::chrono::high_resolution_clock::now();
@@ -211,24 +122,6 @@ void CPURayTracerRenderer::staticSceneChanged() noexcept
 		float delta = std::chrono::duration_cast<FloatSecond>(after - before).count();
 		printf("Time spent building BVH: %.3f seconds\n", delta);
 	}
-
-	/*{
-		using time_point = std::chrono::high_resolution_clock::time_point;
-		time_point before = std::chrono::high_resolution_clock::now();
-
-		vec3 origin ={-0.25f, 2.25f, 0.0f};
-		vec3 dir ={0.0f, 0.0f, -1.0f};
-		Ray ray(origin, dir);
-		RaycastResult result = mAabbTree.raycast(ray);
-
-		time_point after = std::chrono::high_resolution_clock::now();
-		using FloatSecond = std::chrono::duration<float>;
-		float delta = std::chrono::duration_cast<FloatSecond>(after - before).count();
-		printf("Time to find ray intersection: %f seconds\n", delta);
-		if (result.intersection.intersected) {
-			printf("Test ray intersected at t=%f, %s\n", result.intersection.t, toString(origin + result.intersection.t * dir).str);
-		}
-	}*/
 }
 
 void CPURayTracerRenderer::targetResolutionUpdated() noexcept
@@ -244,10 +137,10 @@ void CPURayTracerRenderer::targetResolutionUpdated() noexcept
 // CPURayTracerRenderer: Private methods
 // ------------------------------------------------------------------------------------------------
 
-vec4 CPURayTracerRenderer::traceSecondaryRays(const Ray& ray) const noexcept
+/*vec4 CPURayTracerRenderer::traceSecondaryRays(const Ray& ray) const noexcept
 {
 	return vec4(0.0f);
-}
+}*/
 
 // Reflect u in v, v must be normalized
 vec3 reflect(const vec3 u, const vec3 v) noexcept
@@ -279,7 +172,7 @@ const uint8_t* CPURayTracerRenderer::sampleImage(const RawImage& image, const ve
 
 // PBR shading functions
 // ------------------------------------------------------------------------------------------------
-
+/*
 // References used:
 // https://de45xmedrsdbp.cloudfront.net/Resources/files/2013SiggraphPresentationsNotes-26915738.pdf
 // http://blog.selfshadow.com/publications/s2016-shading-course/
@@ -424,6 +317,6 @@ vec4 CPURayTracerRenderer::tracePrimaryRays(const Ray& ray) const noexcept
 	//vec4 bouncyBounce = traceSecondaryRays({ pos, reflectionDir });
 
 	return vec4(color, 1.0f);
-}
+}*/
 
 } // namespace phe

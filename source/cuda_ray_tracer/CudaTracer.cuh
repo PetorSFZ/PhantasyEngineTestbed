@@ -6,8 +6,10 @@
 
 #include <sfz/math/Vector.hpp>
 
-#include <phantasy_engine/renderers/cpu_ray_tracer/RayTracerCommon.hpp>
+// TODO: REMOVE
 #include <phantasy_engine/renderers/cpu_ray_tracer/BVH.hpp>
+
+#include <phantasy_engine/RayTracerCommon.hpp>
 
 namespace phe {
 

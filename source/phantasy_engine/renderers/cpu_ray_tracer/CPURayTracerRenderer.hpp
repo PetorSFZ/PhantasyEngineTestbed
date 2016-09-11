@@ -8,7 +8,6 @@
 #include <sfz/math/Vector.hpp>
 
 #include "phantasy_engine/renderers/BaseRenderer.hpp"
-#include "phantasy_engine/renderers/cpu_ray_tracer/AabbTree.hpp"
 #include "phantasy_engine/renderers/cpu_ray_tracer/BVH.hpp"
 
 namespace phe {
@@ -53,16 +52,15 @@ private:
 
 	const uint8_t* sampleImage(const RawImage& image, const vec2 uv) const noexcept;
 
-	vec4 tracePrimaryRays(const Ray& ray) const noexcept;
+	//vec4 tracePrimaryRays(const Ray& ray) const noexcept;
 
-	vec4 traceSecondaryRays(const Ray& ray) const noexcept;
+	//vec4 traceSecondaryRays(const Ray& ray) const noexcept;
 
 	// Private members
 	// --------------------------------------------------------------------------------------------
 
 	DynArray<vec4> mTexture;
 	DynArray<std::thread> mThreads;
-	AabbTree mAabbTree;
 	BVH mBVH;
 };
 

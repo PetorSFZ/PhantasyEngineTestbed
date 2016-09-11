@@ -11,8 +11,8 @@
 #include <cuda_gl_interop.h>
 #include <cuda_runtime.h>
 
-#include <phantasy_engine/renderers/cpu_ray_tracer/RayTracerCommon.hpp>
-#include <phantasy_engine/renderers/cpu_ray_tracer/BVH.hpp>
+#include <phantasy_engine/RayTracerCommon.hpp>
+#include <phantasy_engine/renderers/cpu_ray_tracer/BVH.hpp> // TODO: REMOVE
 
 #include <phantasy_engine/renderers/FullscreenTriangle.hpp>
 

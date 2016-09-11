@@ -1,7 +1,5 @@
 // See 'LICENSE_PHANTASY_ENGINE' for copyright and contributors.
 
-// This file contains common functions shared between various ray tracers
-
 #pragma once
 
 #include <sfz/math/Vector.hpp>

@@ -91,8 +91,13 @@ set(PHANTASY_ENGINE_LIB_FILES
 	${PH_INCLUDE_DIR}/config/Setting.hpp
 	 ${PH_SOURCE_DIR}/config/Setting.cpp
 
-	${PH_INCLUDE_DIR}/ray_tracer_common/Ray.hpp
+	${PH_INCLUDE_DIR}/RayTracerCommon.hpp
 	${PH_INCLUDE_DIR}/ray_tracer_common/BVHNode.hpp
+	${PH_INCLUDE_DIR}/ray_tracer_common/BVHTraversal.hpp
+	${PH_INCLUDE_DIR}/ray_tracer_common/GenerateRays.hpp
+	 ${PH_SOURCE_DIR}/ray_tracer_common/GenerateRays.cpp
+	${PH_INCLUDE_DIR}/ray_tracer_common/Intersection.hpp
+	${PH_INCLUDE_DIR}/ray_tracer_common/Ray.hpp
 	${PH_INCLUDE_DIR}/ray_tracer_common/Triangle.hpp
 
 	${PH_INCLUDE_DIR}/Renderers.hpp
@@ -110,8 +115,6 @@ set(PHANTASY_ENGINE_LIB_FILES
 	 ${PH_SOURCE_DIR}/renderers/cpu_ray_tracer/BVH.cpp
 	${PH_INCLUDE_DIR}/renderers/cpu_ray_tracer/CPURayTracerRenderer.hpp
 	 ${PH_SOURCE_DIR}/renderers/cpu_ray_tracer/CPURayTracerRenderer.cpp
-	${PH_INCLUDE_DIR}/renderers/cpu_ray_tracer/RayTracerCommon.hpp
-	 ${PH_SOURCE_DIR}/renderers/cpu_ray_tracer/RayTracerCommon.cpp
 
 	${PH_INCLUDE_DIR}/Resources.hpp
 	${PH_INCLUDE_DIR}/resources/GLModel.hpp
