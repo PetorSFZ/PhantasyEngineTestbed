@@ -35,6 +35,9 @@ public:
 	DynArray<TriangleVertices> triangles;
 	DynArray<TriangleData> triangleDatas;
 
+	// The distance from the (inclusive) root node to the "deepest" leaf node
+	uint32_t maxDepth = ~0u;
+
 	// Methods
 	// --------------------------------------------------------------------------------------------
 

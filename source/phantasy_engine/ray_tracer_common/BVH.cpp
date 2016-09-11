@@ -39,7 +39,7 @@ sfz::AABB createAabbUsingExisting(
 static void fillStaticNode(
 	BVH& bvh,
 	uint32_t nodeInd,
-	uint32_t depth,
+	uint32_t pathDepth,
 	const DynArray<uint32_t>& triangleInds,
 	const DynArray<TriangleVertices>& inTriangles,
 	const DynArray<TriangleData>& inTriangleDatas,
@@ -123,8 +123,9 @@ breakNestedFor:
 
 	bvh.nodes[nodeInd].setInner(bvh.nodes.size() - 2, bvh.nodes.size() - 1);
 
-	fillStaticNode(bvh, bvh.nodes[nodeInd].leftChildIndex(), depth + 1, leftTriangles, inTriangles, inTriangleDatas, inTriangleAabbs);
-	fillStaticNode(bvh, bvh.nodes[nodeInd].rightChildIndex(), depth + 1, rightTriangles, inTriangles, inTriangleDatas, inTriangleAabbs);
+	bvh.maxDepth = std::max(bvh.maxDepth, pathDepth + 1);
+	fillStaticNode(bvh, bvh.nodes[nodeInd].leftChildIndex(), pathDepth + 1, leftTriangles, inTriangles, inTriangleDatas, inTriangleAabbs);
+	fillStaticNode(bvh, bvh.nodes[nodeInd].rightChildIndex(), pathDepth + 1, rightTriangles, inTriangles, inTriangleDatas, inTriangleAabbs);
 }
 
 // C++ container
@@ -206,7 +207,8 @@ void BVH::buildStaticFrom(const DynArray<TriangleVertices>& inTriangles,
 	}
 
 	nodes.add(BVHNode());
-	fillStaticNode(*this, 0, 0, triangleInds, inTriangles, inTriangleDatas, inTriangleAabbs);
+	this->maxDepth = 0;
+	fillStaticNode(*this, 0, 1, triangleInds, inTriangles, inTriangleDatas, inTriangleAabbs);
 }
 
 } // namespace phe
