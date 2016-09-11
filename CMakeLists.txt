@@ -100,6 +100,7 @@ set(PHANTASY_ENGINE_LIB_FILES
 	 ${PH_SOURCE_DIR}/ray_tracer_common/GenerateRays.cpp
 	${PH_INCLUDE_DIR}/ray_tracer_common/Intersection.hpp
 	${PH_INCLUDE_DIR}/ray_tracer_common/Ray.hpp
+	${PH_INCLUDE_DIR}/ray_tracer_common/Shading.hpp
 	${PH_INCLUDE_DIR}/ray_tracer_common/Triangle.hpp
 
 	${PH_INCLUDE_DIR}/Renderers.hpp

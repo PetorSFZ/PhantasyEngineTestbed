@@ -122,7 +122,7 @@ void CPURayTracerRenderer::staticSceneChanged() noexcept
 		time_point after = std::chrono::high_resolution_clock::now();
 		using FloatSecond = std::chrono::duration<float>;
 		float delta = std::chrono::duration_cast<FloatSecond>(after - before).count();
-		printf("Time spent building BVH: %.3f seconds\n", delta);
+		printf("CPU Ray Tracer: Time spent building BVH: %.3f seconds\n", delta);
 	}
 }
 
@@ -138,17 +138,6 @@ void CPURayTracerRenderer::targetResolutionUpdated() noexcept
 
 // CPURayTracerRenderer: Private methods
 // ------------------------------------------------------------------------------------------------
-
-/*vec4 CPURayTracerRenderer::traceSecondaryRays(const Ray& ray) const noexcept
-{
-	return vec4(0.0f);
-}*/
-
-// Reflect u in v, v must be normalized
-vec3 reflect(const vec3 u, const vec3 v) noexcept
-{
-	return u - 2 * dot(u, v) * v;
-}
 
 const uint8_t* CPURayTracerRenderer::sampleImage(const RawImage& image, const vec2 uv) const noexcept
 {
@@ -175,41 +164,7 @@ const uint8_t* CPURayTracerRenderer::sampleImage(const RawImage& image, const ve
 // PBR shading functions
 // ------------------------------------------------------------------------------------------------
 /*
-// References used:
-// https://de45xmedrsdbp.cloudfront.net/Resources/files/2013SiggraphPresentationsNotes-26915738.pdf
-// http://blog.selfshadow.com/publications/s2016-shading-course/
-// http://www.codinglabs.net/article_physically_based_rendering_cook_torrance.aspx
-// http://graphicrants.blogspot.se/2013/08/specular-brdf-reference.html
 
-// Normal distribution function, GGX/Trowbridge-Reitz
-// a = roughness^2, UE4 parameterization
-// dot(n,h) term should be clamped to 0 if negative
-float ggx(float nDotH, float a)
-{
-	float a2 = a * a;
-	float div = sfz::PI() * pow(nDotH * nDotH * (a2 - 1.0f) + 1.0f, 2);
-	return a2 / div;
-}
-
-// Schlick's model adjusted to fit Smith's method
-// k = a/2, where a = roughness^2, however, for analytical light sources (non image based)
-// roughness is first remapped to roughness = (roughnessOrg + 1) / 2.
-// Essentially, for analytical light sources:
-// k = (roughness + 1)^2 / 8
-// For image based lighting:
-// k = roughness^2 / 2
-float geometricSchlick(float nDotL, float nDotV, float k)
-{
-	float g1 = nDotL / (nDotL * (1.0f - k) + k);
-	float g2 = nDotV / (nDotV * (1.0f - k) + k);
-	return g1 * g2;
-}
-
-// Schlick's approximation. F0 should typically be 0.04 for dielectrics
-vec3 fresnelSchlick(float nDotL, vec3 f0)
-{
-	return f0 + (vec3(1.0f) - f0) * sfz::clamp(std::pow(1.0f - nDotL, 5.0f), 0.0f, 1.0f);
-}
 
 vec4 CPURayTracerRenderer::tracePrimaryRays(const Ray& ray) const noexcept
 {

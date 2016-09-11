@@ -8,4 +8,5 @@
 #include "phantasy_engine/ray_tracer_common/GenerateRays.hpp"
 #include "phantasy_engine/ray_tracer_common/Intersection.hpp"
 #include "phantasy_engine/ray_tracer_common/Ray.hpp"
+#include "phantasy_engine/ray_tracer_common/Shading.hpp"
 #include "phantasy_engine/ray_tracer_common/Triangle.hpp"
