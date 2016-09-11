@@ -69,18 +69,23 @@ struct TriangleHit final {
 };
 
 // See page 750 in Real-Time Rendering 3
-SFZ_CUDA_CALLABLE TriangleHit intersects(const TriangleVertices& tri, vec3 origin, vec3 dir) noexcept
+SFZ_CUDA_CALLABLE TriangleHit intersects(const TriangleVertices& tri, const vec3& origin, const vec3& dir) noexcept
 {
+	TriangleHit result;
+
 	const float EPS = 0.00001f;
-	vec3 p0 = vec3(tri.v0);
-	vec3 p1 = vec3(tri.v1);
-	vec3 p2 = vec3(tri.v2);
+	vec3 p0 = tri.v0;
+	vec3 p1 = tri.v1;
+	vec3 p2 = tri.v2;
 
 	vec3 e1 = p1 - p0;
 	vec3 e2 = p2 - p0;
 	vec3 q = cross(dir, e2);
 	float a = dot(e1, q);
-	if (-EPS < a && a < EPS) return {false, 0.0f, 0.0f, 0.0f};
+	if (-EPS < a && a < EPS) {
+		result.hit = false;
+		return result;
+	}
 
 	// Backface culling here?
 	// dot(cross(e1, e2), dir) <= 0.0 ??
@@ -88,14 +93,25 @@ SFZ_CUDA_CALLABLE TriangleHit intersects(const TriangleVertices& tri, vec3 origi
 	float f = 1.0f / a;
 	vec3 s = origin - p0;
 	float u = f * dot(s, q);
-	if (u < 0.0f) return {false, 0.0f, 0.0f, 0.0f};
+	if (u < 0.0f) {
+		result.hit = false;
+		return result;
+	}
 
 	vec3 r = cross(s, e1);
 	float v = f * dot(dir, r);
-	if (v < 0.0f || (u + v) > 1.0f) return {false, 0.0f, 0.0f, 0.0f};
+	if (v < 0.0f || (u + v) > 1.0f) {
+		result.hit = false;
+		return result;
+	}
 
 	float t = f * dot(e2, r);
-	return {true, u, v, t};
+
+	result.hit = true;
+	result.t = t;
+	result.u = u;
+	result.v = v;
+	return result;
 }
 
 SFZ_CUDA_CALLABLE TriangleHit intersects(const TriangleVertices& tri, const Ray& ray) noexcept
