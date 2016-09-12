@@ -40,45 +40,10 @@ RenderResult CPURayTracerRenderer::render(Framebuffer& resultFB) noexcept
 	// Calculate camera def in order to generate first rays
 	vec2 resultRes = vec2(mTargetResolution);
 	CameraDef cam = generateCameraDef(mMatrices.position, mMatrices.forward, mMatrices.up,
-		mMatrices.vertFovRad, resultRes);
+	                                  mMatrices.vertFovRad, resultRes);
 
 	int nThreads = 10;
 	int rowsPerThread = mTargetResolution.y / nThreads;
-
-	/*
-	uint32_t maxTextureIndex = mTexture.size();
-	uint32_t numCores = std::thread::hardware_concurrency();
-	volatile std::atomic<uint32_t> count(0);
-	DynArray<std::future<void>> futures;
-
-	while (numCores--) {
-		futures.add(
-			std::async([this, &count, &maxTextureIndex, &resultRes, &cam]() {
-					while (true) {
-						uint32_t index = count++;
-						if (index >= maxTextureIndex)
-							break;
-						uint32_t x = index % mTargetResolution.x;
-						uint32_t y = index / mTargetResolution.x;
-
-						// Calculate ray dir
-						vec2 loc = vec2(float(x), float(y));
-						vec2 locNormalized = loc / resultRes; // [0, 1]
-						vec2 centerOffsCoord = locNormalized * 2.0f - vec2(1.0f); // [-1.0, 1.0]
-						vec3 rayDir = normalize(cam.dir + centerOffsCoord.x * cam.dX + centerOffsCoord.y * cam.dY);
-
-						// Trace ray
-						Ray ray(cam.origin, rayDir);
-						this->mTexture[index] = tracePrimaryRays(ray);
-					}
-				}
-			)
-		);
-	}
-
-	for (const std::future<void>& future : futures) {
-		future.wait();
-	}*/
 
 	// Spawn threads for ray tracing
 	for (int i = 0; i < nThreads; i++) {
@@ -111,7 +76,9 @@ RenderResult CPURayTracerRenderer::render(Framebuffer& resultFB) noexcept
 					}
 
 					HitInfo info = interpretHit(datas, hit, ray);
+
 					this->mTexture[x + rowStartIndex] = vec4(info.normal, 1.0);
+
 
 					// Trace ray ODL
 					//

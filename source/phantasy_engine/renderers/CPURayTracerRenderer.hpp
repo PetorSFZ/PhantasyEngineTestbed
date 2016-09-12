@@ -28,8 +28,8 @@ public:
 
 	CPURayTracerRenderer(const CPURayTracerRenderer&) = delete;
 	CPURayTracerRenderer& operator= (const CPURayTracerRenderer&) = delete;
-	CPURayTracerRenderer(CPURayTracerRenderer&&) noexcept = delete;
-	CPURayTracerRenderer& operator= (CPURayTracerRenderer&&) noexcept = delete;
+	CPURayTracerRenderer(CPURayTracerRenderer&&) noexcept = default;
+	CPURayTracerRenderer& operator= (CPURayTracerRenderer&&) noexcept = default;
 
 	CPURayTracerRenderer() noexcept;
 
