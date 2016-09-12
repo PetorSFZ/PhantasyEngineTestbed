@@ -48,25 +48,14 @@ SFZ_CUDA_CALLABLE RayCastResult castRay(const BVHNode* nodes, const TriangleVert
 		if (!node.isLeaf()) {
 
 			float tCurrMax = std::min(tMax, closest.t);
+			AABBHit hit = intersects(ray, node.min, node.max);
+			if (hit.hit &&
+			    hit.tOut > tMin &&
+			    hit.tIn < tCurrMax) {
 
-			// Add right child to stack if it was hit and within valid range
-			const BVHNode& rightChild = nodes[node.rightChildIndex()];
-			AABBHit rightChildHit = intersects(ray, rightChild.min, rightChild.max);
-			if (rightChildHit.hit &&
-			    rightChildHit.tOut > tMin &&
-			    rightChildHit.tIn < tCurrMax) {
 				stack[stackSize] = node.rightChildIndex();
-				stackSize += 1;
-			}
-
-			// Add left child to stack if it was hit and within valid range
-			const BVHNode& leftChild = nodes[node.leftChildIndex()];
-			AABBHit leftChildHit = intersects(ray, leftChild.min, leftChild.max);
-			if (leftChildHit.hit &&
-				leftChildHit.tOut > tMin &&
-				leftChildHit.tIn < tCurrMax) {
-				stack[stackSize] = node.leftChildIndex();
-				stackSize += 1;
+				stack[stackSize + 1] = node.leftChildIndex();
+				stackSize += 2;
 			}
 		}
 
