@@ -24,7 +24,7 @@ struct RayCastResult final {
 	float v = FLT_MAX;
 };
 
-template<size_t STACK_MAX_SIZE = 196u>
+template<size_t STACK_MAX_SIZE = 144>
 SFZ_CUDA_CALLABLE RayCastResult castRay(const BVHNode* nodes, const TriangleVertices* triangles,
                                         const Ray& ray, float tMin = 0.0001f, float tMax = FLT_MAX) noexcept
 {
@@ -42,10 +42,36 @@ SFZ_CUDA_CALLABLE RayCastResult castRay(const BVHNode* nodes, const TriangleVert
 		
 		// Retrieve node on top of stack
 		stackSize--;
-		BVHNode node = nodes[stack[stackSize]];
+		const BVHNode& node = nodes[stack[stackSize]];
+
+		// Node is a not leaf
+		if (!node.isLeaf()) {
+
+			float tCurrMax = std::min(tMax, closest.t);
+
+			// Add right child to stack if it was hit and within valid range
+			const BVHNode& rightChild = nodes[node.rightChildIndex()];
+			AABBHit rightChildHit = intersects(ray, rightChild.min, rightChild.max);
+			if (rightChildHit.hit &&
+			    rightChildHit.tOut > tMin &&
+			    rightChildHit.tIn < tCurrMax) {
+				stack[stackSize] = node.rightChildIndex();
+				stackSize += 1;
+			}
+
+			// Add left child to stack if it was hit and within valid range
+			const BVHNode& leftChild = nodes[node.leftChildIndex()];
+			AABBHit leftChildHit = intersects(ray, leftChild.min, leftChild.max);
+			if (leftChildHit.hit &&
+				leftChildHit.tOut > tMin &&
+				leftChildHit.tIn < tCurrMax) {
+				stack[stackSize] = node.leftChildIndex();
+				stackSize += 1;
+			}
+		}
 
 		// Node is a leaf
-		if (node.isLeaf()) {
+		else {
 			uint32_t triCount = node.numTriangles();
 			const TriangleVertices* triList = triangles + node.triangleListIndex();
 
@@ -62,17 +88,6 @@ SFZ_CUDA_CALLABLE RayCastResult castRay(const BVHNode* nodes, const TriangleVert
 					// Possible early exit
 					// if (hit.t == tMin) return closest;
 				}
-			}
-		}
-
-		// Node is a not leaf
-		else {
-			AABBHit hit = intersects(ray, node.min, node.max);
-			if (hit.hit && hit.t <= closest.t && hit.t <= tMax) {
-				
-				stack[stackSize] = node.leftChildIndex();
-				stack[stackSize + 1u] = node.rightChildIndex();
-				stackSize += 2u;
 			}
 		}
 	}

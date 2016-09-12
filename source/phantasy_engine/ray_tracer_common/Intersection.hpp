@@ -71,7 +71,7 @@ SFZ_CUDA_CALLABLE TriangleHit intersects(const TriangleVertices& tri, const vec3
 
 struct AABBHit final {
 	bool hit;
-	float t;
+	float tIn, tOut;
 };
 
 SFZ_CUDA_CALLABLE AABBHit intersects(const Ray& ray, const vec3& min, const vec3& max) noexcept
@@ -84,7 +84,8 @@ SFZ_CUDA_CALLABLE AABBHit intersects(const Ray& ray, const vec3& min, const vec3
 
 	AABBHit tmp;
 	tmp.hit = tmax >= tmin;
-	tmp.t = tmin;
+	tmp.tIn = tmin;
+	tmp.tOut = tmax;
 	return tmp;
 }
 
