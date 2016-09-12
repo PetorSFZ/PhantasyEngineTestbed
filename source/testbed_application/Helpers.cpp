@@ -35,5 +35,8 @@ DynArray<RendererAndStatus> createRenderers(uint32_t& indexSelected) noexcept
 		sfz::error("Renderer index out of bounds, probably need to add rendering backend to this function.");
 	}
 
+	// Selected renderer will be baked in constructor, set baked=true
+	renderers[indexSelected].baked = true;
+
 	return renderers;
 }
