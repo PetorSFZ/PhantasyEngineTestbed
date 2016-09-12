@@ -234,6 +234,7 @@ void BVH::buildStaticFrom(const StaticScene& scene) noexcept
 	inTriangles.ensureCapacity((scene.opaqueComponents.size() + scene.transparentComponents.size()) * 2u);
 	inTriangleDatas.ensureCapacity((scene.opaqueComponents.size() + scene.transparentComponents.size()) * 2u);
 
+	uint32_t componentIndex = 0;
 	for (const DynArray<RenderableComponent>* renderableComponentList : {&scene.opaqueComponents, &scene.transparentComponents}) {
 		for (const RenderableComponent& component : *renderableComponentList) {
 			const RawGeometry& rawGeometry = component.geometry;
@@ -259,9 +260,13 @@ void BVH::buildStaticFrom(const StaticScene& scene) noexcept
 				dataTmp.uv0 = v0.uv;
 				dataTmp.uv1 = v1.uv;
 				dataTmp.uv2 = v2.uv;
-				dataTmp.materialIndex = ~0u;
+
+				// TODO: Get material from separate list in StaticScene, or some other more consistent solution.
+				dataTmp.materialIndex = componentIndex;
+
 				inTriangleDatas.add(dataTmp);
 			}
+			componentIndex++;
 		}
 	}
 	this->buildStaticFrom(inTriangles, inTriangleDatas);

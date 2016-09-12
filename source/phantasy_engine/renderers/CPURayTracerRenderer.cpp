@@ -74,12 +74,8 @@ RenderResult CPURayTracerRenderer::render(Framebuffer& resultFB) noexcept
 
 					HitInfo info = interpretHit(datas, hit, ray);
 
-					this->mTexture[x + rowStartIndex] = vec4(info.normal, 1.0);
-
-
-					// Trace ray ODL
-					//
-					//this->mTexture[x + rowStartIndex] = tracePrimaryRays(ray);
+					vec4 color = shadeHit(ray, hit, info);
+					this->mTexture[x + rowStartIndex] = color;
 				}
 			}
 		} });
@@ -156,42 +152,37 @@ const uint8_t* CPURayTracerRenderer::sampleImage(const RawImage& image, const ve
 
 // PBR shading functions
 // ------------------------------------------------------------------------------------------------
-/*
 
-
-vec4 CPURayTracerRenderer::tracePrimaryRays(const Ray& ray) const noexcept
+vec4 CPURayTracerRenderer::shadeHit(const Ray& ray, const RayCastResult& hit, const HitInfo& info) noexcept
 {
-	RaycastResult result = mAabbTree.raycast(ray);
-	if (!result.intersection.intersected) {
-		return vec4{0.0f, 0.0f, 0.0f, 1.0f};
+	BVHNode* nodes = this->mBVH.nodes.data();
+	TriangleVertices* triangles = this->mBVH.triangles.data();
+	TriangleData* datas = this->mBVH.triangleDatas.data();
+
+	const TriangleData& data = datas[hit.triangleIndex];
+
+	// Use opaque component index as material index. This Would not work for materials of
+	// transparent components.
+	// TODO: Get material from separate list in StaticScene, or some other more consistent solution.
+	const Material* material;
+	const DynArray<RenderableComponent>& opaqueComponents = mStaticScene->opaqueComponents;
+	if (data.materialIndex < opaqueComponents.size()) {
+		material = &opaqueComponents[data.materialIndex].material;
+	} else {
+		Material tempMaterial;
+		tempMaterial.albedoValue = vec3(0.5f);
+		material = &tempMaterial;
 	}
 
-	vec3 n0 = result.rawGeometryTriangle.v0->normal;
-	vec3 n1 = result.rawGeometryTriangle.v1->normal;
-	vec3 n2 = result.rawGeometryTriangle.v2->normal;
-
-	vec2 uv0 = result.rawGeometryTriangle.v0->uv;
-	vec2 uv1 = result.rawGeometryTriangle.v1->uv;
-	vec2 uv2 = result.rawGeometryTriangle.v2->uv;
-
-	float t = result.intersection.t;
-
-	float u = result.intersection.u;
-	float v = result.intersection.v;
-
-	vec3 normal = normalize(n0 + (n1 - n0) * u + (n2 - n0) * v);
-	vec2 textureUV = uv0 + (uv1 - uv0) * u + (uv2 - uv0) * v;
-
-	const Material& material = result.rawGeometryTriangle.component->material;
 	const DynArray<RawImage>& images = mStaticScene->images;
 
-	vec3 albedoColor = material.albedoValue;
+	vec3 albedoColor = material->albedoValue;
 
-	if (material.albedoIndex != UINT32_MAX) {
-		const RawImage& albedoImage = images[material.albedoIndex];
+	if (material->albedoIndex != UINT32_MAX) {
+		const RawImage& albedoImage = images[material->albedoIndex];
 		if (albedoImage.bytesPerPixel == 3 ||
-		    albedoImage.bytesPerPixel == 4) {
-			Vector<uint8_t, 3> intColor = Vector<uint8_t, 3>(sampleImage(albedoImage, textureUV));
+			albedoImage.bytesPerPixel == 4) {
+			Vector<uint8_t, 3> intColor = Vector<uint8_t, 3>(sampleImage(albedoImage, info.uv));
 			albedoColor = vec3(intColor) / 255.0f;
 		}
 	}
@@ -200,22 +191,22 @@ vec4 CPURayTracerRenderer::tracePrimaryRays(const Ray& ray) const noexcept
 	albedoColor.y = std::pow(albedoColor.y, 2.2);
 	albedoColor.z = std::pow(albedoColor.z, 2.2);
 
-	float roughness = material.roughnessValue;
-	float metallic = material.metallicValue;
+	float roughness = material->roughnessValue;
+	float metallic = material->metallicValue;
 
-	if (material.roughnessIndex != UINT32_MAX) {
-		const RawImage& image = images[material.roughnessIndex];
-		uint8_t intColor = sampleImage(image, textureUV)[0];
+	if (material->roughnessIndex != UINT32_MAX) {
+		const RawImage& image = images[material->roughnessIndex];
+		uint8_t intColor = sampleImage(image, info.uv)[0];
 		roughness = intColor / 255.0f;
 	}
-	if (material.metallicIndex != UINT32_MAX) {
-		const RawImage& image = images[material.metallicIndex];
-		uint8_t intColor = sampleImage(image, textureUV)[0];
+	if (material->metallicIndex != UINT32_MAX) {
+		const RawImage& image = images[material->metallicIndex];
+		uint8_t intColor = sampleImage(image, info.uv)[0];
 		metallic = intColor / 255.0f;
 	}
 
-	vec3 pos = ray.origin + ray.dir * t;
-	vec3 reflectionDir = reflect(ray.dir, normal);
+	vec3 pos = ray.origin + ray.dir * hit.t;
+	vec3 reflectionDir = reflect(ray.dir, info.normal);
 
 	vec3 color = vec3(0.0f);
 
@@ -226,12 +217,12 @@ vec4 CPURayTracerRenderer::tracePrimaryRays(const Ray& ray) const noexcept
 		vec3 v = normalize(-ray.dir);
 		vec3 h = normalize(l + v);
 
-		float nDotL = dot(normal, l);
+		float nDotL = dot(info.normal, l);
 		if (nDotL <= 0.0f) {
 			continue;
 		}
-		
-		float nDotV = dot(normal, v);
+
+		float nDotV = dot(info.normal, v);
 
 		nDotV = std::max(0.001f, nDotV);
 
@@ -240,7 +231,7 @@ vec4 CPURayTracerRenderer::tracePrimaryRays(const Ray& ray) const noexcept
 
 		// Cook-Torrance specular
 		// Normal distribution function
-		float nDotH = std::max(sfz::dot(normal, h), 0.0f); // max() should be superfluous here
+		float nDotH = std::max(sfz::dot(info.normal, h), 0.0f); // max() should be superfluous here
 		float ctD = ggx(nDotH, roughness * roughness);
 
 		// Geometric self-shadowing term
@@ -263,10 +254,7 @@ vec4 CPURayTracerRenderer::tracePrimaryRays(const Ray& ray) const noexcept
 
 		color += (diffuse + specular) * lighting * nDotL;
 	}
-
-	//vec4 bouncyBounce = traceSecondaryRays({ pos, reflectionDir });
-
 	return vec4(color, 1.0f);
-}*/
+}
 
 } // namespace phe

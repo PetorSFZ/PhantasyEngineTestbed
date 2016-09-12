@@ -17,6 +17,13 @@ using sfz::gl::Framebuffer;
 using sfz::vec3;
 using sfz::vec4;
 
+// Forward declarations
+// ------------------------------------------------------------------------------------------------
+
+struct HitInfo;
+struct RayCastResult;
+struct Ray;
+
 // CPURayTracerRenderer
 // ------------------------------------------------------------------------------------------------
 
@@ -52,9 +59,7 @@ private:
 
 	const uint8_t* sampleImage(const RawImage& image, const vec2 uv) const noexcept;
 
-	//vec4 tracePrimaryRays(const Ray& ray) const noexcept;
-
-	//vec4 traceSecondaryRays(const Ray& ray) const noexcept;
+	vec4 shadeHit(const Ray& ray, const RayCastResult& hit, const HitInfo& info) noexcept;
 
 	// Private members
 	// --------------------------------------------------------------------------------------------
