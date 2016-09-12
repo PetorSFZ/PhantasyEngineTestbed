@@ -57,6 +57,8 @@ static void fillStaticNode(
 			bvh.triangleDatas.add(inTriangleDatas[triangleInd]);
 		}
 		node.setLeaf(triangleInds.size(), firstTriangleIndex);
+
+		bvh.maxDepth = std::max(bvh.maxDepth, pathDepth + 1);
 		return;
 	}
 
@@ -119,13 +121,14 @@ breakNestedFor:
 	sfz_assert_debug(leftTriangles.size() + rightTriangles.size() == triangleInds.size());
 
 	bvh.nodes.add(BVHNode());
+	uint32_t leftIndex = bvh.nodes.size() - 1;
+	fillStaticNode(bvh, leftIndex, pathDepth + 1, leftTriangles, inTriangles, inTriangleDatas, inTriangleAabbs);
+
 	bvh.nodes.add(BVHNode());
+	uint32_t rightIndex = bvh.nodes.size() - 1;
+	fillStaticNode(bvh, rightIndex, pathDepth + 1, rightTriangles, inTriangles, inTriangleDatas, inTriangleAabbs);
 
-	bvh.nodes[nodeInd].setInner(bvh.nodes.size() - 2, bvh.nodes.size() - 1);
-
-	bvh.maxDepth = std::max(bvh.maxDepth, pathDepth + 1);
-	fillStaticNode(bvh, bvh.nodes[nodeInd].leftChildIndex(), pathDepth + 1, leftTriangles, inTriangles, inTriangleDatas, inTriangleAabbs);
-	fillStaticNode(bvh, bvh.nodes[nodeInd].rightChildIndex(), pathDepth + 1, rightTriangles, inTriangles, inTriangleDatas, inTriangleAabbs);
+	bvh.nodes[nodeInd].setInner(leftIndex, rightIndex);
 }
 
 // C++ container
