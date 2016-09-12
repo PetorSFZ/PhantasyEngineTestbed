@@ -159,9 +159,7 @@ if(CUDA_TRACER)
 	add_definitions(-DCUDA_TRACER_AVAILABLE)
 
 	# CUDA compiler flags
-	set(CUDA_NVCC_FLAGS
-		${CUDA_NVCC_FLAGS}
-		-O3)
+	set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -O3 -use_fast_math --gpu-architecture=compute_30 --gpu-code=compute_30)
 
 	set(CT_SOURCE_DIR ${SOURCE_DIR}/cuda_ray_tracer)
 	set(CT_INCLUDE_DIR ${INCLUDE_DIR}/cuda_ray_tracer)
@@ -169,6 +167,7 @@ if(CUDA_TRACER)
 
 	# Source files
 	set(CUDA_RAY_TRACER_FILES
+		${CT_INCLUDE_DIR}/CudaHelpers.hpp
 		${CT_INCLUDE_DIR}/CudaRayTracerRenderer.hpp
 		 ${CT_SOURCE_DIR}/CudaRayTracerRenderer.cpp
 		${CT_INCLUDE_DIR}/CudaSfzVectorCompatibility.cuh

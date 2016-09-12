@@ -2,11 +2,12 @@
 
 #include "CudaTracer.cuh"
 
+#include <math.h>
+
 #include <sfz/math/Vector.hpp>
 
+#include "CudaHelpers.hpp"
 #include "CudaSfzVectorCompatibility.cuh"
-
-#include <math.h>
 
 namespace phe {
 
@@ -63,7 +64,8 @@ void runCudaRayTracer(cudaSurfaceObject_t surface, vec2i surfaceRes, const Camer
 
 	// Run cuda ray tracer kernel
 	cudaRayTracerKernel<<<numBlocks, threadsPerBlock>>>(surface, surfaceRes, cam, staticScene);
-	cudaDeviceSynchronize();
+	CHECK_CUDA_ERROR(cudaGetLastError());
+	CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 }
 
 } // namespace phe

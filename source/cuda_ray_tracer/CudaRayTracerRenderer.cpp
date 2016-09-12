@@ -2,6 +2,8 @@
 
 #include "CudaRayTracerRenderer.hpp"
 
+#include <chrono>
+
 #include <sfz/gl/Program.hpp>
 #include <sfz/math/MathHelpers.hpp>
 #include <sfz/memory/New.hpp>
@@ -14,18 +16,8 @@
 #include <phantasy_engine/RayTracerCommon.hpp>
 #include <phantasy_engine/renderers/FullscreenTriangle.hpp>
 
+#include "CudaHelpers.hpp"
 #include "CudaTracer.cuh"
-
-// CUDA helpers
-// ------------------------------------------------------------------------------------------------
-
-#define CHECK_CUDA_ERROR(error) (checkCudaError(__FILE__, __LINE__, error))
-static cudaError_t checkCudaError(const char* file, int line, cudaError_t error) noexcept
-{
-	if (error == cudaSuccess) return error;
-	sfz::printErrorMessage("%s:%i: CUDA error: %s\n", file, line, cudaGetErrorString(error));
-	return error;
-}
 
 namespace phe {
 
@@ -121,7 +113,17 @@ void CUDARayTracerRenderer::staticSceneChanged() noexcept
 {
 	// Build the BVH
 	BVH& bvh = mImpl->bvh;
-	bvh.buildStaticFrom(*mStaticScene.get());
+	{
+		using time_point = std::chrono::high_resolution_clock::time_point;
+		time_point before = std::chrono::high_resolution_clock::now();
+
+		bvh.buildStaticFrom(*mStaticScene.get());
+
+		time_point after = std::chrono::high_resolution_clock::now();
+		using FloatSecond = std::chrono::duration<float>;
+		float delta = std::chrono::duration_cast<FloatSecond>(after - before).count();
+		printf("CUDA Ray Tracer: Time spent building BVH: %.3f seconds\n", delta);
+	}
 
 	// Copy pointlights to GPU
 	PointLight*& gpuPointLights = mImpl->staticSceneCuda.pointLights;

@@ -7,7 +7,7 @@
 #include <sfz/math/MathHelpers.hpp>
 
 #include "phantasy_engine/ray_tracer_common/BVHNode.hpp"
-#include <phantasy_engine/renderers/cpu_ray_tracer/BVH.hpp>
+#include <phantasy_engine/ray_tracer_common/BVH.hpp>
 
 TEST_CASE("isLeaf() && numTriangles()", "[BVHNode]")
 {
