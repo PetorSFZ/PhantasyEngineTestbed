@@ -34,9 +34,6 @@ CPURayTracerRenderer::CPURayTracerRenderer() noexcept
 
 RenderResult CPURayTracerRenderer::render(Framebuffer& resultFB) noexcept
 {
-	using time_point = std::chrono::high_resolution_clock::time_point;
-	time_point before = std::chrono::high_resolution_clock::now();
-
 	// Calculate camera def in order to generate first rays
 	vec2 resultRes = vec2(mTargetResolution);
 	CameraDef cam = generateCameraDef(mMatrices.position, mMatrices.forward, mMatrices.up,
@@ -100,11 +97,6 @@ RenderResult CPURayTracerRenderer::render(Framebuffer& resultFB) noexcept
 	
 	RenderResult tmp;
 	tmp.renderedRes = mTargetResolution;
-
-	time_point after = std::chrono::high_resolution_clock::now();
-	using FloatSecond = std::chrono::duration<float>;
-	float delta = std::chrono::duration_cast<FloatSecond>(after - before).count();
-	printf("Render time (CPU tracer): %.3f seconds\n", delta);
 
 	return tmp;
 }
