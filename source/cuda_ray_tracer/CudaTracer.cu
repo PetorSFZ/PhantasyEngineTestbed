@@ -58,7 +58,7 @@ void runCudaRayTracer(cudaSurfaceObject_t surface, vec2i surfaceRes, const Camer
                       const StaticSceneCuda& staticScene) noexcept
 {	
 	// Calculate number of threads and blocks to run
-	dim3 threadsPerBlock(16, 16);
+	dim3 threadsPerBlock(8, 8);
 	dim3 numBlocks((surfaceRes.x + threadsPerBlock.x - 1) / threadsPerBlock.x,
 	               (surfaceRes.y + threadsPerBlock.y  - 1) / threadsPerBlock.y);
 
