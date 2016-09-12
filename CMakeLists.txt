@@ -112,10 +112,8 @@ set(PHANTASY_ENGINE_LIB_FILES
 	${PH_INCLUDE_DIR}/renderers/FullscreenTriangle.hpp
 	 ${PH_SOURCE_DIR}/renderers/FullscreenTriangle.cpp
 
-	${PH_INCLUDE_DIR}/renderers/cpu_ray_tracer/AabbTree.hpp
-	 ${PH_SOURCE_DIR}/renderers/cpu_ray_tracer/AabbTree.cpp
-	${PH_INCLUDE_DIR}/renderers/cpu_ray_tracer/CPURayTracerRenderer.hpp
-	 ${PH_SOURCE_DIR}/renderers/cpu_ray_tracer/CPURayTracerRenderer.cpp
+	${PH_INCLUDE_DIR}/renderers/CPURayTracerRenderer.hpp
+	 ${PH_SOURCE_DIR}/renderers/CPURayTracerRenderer.cpp
 
 	${PH_INCLUDE_DIR}/Resources.hpp
 	${PH_INCLUDE_DIR}/resources/GLModel.hpp
