@@ -118,6 +118,7 @@ void CUDARayTracerRenderer::staticSceneChanged() noexcept
 		time_point before = std::chrono::high_resolution_clock::now();
 
 		bvh.buildStaticFrom(*mStaticScene.get());
+		optimizeBVHCacheLocality(bvh);
 
 		time_point after = std::chrono::high_resolution_clock::now();
 		using FloatSecond = std::chrono::duration<float>;

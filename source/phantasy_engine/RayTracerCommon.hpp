@@ -3,6 +3,7 @@
 #pragma once
 
 #include "phantasy_engine/ray_tracer_common/BVH.hpp"
+#include "phantasy_engine/ray_tracer_common/BVHCacheOptimizer.hpp"
 #include "phantasy_engine/ray_tracer_common/BVHNode.hpp"
 #include "phantasy_engine/ray_tracer_common/BVHTraversal.hpp"
 #include "phantasy_engine/ray_tracer_common/GenerateRays.hpp"
