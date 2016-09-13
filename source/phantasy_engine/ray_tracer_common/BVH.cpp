@@ -98,6 +98,7 @@ static void fillStaticNode(
 	node.min = aabb.min;
 	node.max = aabb.max;
 
+	// If there are only a few triangles left, create a leaf node
 	if (triangleInds.size() <= 3) {
 		uint32_t firstTriangleIndex = bvh.triangles.size();
 		for (uint32_t triangleInd : triangleInds) {
@@ -110,15 +111,23 @@ static void fillStaticNode(
 		return;
 	}
 
+	// Find a split axis and position using surface area heuristics (SAH)
+
 	uint8_t splitAxis;
 	float splitPos;
 	float minCost = INFINITY;
-	vec3 extentsDiff = aabb.extents() / 5.0f;
+	vec3 extents = aabb.extents();
+
+	// Define number of splits in each axis. Includes a split that puts everything in a single bin.
+	// For example, numSplits of 2 means testing middle point and putting all in one bin.
+	vec3i numSplits = vec3i(5);
+
 	DynArray<HeuristicTestNode> finalTestNodes;
 
 	for (uint8_t axis = 0; axis < 3; axis++) {
-		float extentDiff = extentsDiff[axis];
-		for (int splitIndex = 0; splitIndex < 5; splitIndex++) {
+		float extentDiff = extents[axis] / float(numSplits[axis]);
+		for (int splitIndex = 0; splitIndex < numSplits[axis]; splitIndex++) {
+
 			float splitAt = aabb.min[axis] + splitIndex * extentDiff;
 
 			DynArray<uint32_t> leftTriangles;
@@ -139,6 +148,7 @@ static void fillStaticNode(
 			DynArray<HeuristicTestNode> testNodes;
 
 			if (leftTriangles.size() == 0 || rightTriangles.size() == 0) {
+				// This split means all nodes have gone into one bin, so put all in a single leaf test node
 				HeuristicTestNode testNode;
 				testNode.isLeaf = true;
 				testNode.aabb = aabb;
@@ -146,6 +156,7 @@ static void fillStaticNode(
 				testNodes.add(testNode);
 			}
 			else {
+				// Get inner test nodes corresponding to split
 				for (auto& triangleList : { leftTriangles, rightTriangles }) {
 					HeuristicTestNode testNode;
 					testNode.numTriangles = triangleList.size();
@@ -158,15 +169,17 @@ static void fillStaticNode(
 			float cost = surfaceAreaHeuristic(bvh.nodes[0], testNodes);
 
 			if (cost < minCost) {
+				// Split is better than previous
 				splitAxis = axis;
 				splitPos = splitAt;
 				minCost = cost;
-				finalTestNodes = testNodes;
+				finalTestNodes = std::move(testNodes);
 			}
 		}
 	}
 
 	if (finalTestNodes.size() == 1) {
+		// The best split was to put in one bin
 		uint32_t firstTriangleIndex = bvh.triangles.size();
 		for (uint32_t triangleInd : triangleInds) {
 			bvh.triangles.add(inTriangles[triangleInd]);
@@ -177,36 +190,40 @@ static void fillStaticNode(
 		bvh.maxDepth = std::max(bvh.maxDepth, pathDepth + 1);
 		return;
 	}
-	else {
-		DynArray<uint32_t> leftTriangles;
-		DynArray<uint32_t> rightTriangles;
 
-		for (const uint32_t triangleInd : triangleInds) {
-			const auto& triangle = inTriangles[triangleInd];
+	// Continue splitting using the best splitting plane
 
-			vec3 center = vec3(triangle.v0) / 3.0f + vec3(triangle.v1) / 3.0f + vec3(triangle.v2) / 3.0f;
-			if (center[splitAxis] < splitPos) {
-				leftTriangles.add(triangleInd);
-			}
-			else {
-				rightTriangles.add(triangleInd);
-			}
+	DynArray<uint32_t> leftTriangles;
+	DynArray<uint32_t> rightTriangles;
+
+	for (const uint32_t triangleInd : triangleInds) {
+		const auto& triangle = inTriangles[triangleInd];
+
+		vec3 center = vec3(triangle.v0) / 3.0f + vec3(triangle.v1) / 3.0f + vec3(triangle.v2) / 3.0f;
+		if (center[splitAxis] < splitPos) {
+			leftTriangles.add(triangleInd);
 		}
+		else {
+			rightTriangles.add(triangleInd);
+		}
+	}
 
-		sfz_assert_debug(leftTriangles.size() != 0);
-		sfz_assert_debug(rightTriangles.size() != 0);
-		sfz_assert_debug(leftTriangles.size() + rightTriangles.size() == triangleInds.size());
+	sfz_assert_debug(leftTriangles.size() != 0);
+	sfz_assert_debug(rightTriangles.size() != 0);
+	sfz_assert_debug(leftTriangles.size() + rightTriangles.size() == triangleInds.size());
 
-		bvh.nodes.add(BVHNode());
-		uint32_t leftIndex = bvh.nodes.size() - 1;
-		fillStaticNode(bvh, leftIndex, pathDepth + 1, leftTriangles, inTriangles, inTriangleDatas, inTriangleAabbs);
+	// Continue recursion by adding new left and right nodes. The final node array is filled with
+	// all left nodes with lower depth before right nodes are added (pre-order).
 
-		bvh.nodes.add(BVHNode());
-		uint32_t rightIndex = bvh.nodes.size() - 1;
-		fillStaticNode(bvh, rightIndex, pathDepth + 1, rightTriangles, inTriangles, inTriangleDatas, inTriangleAabbs);
+	bvh.nodes.add(BVHNode());
+	uint32_t leftIndex = bvh.nodes.size() - 1;
+	fillStaticNode(bvh, leftIndex, pathDepth + 1, leftTriangles, inTriangles, inTriangleDatas, inTriangleAabbs);
 
-		bvh.nodes[nodeInd].setInner(leftIndex, rightIndex);
-	}	
+	bvh.nodes.add(BVHNode());
+	uint32_t rightIndex = bvh.nodes.size() - 1;
+	fillStaticNode(bvh, rightIndex, pathDepth + 1, rightTriangles, inTriangles, inTriangleDatas, inTriangleAabbs);
+
+	bvh.nodes[nodeInd].setInner(leftIndex, rightIndex);
 }
 
 // C++ container
@@ -227,10 +244,14 @@ sfz::AABB aabbFrom(uint32_t triangleInd, const DynArray<TriangleVertices>& inTri
 // Members
 // ------------------------------------------------------------------------------------------------
 
-void BVH::buildStaticFrom(const StaticScene& scene) noexcept
+BVH buildStaticFrom(const StaticScene& scene) noexcept
 {
+	// Extract information from StaticScene to simple arrays, whose indicies map to the same
+	// triangle.
+
 	DynArray<TriangleVertices> inTriangles;
 	DynArray<TriangleData> inTriangleDatas;
+
 	inTriangles.ensureCapacity((scene.opaqueComponents.size() + scene.transparentComponents.size()) * 2u);
 	inTriangleDatas.ensureCapacity((scene.opaqueComponents.size() + scene.transparentComponents.size()) * 2u);
 
@@ -269,32 +290,41 @@ void BVH::buildStaticFrom(const StaticScene& scene) noexcept
 			componentIndex++;
 		}
 	}
-	this->buildStaticFrom(inTriangles, inTriangleDatas);
+	BVH bvh = buildStaticFrom(inTriangles, inTriangleDatas);
+
+	return bvh; // Copy will be optimized away
 }
 
-void BVH::buildStaticFrom(const DynArray<TriangleVertices>& inTriangles,
-                          const DynArray<TriangleData>& inTriangleDatas) noexcept
+BVH buildStaticFrom(const DynArray<TriangleVertices>& inTriangles,
+                    const DynArray<TriangleData>& inTriangleDatas) noexcept
 {
-	triangles.ensureCapacity(inTriangles.size());
+	BVH bvh;
+	// Triangle information will be saved internal arrays in an order depending on the BVH structure
+	bvh.triangles.ensureCapacity(inTriangles.size());
+	bvh.triangleDatas.ensureCapacity(inTriangles.size());
 
+	// Compute AABBs for each Triangle. They are used later in the construction phase.
 	DynArray<sfz::AABB> inTriangleAabbs;
 	inTriangleAabbs.ensureCapacity(inTriangles.size());
-
 
 	for (uint32_t i = 0; i < inTriangles.size(); i++) {
 		inTriangleAabbs.add(aabbFrom(i, inTriangles));
 	}
 	sfz_assert_debug(inTriangleAabbs.size() == inTriangles.size());
 
+	// Prepare the initial list of triangles that are to be divided up, which simply is all of them
 	DynArray<uint32_t> triangleInds;
 	triangleInds.ensureCapacity(inTriangles.size());
 	for (uint32_t i = 0; i < inTriangles.size(); i++) {
 		triangleInds.add(i);
 	}
 
-	nodes.add(BVHNode());
-	this->maxDepth = 0;
-	fillStaticNode(*this, 0, 1, triangleInds, inTriangles, inTriangleDatas, inTriangleAabbs);
+	// Start the top-down BVH construction by initializing root node at index 0
+	bvh.nodes.add(BVHNode());
+	bvh.maxDepth = 0;
+	fillStaticNode(bvh, 0, 1, triangleInds, inTriangles, inTriangleDatas, inTriangleAabbs);
+
+	return bvh; // Copy will be optimized away
 }
 
 } // namespace phe

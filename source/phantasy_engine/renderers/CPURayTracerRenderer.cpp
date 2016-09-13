@@ -106,7 +106,7 @@ void CPURayTracerRenderer::staticSceneChanged() noexcept
 		using time_point = std::chrono::high_resolution_clock::time_point;
 		time_point before = std::chrono::high_resolution_clock::now();
 
-		mBVH.buildStaticFrom(*mStaticScene.get());
+		mBVH = std::move(buildStaticFrom(*mStaticScene.get()));
 		optimizeBVHCacheLocality(mBVH);
 
 		time_point after = std::chrono::high_resolution_clock::now();

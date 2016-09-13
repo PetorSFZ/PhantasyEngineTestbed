@@ -19,16 +19,12 @@ namespace phe {
 
 using sfz::DynArray;
 using sfz::vec3;
+using sfz::vec3i;
 
 // C++ container
 // ------------------------------------------------------------------------------------------------
 
-class BVH final {
-public:
-
-	// Members
-	// --------------------------------------------------------------------------------------------
-
+struct BVH final {
 	DynArray<BVHNode> nodes;
 
 	// These arrays are supposed to be the same size, an index is valid in both lists
@@ -37,13 +33,10 @@ public:
 
 	// The distance from the (inclusive) root node to the "deepest" leaf node
 	uint32_t maxDepth = ~0u;
-
-	// Methods
-	// --------------------------------------------------------------------------------------------
-
-	void buildStaticFrom(const StaticScene& scene) noexcept;
-	void buildStaticFrom(const DynArray<TriangleVertices>& triangles,
-	                     const DynArray<TriangleData>& triangleDatas) noexcept;
 };
+
+BVH buildStaticFrom(const StaticScene& scene) noexcept;
+BVH buildStaticFrom(const DynArray<TriangleVertices>& triangles,
+                    const DynArray<TriangleData>& triangleDatas) noexcept;
 
 } // namespace phe
