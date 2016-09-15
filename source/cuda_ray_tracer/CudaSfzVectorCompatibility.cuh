@@ -43,32 +43,32 @@ SFZ_CUDA_CALLABLE int4 toInt4(const sfz::vec4i& v) noexcept
 // sfz::Vector -> CUDA Vector
 // ------------------------------------------------------------------------------------------------
 
-SFZ_CUDA_CALLABLE sfz::vec2 toFloat2(const float2& v) noexcept
+SFZ_CUDA_CALLABLE sfz::vec2 toSFZ(const float2& v) noexcept
 {
 	return sfz::vec2(v.x, v.y);
 }
 
-SFZ_CUDA_CALLABLE sfz::vec3 toFloat3(const float3& v) noexcept
+SFZ_CUDA_CALLABLE sfz::vec3 toSFZ(const float3& v) noexcept
 {
 	return sfz::vec3(v.x, v.y, v.z);
 }
 
-SFZ_CUDA_CALLABLE sfz::vec4 toFloat4(const float4& v) noexcept
+SFZ_CUDA_CALLABLE sfz::vec4 toSFZ(const float4& v) noexcept
 {
 	return sfz::vec4(v.x, v.y, v.z, v.w);
 }
 
-SFZ_CUDA_CALLABLE sfz::vec2i toInt2(const int2& v) noexcept
+SFZ_CUDA_CALLABLE sfz::vec2i toSFZ(const int2& v) noexcept
 {
 	return sfz::vec2i(v.x, v.y);
 }
 
-SFZ_CUDA_CALLABLE sfz::vec3i toInt3(const int3& v) noexcept
+SFZ_CUDA_CALLABLE sfz::vec3i toSFZ(const int3& v) noexcept
 {
 	return sfz::vec3i(v.x, v.y, v.z);
 }
 
-SFZ_CUDA_CALLABLE sfz::vec4i toInt4(const int4& v) noexcept
+SFZ_CUDA_CALLABLE sfz::vec4i toSFZ(const int4& v) noexcept
 {
 	return sfz::vec4i(v.x, v.y, v.z, v.w);
 }

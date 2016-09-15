@@ -48,10 +48,16 @@ __global__ void cudaRayTracerKernel(cudaSurfaceObject_t surface, vec2i surfaceRe
 	}
 
 	HitInfo info = interpretHit(staticScene.triangleDatas, hit, ray);
+	cudaTextureObject_t texture = staticScene.textures[info.materialIndex];
+
 	vec3 lightPos = staticScene.pointLights[0].pos;
 	vec3 l = -normalize(info.pos - lightPos);
+	vec3 color = vec3(dot(l, info.normal));
 
-	writeSurface(surface, loc, vec4(vec3(dot(l, info.normal)), 1.0));
+	//float4 texRes = tex2D<float4>(texture, info.uv.x, info.uv.y);
+	//vec4 color = toSFZ(texRes);
+
+	writeSurface(surface, loc, vec4(color, 1.0));
 }
 
 void runCudaRayTracer(cudaSurfaceObject_t surface, vec2i surfaceRes, const CameraDef& cam,

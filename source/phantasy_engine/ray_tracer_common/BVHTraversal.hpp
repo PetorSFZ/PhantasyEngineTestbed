@@ -93,6 +93,7 @@ struct HitInfo final {
 	vec3 pos;
 	vec3 normal;
 	vec2 uv;
+	uint32_t materialIndex;
 };
 
 SFZ_CUDA_CALLABLE HitInfo interpretHit(const TriangleData* triDatas, const RayCastResult& result,
@@ -117,6 +118,9 @@ SFZ_CUDA_CALLABLE HitInfo interpretHit(const TriangleData* triDatas, const RayCa
 	vec2 uv1 = data.uv1;
 	vec2 uv2 = data.uv2;
 	info.uv = uv0 + (uv1 - uv0) * u + (uv2 - uv0) * v; // TODO: Wrong
+
+	// Material index
+	info.materialIndex = data.materialIndex;
 
 	return info;
 }

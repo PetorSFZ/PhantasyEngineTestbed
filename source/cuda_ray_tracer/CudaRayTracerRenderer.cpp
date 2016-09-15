@@ -16,6 +16,7 @@
 #include <phantasy_engine/RayTracerCommon.hpp>
 #include <phantasy_engine/renderers/FullscreenTriangle.hpp>
 
+#include "CudaBindlessTexture.hpp"
 #include "CudaHelpers.hpp"
 #include "CudaTracer.cuh"
 
@@ -39,6 +40,8 @@ public:
 
 	BVH bvh;
 	StaticSceneCuda staticSceneCuda;
+	DynArray<CudaBindlessTexture> staticSceneTextures;
+	DynArray<cudaTextureObject_t> staticSceneTexturesHandles;
 
 	CUDARayTracerRendererImpl() noexcept
 	{
@@ -51,10 +54,10 @@ public:
 		CHECK_CUDA_ERROR(cudaGraphicsUnregisterResource(cudaResource));
 		glDeleteTextures(1, &glTex);
 
-		CHECK_CUDA_ERROR(cudaFree(staticSceneCuda.pointLights));
 		CHECK_CUDA_ERROR(cudaFree(staticSceneCuda.bvhNodes));
 		CHECK_CUDA_ERROR(cudaFree(staticSceneCuda.triangleVertices));
 		CHECK_CUDA_ERROR(cudaFree(staticSceneCuda.triangleDatas));
+		CHECK_CUDA_ERROR(cudaFree(staticSceneCuda.pointLights));
 	}
 };
 
@@ -126,13 +129,6 @@ void CUDARayTracerRenderer::staticSceneChanged() noexcept
 		printf("CUDA Ray Tracer: Time spent building BVH: %.3f seconds\n", delta);
 	}
 
-	// Copy pointlights to GPU
-	PointLight*& gpuPointLights = mImpl->staticSceneCuda.pointLights;
-	CHECK_CUDA_ERROR(cudaFree(gpuPointLights));
-	size_t numPointLightBytes = mStaticScene->pointLights.size() * sizeof(PointLight);
-	CHECK_CUDA_ERROR(cudaMalloc(&gpuPointLights, numPointLightBytes));
-	CHECK_CUDA_ERROR(cudaMemcpy(gpuPointLights, mStaticScene->pointLights.data(), numPointLightBytes, cudaMemcpyHostToDevice));
-
 	// Copy BVHNodes to GPU
 	BVHNode*& gpuBVHNodes = mImpl->staticSceneCuda.bvhNodes;
 	CHECK_CUDA_ERROR(cudaFree(gpuBVHNodes));
@@ -153,6 +149,31 @@ void CUDARayTracerRenderer::staticSceneChanged() noexcept
 	size_t numTriangleDatasBytes = bvh.triangleDatas.size() * sizeof(TriangleData);
 	CHECK_CUDA_ERROR(cudaMalloc(&gpuTriangleDatas, numTriangleDatasBytes));
 	CHECK_CUDA_ERROR(cudaMemcpy(gpuTriangleDatas, mImpl->bvh.triangleDatas.data(), numTriangleDatasBytes, cudaMemcpyHostToDevice));
+
+	// Copy pointlights to GPU
+	PointLight*& gpuPointLights = mImpl->staticSceneCuda.pointLights;
+	CHECK_CUDA_ERROR(cudaFree(gpuPointLights));
+	size_t numPointLightBytes = mStaticScene->pointLights.size() * sizeof(PointLight);
+	CHECK_CUDA_ERROR(cudaMalloc(&gpuPointLights, numPointLightBytes));
+	CHECK_CUDA_ERROR(cudaMemcpy(gpuPointLights, mStaticScene->pointLights.data(), numPointLightBytes, cudaMemcpyHostToDevice));
+	mImpl->staticSceneCuda.numPointLights = mStaticScene->pointLights.size();
+
+	// Create CUDA bindless textures from static scene textures
+	mImpl->staticSceneTextures.clear();
+	mImpl->staticSceneTexturesHandles.clear();
+	for (const RawImage& image : mStaticScene->images) {
+		CudaBindlessTexture tmp;
+		tmp.load(image);
+		mImpl->staticSceneTextures.add(std::move(tmp));
+		mImpl->staticSceneTexturesHandles.add(mImpl->staticSceneTextures.last().textureObject());
+	}
+
+	// Copy static scene texture pointers into GPU array
+	cudaSurfaceObject_t*& gpuTextures = mImpl->staticSceneCuda.textures;
+	CHECK_CUDA_ERROR(cudaFree(gpuTextures));
+	size_t numGpuTexturesBytes = mImpl->staticSceneTextures.size() * sizeof(cudaSurfaceObject_t);
+	CHECK_CUDA_ERROR(cudaMalloc(&gpuTextures, numGpuTexturesBytes));
+	CHECK_CUDA_ERROR(cudaMemcpy(gpuTextures, mImpl->staticSceneTexturesHandles.data(), numGpuTexturesBytes, cudaMemcpyHostToDevice));
 }
 
 void CUDARayTracerRenderer::targetResolutionUpdated() noexcept

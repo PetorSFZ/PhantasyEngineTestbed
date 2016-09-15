@@ -77,7 +77,7 @@ void CudaBindlessTexture::load(const RawImage& image) noexcept
 	memset(&textureDesc, 0, sizeof(textureDesc));
 	textureDesc.addressMode[0] = cudaAddressModeWrap;
 	textureDesc.addressMode[1] = cudaAddressModeWrap;
-	textureDesc.filterMode = cudaFilterModeLinear;
+	textureDesc.filterMode = cudaFilterModePoint;//cudaFilterModeLinear;
 	textureDesc.readMode = cudaReadModeElementType;
 	textureDesc.normalizedCoords = 1; // Use coord in [0,1] instead of [0, size]
 
