@@ -113,6 +113,8 @@ void CPURayTracerRenderer::staticSceneChanged() noexcept
 		using FloatSecond = std::chrono::duration<float>;
 		float delta = std::chrono::duration_cast<FloatSecond>(after - before).count();
 		printf("CPU Ray Tracer: Time spent building BVH: %.3f seconds\n", delta);
+
+		printBVHMetrics(mBVH);
 	}
 }
 
