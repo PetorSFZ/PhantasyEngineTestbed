@@ -171,6 +171,8 @@ if(CUDA_TRACER)
 
 	# Source files
 	set(CUDA_RAY_TRACER_FILES
+		${CT_INCLUDE_DIR}/CudaBindlessTexture.hpp
+		 ${CT_SOURCE_DIR}/CudaBindlessTexture.cpp
 		${CT_INCLUDE_DIR}/CudaHelpers.hpp
 		${CT_INCLUDE_DIR}/CudaRayTracerRenderer.hpp
 		 ${CT_SOURCE_DIR}/CudaRayTracerRenderer.cpp
