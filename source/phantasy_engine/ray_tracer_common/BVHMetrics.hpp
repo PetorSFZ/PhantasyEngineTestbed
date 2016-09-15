@@ -11,15 +11,15 @@ struct BVHMetrics {
 	uint32_t leafCount;
 	uint32_t triangleCount;
 
-	uint32_t maxDepth; // Not implemented
-	uint32_t minDepth; // Not implemented
-	float averageLeafDepth; // Not implemented
+	uint32_t maxLeafDepth;
+	uint32_t minLeafDepth;
+	float averageLeafDepth;
 	float medianLeafDepth; // Not implemented
 	float leafDepthDeviation; // Not implemented
 
 	uint32_t minLeavesInNodes; // Not implemented
 	uint32_t maxLeavesInNodes; // Not implemented
-	float averageLeavesInNodes; // Not implemented
+	float averageLeavesInNodes;
 	float medianLeavesInNodes; // Not implemented
 	float leavesInNodesDeviation; // Not implemented
 
