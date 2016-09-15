@@ -30,8 +30,10 @@ SFZ_CUDA_CALLABLE RayCastResult castRay(const BVHNode* nodes, const TriangleVert
 {
 	// Create local stack
 	uint32_t stack[STACK_MAX_SIZE];
+#ifdef SFZ_NO_DEBUG
 	for (uint32_t& s : stack) s = ~0u;
-	
+#endif
+
 	// Place initial node on stack
 	stack[0] = 0u;
 	uint32_t stackSize = 1u;
