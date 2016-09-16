@@ -1,6 +1,6 @@
 // See 'LICENSE_PHANTASY_ENGINE' for copyright and contributors.
 
-#include "phantasy_engine/resources/RawImage.hpp"
+#include "phantasy_engine/rendering/RawImage.hpp"
 
 #include <cmath>
 #include <cstring> // std::memcpy

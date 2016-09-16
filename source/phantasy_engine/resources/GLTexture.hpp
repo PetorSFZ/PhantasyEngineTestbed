@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "phantasy_engine/resources/RawImage.hpp"
+#include "phantasy_engine/rendering/RawImage.hpp"
 
 namespace phe {
 

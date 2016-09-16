@@ -116,19 +116,19 @@ set(PHANTASY_ENGINE_LIB_FILES
 	${PH_INCLUDE_DIR}/ray_tracer_common/Triangle.hpp
 
 	${PH_INCLUDE_DIR}/rendering/BaseRenderer.hpp
-	${PH_INCLUDE_DIR}/rendering/ViewFrustum.hpp
-	 ${PH_SOURCE_DIR}/rendering/ViewFrustum.cpp
 	${PH_INCLUDE_DIR}/rendering/FullscreenTriangle.hpp
 	 ${PH_SOURCE_DIR}/rendering/FullscreenTriangle.cpp
+	${PH_INCLUDE_DIR}/rendering/ViewFrustum.hpp
+	 ${PH_SOURCE_DIR}/rendering/ViewFrustum.cpp
+	${PH_INCLUDE_DIR}/rendering/Material.hpp
+	${PH_INCLUDE_DIR}/rendering/RawGeometry.hpp
+	${PH_INCLUDE_DIR}/rendering/RawImage.hpp
+	 ${PH_SOURCE_DIR}/rendering/RawImage.cpp
 
-	${PH_INCLUDE_DIR}/Resources.hpp
 	${PH_INCLUDE_DIR}/resources/GLModel.hpp
 	 ${PH_SOURCE_DIR}/resources/GLModel.cpp
 	${PH_INCLUDE_DIR}/resources/GLTexture.hpp
 	 ${PH_SOURCE_DIR}/resources/GLTexture.cpp
-	${PH_INCLUDE_DIR}/resources/RawGeometry.hpp
-	${PH_INCLUDE_DIR}/resources/RawImage.hpp
-	 ${PH_SOURCE_DIR}/resources/RawImage.cpp
 	${PH_INCLUDE_DIR}/resources/Renderable.hpp
 	 ${PH_SOURCE_DIR}/resources/Renderable.cpp
 

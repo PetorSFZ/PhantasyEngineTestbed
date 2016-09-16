@@ -4,7 +4,7 @@
 
 #include <cstdint>
 
-#include "phantasy_engine/resources/RawGeometry.hpp"
+#include "phantasy_engine/rendering/RawGeometry.hpp"
 
 namespace phe {
 

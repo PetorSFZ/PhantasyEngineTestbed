@@ -15,7 +15,7 @@ layout(location = 2) out vec4 outFragMaterial;
 // Uniforms
 uniform int uHasAlbedoTexture = 0;
 uniform sampler2D uAlbedoTexture;
-uniform vec3 uAlbedoValue = vec3(0.0);
+uniform vec4 uAlbedoValue = vec4(vec3(0.0), 1.0);
 
 uniform int uHasRoughnessTexture = 0;
 uniform sampler2D uRoughnessTexture;
@@ -33,16 +33,15 @@ void main()
 	// TODO: Normal mapping
 	outFragNormal = vec4(normalize(normal), 1.0);
 
-	vec3 albedo = uAlbedoValue;
+	vec4 albedo = uAlbedoValue;
 	if (uHasAlbedoTexture != 0) {
-		vec4 albedoTmp = texture(uAlbedoTexture, uv);
-		if (albedoTmp.a < 0.1) {
+		albedo = texture(uAlbedoTexture, uv);
+		if (albedo.a < 0.1) {
 			discard;
 			return;
 		}
-		albedo = albedoTmp.rgb;
 	}
-	outFragAlbedo = vec4(albedo, 1.0);
+	outFragAlbedo = vec4(albedo.rgb, 1.0);
 
 	float roughness = uRoughnessValue;
 	if (uHasRoughnessTexture != 0) {

@@ -167,22 +167,20 @@ vec4 CPURayTracerRenderer::shadeHit(const Ray& ray, const RayCastResult& hit, co
 	// Use opaque component index as material index. This Would not work for materials of
 	// transparent components.
 	// TODO: Get material from separate list in StaticScene, or some other more consistent solution.
-	const Material* material;
 	const DynArray<RenderableComponent>& opaqueComponents = mStaticScene->opaqueComponents;
+	Material material;
 	if (data.materialIndex < opaqueComponents.size()) {
-		material = &opaqueComponents[data.materialIndex].material;
+		material = opaqueComponents[data.materialIndex].material;
 	} else {
-		Material tempMaterial;
-		tempMaterial.albedoValue = vec3(0.5f);
-		material = &tempMaterial;
+		material.albedoValue = vec4(0.5f, 0.5f, 0.5f, 1.0f);
 	}
 
 	const DynArray<RawImage>& images = mStaticScene->images;
 
-	vec3 albedoColor = material->albedoValue;
+	vec3 albedoColor = material.albedoValue.xyz;
 
-	if (material->albedoIndex != UINT32_MAX) {
-		const RawImage& albedoImage = images[material->albedoIndex];
+	if (material.albedoIndex != UINT32_MAX) {
+		const RawImage& albedoImage = images[material.albedoIndex];
 		if (albedoImage.bytesPerPixel == 3 ||
 			albedoImage.bytesPerPixel == 4) {
 			Vector<uint8_t, 3> intColor = Vector<uint8_t, 3>(sampleImage(albedoImage, info.uv));
@@ -194,16 +192,16 @@ vec4 CPURayTracerRenderer::shadeHit(const Ray& ray, const RayCastResult& hit, co
 	albedoColor.y = std::pow(albedoColor.y, 2.2);
 	albedoColor.z = std::pow(albedoColor.z, 2.2);
 
-	float roughness = material->roughnessValue;
-	float metallic = material->metallicValue;
+	float roughness = material.roughnessValue;
+	float metallic = material.metallicValue;
 
-	if (material->roughnessIndex != UINT32_MAX) {
-		const RawImage& image = images[material->roughnessIndex];
+	if (material.roughnessIndex != UINT32_MAX) {
+		const RawImage& image = images[material.roughnessIndex];
 		uint8_t intColor = sampleImage(image, info.uv)[0];
 		roughness = intColor / 255.0f;
 	}
-	if (material->metallicIndex != UINT32_MAX) {
-		const RawImage& image = images[material->metallicIndex];
+	if (material.metallicIndex != UINT32_MAX) {
+		const RawImage& image = images[material.metallicIndex];
 		uint8_t intColor = sampleImage(image, info.uv)[0];
 		metallic = intColor / 255.0f;
 	}
