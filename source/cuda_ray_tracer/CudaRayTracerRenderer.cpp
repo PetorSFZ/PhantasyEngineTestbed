@@ -32,7 +32,6 @@ public:
 	gl::Program transferShader;
 	FullscreenTriangle fullscreenTriangle;
 
-	// Temp
 	GLuint glTex = 0;
 	cudaGraphicsResource_t cudaResource = 0;
 	cudaArray_t cudaArray = 0; // Probably no need to free, since memory is owned by OpenGL

@@ -13,6 +13,12 @@ namespace phe {
 
 using namespace sfz;
 
+inline __device__ vec4 readTexture(cudaTextureObject_t texture, vec2 coord) noexcept
+{
+	uchar4 res = tex2D<uchar4>(texture, coord.x, coord.y);
+	return vec4(float(res.x), float(res.y), float(res.z), float(res.w)) / 256.0f;
+}
+
 inline __device__ void writeSurface(const cudaSurfaceObject_t& surface, vec2i loc, const vec4& data) noexcept
 {
 	float4 dataFloat4 = toFloat4(data);
@@ -48,15 +54,14 @@ __global__ void cudaRayTracerKernel(cudaSurfaceObject_t surface, vec2i surfaceRe
 	}
 
 	HitInfo info = interpretHit(staticScene.triangleDatas, hit, ray);
-	cudaTextureObject_t texture = staticScene.textures[info.materialIndex];
+	cudaTextureObject_t texture = staticScene.textures[10];
 
 	vec3 lightPos = staticScene.pointLights[0].pos;
 	vec3 l = -normalize(info.pos - lightPos);
-	vec3 color = vec3(dot(l, info.normal));
+	float diffuseFactor = max(dot(l, info.normal), 0.0f);
 
-	//float4 texRes = tex2D<float4>(texture, info.uv.x, info.uv.y);
-	//vec4 color = toSFZ(texRes);
-
+	vec4 texRes = readTexture(texture, info.uv);
+	vec3 color = texRes.xyz * diffuseFactor;
 	writeSurface(surface, loc, vec4(color, 1.0));
 }
 

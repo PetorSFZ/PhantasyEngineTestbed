@@ -35,27 +35,17 @@ void CudaBindlessTexture::load(const RawImage& image) noexcept
 	// Make sure texture doesn't already exist
 	this->destroy();
 
-	const int numBits = 8; // RawImage can currently only holds 8bit textures
-	const int numComponents = int(image.bytesPerPixel); // Since each component holds 1 byte
-	
 	// Allocate CUDA array in device memory
 	cudaChannelFormatDesc channelFormatDesc;
-	switch (numComponents) {
+	switch (image.bytesPerPixel) {
 	case 1:
-		channelFormatDesc = cudaCreateChannelDesc(numBits, 0, 0, 0,
-		                                          cudaChannelFormatKindUnsigned);
+		channelFormatDesc = cudaCreateChannelDesc(8, 0, 0, 0, cudaChannelFormatKindUnsigned);
 		break;
 	case 2:
-		channelFormatDesc = cudaCreateChannelDesc(numBits, numBits, 0, 0,
-		                                          cudaChannelFormatKindUnsigned);
-		break;
-	case 3:
-		channelFormatDesc = cudaCreateChannelDesc(numBits, numBits, numBits, 0,
-		                                          cudaChannelFormatKindUnsigned);
+		channelFormatDesc = cudaCreateChannelDesc(8, 8, 0, 0, cudaChannelFormatKindUnsigned);
 		break;
 	case 4:
-		channelFormatDesc = cudaCreateChannelDesc(numBits, numBits, numBits, numBits,
-		                                          cudaChannelFormatKindUnsigned);
+		channelFormatDesc = cudaCreateChannelDesc(8, 8, 8, 8, cudaChannelFormatKindUnsigned);
 		break;
 	default:
 		sfz::error("Invalid number of components, can't create cudaChannelFormatDesc.");
@@ -68,13 +58,13 @@ void CudaBindlessTexture::load(const RawImage& image) noexcept
 
 	// Specify texture
 	struct cudaResourceDesc resourceDesc;
-	memset(&resourceDesc, 0, sizeof(resourceDesc));
+	memset(&resourceDesc, 0, sizeof(cudaResourceDesc));
 	resourceDesc.resType = cudaResourceTypeArray;
 	resourceDesc.res.array.array = mCudaArray;
 
 	// Specify texture object parameters
 	struct cudaTextureDesc textureDesc;
-	memset(&textureDesc, 0, sizeof(textureDesc));
+	memset(&textureDesc, 0, sizeof(cudaTextureDesc));
 	textureDesc.addressMode[0] = cudaAddressModeWrap;
 	textureDesc.addressMode[1] = cudaAddressModeWrap;
 	textureDesc.filterMode = cudaFilterModePoint;//cudaFilterModeLinear;
