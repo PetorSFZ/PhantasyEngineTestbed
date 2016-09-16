@@ -6,9 +6,9 @@
 #include <sfz/screens/BaseScreen.hpp>
 
 #include "phantasy_engine/level/Level.hpp"
-#include "phantasy_engine/renderers/BaseRenderer.hpp"
-#include "phantasy_engine/renderers/ViewFrustum.hpp"
-#include "phantasy_engine/renderers/FullscreenTriangle.hpp"
+#include "phantasy_engine/rendering/BaseRenderer.hpp"
+#include "phantasy_engine/rendering/ViewFrustum.hpp"
+#include "phantasy_engine/rendering/FullscreenTriangle.hpp"
 
 namespace phe {
 

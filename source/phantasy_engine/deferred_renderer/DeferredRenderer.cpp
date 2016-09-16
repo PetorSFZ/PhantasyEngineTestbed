@@ -4,7 +4,7 @@
 #include <sfz/gl/IncludeOpenGL.hpp>
 #include <sfz/util/IO.hpp>
 
-#include "phantasy_engine/renderers/DeferredRenderer.hpp"
+#include "phantasy_engine/deferred_renderer/DeferredRenderer.hpp"
 #include "phantasy_engine/level/PointLight.hpp"
 
 namespace phe {

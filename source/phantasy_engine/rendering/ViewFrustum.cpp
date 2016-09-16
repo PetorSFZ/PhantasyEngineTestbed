@@ -1,6 +1,6 @@
 // See 'LICENSE_PHANTASY_ENGINE' for copyright and contributors.
 
-#include "phantasy_engine/renderers/ViewFrustum.hpp"
+#include "phantasy_engine/rendering/ViewFrustum.hpp"
 
 #include <sfz/geometry/AABB.hpp>
 #include <sfz/geometry/Intersection.hpp>

@@ -14,7 +14,7 @@
 #include <cuda_runtime.h>
 
 #include <phantasy_engine/RayTracerCommon.hpp>
-#include <phantasy_engine/renderers/FullscreenTriangle.hpp>
+#include <phantasy_engine/rendering/FullscreenTriangle.hpp>
 
 #include "CudaBindlessTexture.hpp"
 #include "CudaHelpers.hpp"

@@ -7,7 +7,7 @@
 #include <sfz/containers/DynArray.hpp>
 #include <sfz/math/Vector.hpp>
 
-#include "phantasy_engine/renderers/BaseRenderer.hpp"
+#include "phantasy_engine/rendering/BaseRenderer.hpp"
 #include "phantasy_engine/ray_tracer_common/BVH.hpp"
 
 namespace phe {

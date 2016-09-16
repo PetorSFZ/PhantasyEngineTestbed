@@ -5,7 +5,8 @@
 #include <sfz/containers/DynArray.hpp>
 #include <sfz/memory/SmartPointers.hpp>
 
-#include <phantasy_engine/Renderers.hpp>
+#include <phantasy_engine/CPUTracerRenderer.hpp>
+#include <phantasy_engine/DeferredRenderer.hpp>
 #ifdef CUDA_TRACER_AVAILABLE
 #include <CudaRayTracerRenderer.hpp>
 #endif

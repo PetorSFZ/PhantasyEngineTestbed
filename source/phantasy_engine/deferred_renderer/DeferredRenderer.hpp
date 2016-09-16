@@ -4,8 +4,8 @@
 
 #include <sfz/gl/Program.hpp>
 
-#include "phantasy_engine/renderers/BaseRenderer.hpp"
-#include "phantasy_engine/renderers/FullscreenTriangle.hpp"
+#include "phantasy_engine/rendering/BaseRenderer.hpp"
+#include "phantasy_engine/rendering/FullscreenTriangle.hpp"
 
 namespace phe {
 

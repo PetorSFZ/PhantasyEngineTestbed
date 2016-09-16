@@ -6,7 +6,7 @@
 
 #include <sfz/math/MathHelpers.hpp>
 
-#include <phantasy_engine/renderers/ViewFrustum.hpp>
+#include <phantasy_engine/rendering/ViewFrustum.hpp>
 
 TEST_CASE("ViewFrustum: Getters", "[ViewFrustum]")
 {

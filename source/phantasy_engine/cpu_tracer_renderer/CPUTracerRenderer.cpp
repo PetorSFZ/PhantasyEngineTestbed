@@ -1,6 +1,6 @@
 // See 'LICENSE_PHANTASY_ENGINE' for copyright and contributors.
 
-#include "phantasy_engine/renderers/CPURayTracerRenderer.hpp"
+#include "phantasy_engine/cpu_tracer_renderer/CPUTracerRenderer.hpp"
 
 #include <chrono>
 #include <future>

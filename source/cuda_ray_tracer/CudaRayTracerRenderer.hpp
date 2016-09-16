@@ -2,7 +2,7 @@
 
 #pragma
 
-#include "phantasy_engine/renderers/BaseRenderer.hpp"
+#include "phantasy_engine/rendering/BaseRenderer.hpp"
 
 namespace phe {
 

@@ -91,6 +91,14 @@ set(PHANTASY_ENGINE_LIB_FILES
 	${PH_INCLUDE_DIR}/config/Setting.hpp
 	 ${PH_SOURCE_DIR}/config/Setting.cpp
 
+	${PH_INCLUDE_DIR}/CPUTracerRenderer.hpp
+	${PH_INCLUDE_DIR}/cpu_tracer_renderer/CPUTracerRenderer.hpp
+	 ${PH_SOURCE_DIR}/cpu_tracer_renderer/CPUTracerRenderer.cpp
+
+	${PH_INCLUDE_DIR}/DeferredRenderer.hpp
+	${PH_INCLUDE_DIR}/deferred_renderer/DeferredRenderer.hpp
+	 ${PH_SOURCE_DIR}/deferred_renderer/DeferredRenderer.cpp
+
 	${PH_INCLUDE_DIR}/RayTracerCommon.hpp
 	${PH_INCLUDE_DIR}/ray_tracer_common/BVH.hpp
 	 ${PH_SOURCE_DIR}/ray_tracer_common/BVH.cpp
@@ -107,17 +115,11 @@ set(PHANTASY_ENGINE_LIB_FILES
 	${PH_INCLUDE_DIR}/ray_tracer_common/Shading.hpp
 	${PH_INCLUDE_DIR}/ray_tracer_common/Triangle.hpp
 
-	${PH_INCLUDE_DIR}/Renderers.hpp
-	${PH_INCLUDE_DIR}/renderers/BaseRenderer.hpp
-	${PH_INCLUDE_DIR}/renderers/DeferredRenderer.hpp
-	 ${PH_SOURCE_DIR}/renderers/DeferredRenderer.cpp
-	${PH_INCLUDE_DIR}/renderers/ViewFrustum.hpp
-	 ${PH_SOURCE_DIR}/renderers/ViewFrustum.cpp
-	${PH_INCLUDE_DIR}/renderers/FullscreenTriangle.hpp
-	 ${PH_SOURCE_DIR}/renderers/FullscreenTriangle.cpp
-
-	${PH_INCLUDE_DIR}/renderers/CPURayTracerRenderer.hpp
-	 ${PH_SOURCE_DIR}/renderers/CPURayTracerRenderer.cpp
+	${PH_INCLUDE_DIR}/rendering/BaseRenderer.hpp
+	${PH_INCLUDE_DIR}/rendering/ViewFrustum.hpp
+	 ${PH_SOURCE_DIR}/rendering/ViewFrustum.cpp
+	${PH_INCLUDE_DIR}/rendering/FullscreenTriangle.hpp
+	 ${PH_SOURCE_DIR}/rendering/FullscreenTriangle.cpp
 
 	${PH_INCLUDE_DIR}/Resources.hpp
 	${PH_INCLUDE_DIR}/resources/GLModel.hpp
