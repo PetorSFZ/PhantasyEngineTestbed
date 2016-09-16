@@ -93,7 +93,8 @@ struct SplitInfo {
 	uint8_t axis;
 	float pos;
 	float cost;
-	DynArray<SplitNode> children;
+	uint8_t numChildren;
+	SplitNode children[2];
 };
 
 SplitInfo split(
@@ -136,6 +137,7 @@ SplitInfo split(
 		testNode.aabb = sfz::AABB{node.min, node.max};
 		testNode.numTriangles = leftTriangles.size();
 		testNodes.add(testNode);
+		result.numChildren = 1;
 	}
 	else {
 		// Get inner test nodes corresponding to split
@@ -145,6 +147,7 @@ SplitInfo split(
 			testNode.isLeaf = testNode.numTriangles <= 3;
 			testNode.aabb = createAabbUsingExisting(triangleList, inTriangleAabbs);
 			testNodes.add(testNode);
+			result.numChildren = 2;
 		}
 	}
 
@@ -157,7 +160,7 @@ SplitInfo split(
 		SplitNode node;
 		node.aabb = testNode.aabb;
 		node.triangleIndices = triangles[i];
-		result.children.add(node);
+		result.children[i] = node;
 	}
 
 	return result;
@@ -199,7 +202,7 @@ static void fillStaticNode(
 	SplitInfo bestSplit = std::move(bestObjectSplit.cost > bestSpatialSplit.cost ? bestSpatialSplit : bestObjectSplit);
 
 	// Create child nodes and possibly recurse
-	if (bestSplit.children.size() == 1) {
+	if (bestSplit.numChildren == 1) {
 		// The best split was to put in one bin
 		uint32_t firstTriangleIndex = bvh.triangles.size();
 		for (uint32_t triangleInd : triangleInds) {
@@ -211,8 +214,6 @@ static void fillStaticNode(
 		bvh.maxDepth = std::max(bvh.maxDepth, pathDepth + 1);
 	}
 	else {
-		sfz_assert_debug(bestSplit.children.size() == 2);
-
 		uint32_t indices[2];
 		
 		for (uint32_t i = 0; i < 2; i++) {
