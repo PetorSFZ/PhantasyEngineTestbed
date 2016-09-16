@@ -15,6 +15,30 @@ namespace phe {
 
 using namespace sfz;
 
+// Statics
+// ------------------------------------------------------------------------------------------------
+
+static void padRgb(DynArray<uint8_t>& dst, const uint8_t* src, uint32_t width, uint32_t height) noexcept
+{
+	const uint32_t srcElemWidth = width * 3;
+	const uint32_t dstElemWidth = width * 4;
+
+	dst.ensureCapacity(height * dstElemWidth);
+	dst.setSize(height * dstElemWidth);
+	
+	for (uint32_t y = 0; y < height; y++) {
+		uint32_t srcOffs = y * srcElemWidth;
+		uint32_t dstOffs = y * dstElemWidth;
+		
+		for (uint32_t x = 0; x < width; x++) {
+			dst[dstOffs + x * 4u] = src[srcOffs + x * 3u];
+			dst[dstOffs + x * 4u + 1] = src[srcOffs + x * 3u + 1];
+			dst[dstOffs + x * 4u + 2] = src[srcOffs + x * 3u + 2];
+			dst[dstOffs + x * 4u + 3] = uint8_t(0xFF);
+		}
+	}
+}
+
 // RawImage: Methods
 // ------------------------------------------------------------------------------------------------
 
@@ -79,9 +103,14 @@ RawImage loadImage(const char* basePath, const char* fileName) noexcept
 	// Create RawImage from data
 	RawImage tmp;
 	tmp.dim = vec2i(width, height);
-	tmp.bytesPerPixel = uint32_t(numChannels);
-	tmp.pitch = uint32_t(width * numChannels);
-	tmp.imgData.add(img, uint32_t(width * height * numChannels));
+	if (numChannels == 3) {
+		padRgb(tmp.imgData, img, tmp.dim.x, tmp.dim.y);
+		tmp.bytesPerPixel = 4u;
+	} else {
+		tmp.imgData.add(img, uint32_t(width * height * numChannels));
+		tmp.bytesPerPixel = uint32_t(numChannels);
+	}
+	tmp.pitch = uint32_t(width * tmp.bytesPerPixel);
 
 	// Free data and return RawImage
 	stbi_image_free(img);
