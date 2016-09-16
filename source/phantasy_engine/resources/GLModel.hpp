@@ -7,7 +7,7 @@
 #include "phantasy_engine/rendering/RawGeometry.hpp"
 
 namespace phe {
-
+/*
 using std::uint32_t;
 
 // GLModel class
@@ -50,6 +50,6 @@ private:
 	uint32_t mVertexBuffer = 0;
 	uint32_t mIndexBuffer = 0;
 	uint32_t mNumIndices = 0;
-};
+};*/
 
 } // namespace phe

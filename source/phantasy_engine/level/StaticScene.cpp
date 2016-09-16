@@ -31,7 +31,7 @@ static void processNode(const char* basePath, StaticScene& staticScene, sfz::Has
 		// Allocate memory for vertices
 		tmp.geometry.vertices = DynArray<Vertex>(mesh->mNumVertices, mesh->mNumVertices);// .setCapacity(mesh->mNumVertices);
 
-																						 // Fill vertices with positions, normals and uv coordinates
+		// Fill vertices with positions, normals and uv coordinates
 		sfz_assert_debug(mesh->HasPositions());
 		sfz_assert_debug(mesh->HasNormals());
 		for (uint32_t i = 0; i < mesh->mNumVertices; i++) {
@@ -53,9 +53,6 @@ static void processNode(const char* basePath, StaticScene& staticScene, sfz::Has
 			tmp.geometry.indices.add(face.mIndices, face.mNumIndices);
 		}
 
-		// Load geometry into OpenGL
-		tmp.glModel.load(tmp.geometry);
-
 		// Retrieve mesh's material
 		const aiMaterial* mat = scene->mMaterials[mesh->mMaterialIndex];
 
@@ -70,13 +67,11 @@ static void processNode(const char* basePath, StaticScene& staticScene, sfz::Has
 			if (indexPtr == nullptr) {
 				//printf("Loaded albedo texture: %s\n", tmpPath.C_Str());
 
-				const uint32_t nextIndex = staticScene.textures.size();
+				const uint32_t nextIndex = staticScene.images.size();
 				texMapping.put(tmpPath.C_Str(), nextIndex);
 				indexPtr = texMapping.get(tmpPath.C_Str());
 
 				staticScene.images.add(loadImage(basePath, convertToOSPath(tmpPath.C_Str()).str()));
-				staticScene.textures.add(GLTexture(staticScene.images[nextIndex]));
-				sfz_assert_debug(staticScene.textures.last().isValid());
 			}
 			tmp.material.albedoIndex = *indexPtr;
 		}
@@ -92,13 +87,11 @@ static void processNode(const char* basePath, StaticScene& staticScene, sfz::Has
 			if (indexPtr == nullptr) {
 				//printf("Loaded roughness texture: %s\n", tmpPath.C_Str());
 
-				const uint32_t nextIndex = staticScene.textures.size();
+				const uint32_t nextIndex = staticScene.images.size();
 				texMapping.put(tmpPath.C_Str(), nextIndex);
 				indexPtr = texMapping.get(tmpPath.C_Str());
 
 				staticScene.images.add(loadImage(basePath, convertToOSPath(tmpPath.C_Str()).str()));
-				staticScene.textures.add(GLTexture(staticScene.images[nextIndex]));
-				sfz_assert_debug(staticScene.textures.last().isValid());
 			}
 			tmp.material.roughnessIndex = *indexPtr;
 		}
@@ -114,13 +107,11 @@ static void processNode(const char* basePath, StaticScene& staticScene, sfz::Has
 			if (indexPtr == nullptr) {
 				//printf("Loaded metallic texture: %s\n", tmpPath.C_Str());
 
-				const uint32_t nextIndex = staticScene.textures.size();
+				const uint32_t nextIndex = staticScene.images.size();
 				texMapping.put(tmpPath.C_Str(), nextIndex);
 				indexPtr = texMapping.get(tmpPath.C_Str());
 
 				staticScene.images.add(loadImage(basePath, convertToOSPath(tmpPath.C_Str()).str()));
-				staticScene.textures.add(GLTexture(staticScene.images[nextIndex]));
-				sfz_assert_debug(staticScene.textures.last().isValid());
 			}
 			tmp.material.metallicIndex = *indexPtr;
 		}

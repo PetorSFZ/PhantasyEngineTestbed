@@ -8,7 +8,7 @@
 #include <sfz/gl/IncludeOpenGL.hpp>
 
 namespace phe {
-
+/*
 // GLModel: Constructors & destructors
 // ------------------------------------------------------------------------------------------------
 
@@ -97,5 +97,5 @@ void GLModel::draw() const noexcept
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mIndexBuffer);
 	glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(mNumIndices), GL_UNSIGNED_INT, 0);
 }
-
+*/
 } // namespace phe

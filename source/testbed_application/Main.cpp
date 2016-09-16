@@ -127,7 +127,6 @@ int main(int, char**)
 		uint32_t indices[3] ={0, 1, 2};
 		testComponent.geometry.vertices.add(testVertices, 3);
 		testComponent.geometry.indices.add(indices, 3);
-		testComponent.glModel.load(testComponent.geometry);
 
 		level->staticScene->opaqueComponents.add(std::move(testComponent));
 	}

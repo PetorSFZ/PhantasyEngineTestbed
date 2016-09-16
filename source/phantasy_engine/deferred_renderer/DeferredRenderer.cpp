@@ -41,7 +41,7 @@ DeferredRenderer::DeferredRenderer() noexcept
 
 RenderResult DeferredRenderer::render(Framebuffer& resultFB) noexcept
 {
-	const mat4 viewMatrix = mMatrices.headMatrix * mMatrices.originMatrix;
+	/*const mat4 viewMatrix = mMatrices.headMatrix * mMatrices.originMatrix;
 	const mat4 projMatrix = mMatrices.projMatrix;
 	const mat4 invProjMatrix = inverse(projMatrix);
 
@@ -169,7 +169,7 @@ RenderResult DeferredRenderer::render(Framebuffer& resultFB) noexcept
 
 		mFullscreenTriangle.render();
 	}
-
+	*/
 	RenderResult tmp;
 	tmp.renderedRes = mTargetResolution;
 	return tmp;

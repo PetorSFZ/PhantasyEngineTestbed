@@ -58,9 +58,6 @@ static void processNode(const char* basePath, Renderable& renderable,
 			tmp.geometry.indices.add(face.mIndices, face.mNumIndices);
 		}
 
-		// Load geometry into OpenGL
-		tmp.glModel.load(tmp.geometry);
-
 		// Retrieve mesh's material
 		const aiMaterial* mat = scene->mMaterials[mesh->mMaterialIndex];
 
@@ -75,13 +72,11 @@ static void processNode(const char* basePath, Renderable& renderable,
 			if (indexPtr == nullptr) {
 				//printf("Loaded albedo texture: %s\n", tmpPath.C_Str());
 
-				const uint32_t nextIndex = renderable.textures.size();
+				const uint32_t nextIndex = renderable.images.size();
 				texMapping.put(tmpPath.C_Str(), nextIndex);
 				indexPtr = texMapping.get(tmpPath.C_Str());
 
 				renderable.images.add(loadImage(basePath, convertToOSPath(tmpPath.C_Str()).str()));
-				renderable.textures.add(GLTexture(renderable.images[nextIndex]));
-				sfz_assert_debug(renderable.textures.last().isValid());
 			}
 			tmp.material.albedoIndex = *indexPtr;
 		}
@@ -97,13 +92,11 @@ static void processNode(const char* basePath, Renderable& renderable,
 			if (indexPtr == nullptr) {
 				//printf("Loaded roughness texture: %s\n", tmpPath.C_Str());
 
-				const uint32_t nextIndex = renderable.textures.size();
+				const uint32_t nextIndex = renderable.images.size();
 				texMapping.put(tmpPath.C_Str(), nextIndex);
 				indexPtr = texMapping.get(tmpPath.C_Str());
 
 				renderable.images.add(loadImage(basePath, convertToOSPath(tmpPath.C_Str()).str()));
-				renderable.textures.add(GLTexture(renderable.images[nextIndex]));
-				sfz_assert_debug(renderable.textures.last().isValid());
 			}
 			tmp.material.roughnessIndex = *indexPtr;
 		}
@@ -119,13 +112,11 @@ static void processNode(const char* basePath, Renderable& renderable,
 			if (indexPtr == nullptr) {
 				//printf("Loaded metallic texture: %s\n", tmpPath.C_Str());
 
-				const uint32_t nextIndex = renderable.textures.size();
+				const uint32_t nextIndex = renderable.images.size();
 				texMapping.put(tmpPath.C_Str(), nextIndex);
 				indexPtr = texMapping.get(tmpPath.C_Str());
 
 				renderable.images.add(loadImage(basePath, convertToOSPath(tmpPath.C_Str()).str()));
-				renderable.textures.add(GLTexture(renderable.images[nextIndex]));
-				sfz_assert_debug(renderable.textures.last().isValid());
 			}
 			tmp.material.metallicIndex = *indexPtr;
 		}
@@ -196,9 +187,6 @@ void modelToWorldSpace(Renderable& renderable, const mat4& modelMatrix) noexcept
 			v.pos = transformPoint(modelMatrix, v.pos);
 			v.normal = transformDir(normalMatrix, v.normal);
 		}
-
-		// Reload OpenGL model
-		comp.glModel.load(comp.geometry);
 	}
 }
 

@@ -22,7 +22,6 @@ using sfz::DynArray;
 /// completely skipped or rendered incorrectly.
 struct StaticScene {
 	DynArray<RawImage> images;
-	DynArray<GLTexture> textures;
 	DynArray<RenderableComponent> opaqueComponents;
 	DynArray<RenderableComponent> transparentComponents;
 
