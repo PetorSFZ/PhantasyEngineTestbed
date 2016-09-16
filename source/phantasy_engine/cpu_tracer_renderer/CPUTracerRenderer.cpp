@@ -158,7 +158,7 @@ const uint8_t* CPURayTracerRenderer::sampleImage(const RawImage& image, const ve
 
 vec4 CPURayTracerRenderer::shadeHit(const Ray& ray, const RayCastResult& hit, const HitInfo& info) noexcept
 {
-	BVHNode* nodes = this->mBVH.nodes.data();
+	/*BVHNode* nodes = this->mBVH.nodes.data();
 	TriangleVertices* triangles = this->mBVH.triangles.data();
 	TriangleData* datas = this->mBVH.triangleDatas.data();
 
@@ -255,7 +255,8 @@ vec4 CPURayTracerRenderer::shadeHit(const Ray& ray, const RayCastResult& hit, co
 
 		color += (diffuse + specular) * lighting * nDotL;
 	}
-	return vec4(color, 1.0f);
+	return vec4(color, 1.0f);*/
+	return vec4(1.0f, 0.0f, 0.0f, 1.0f);
 }
 
 } // namespace phe

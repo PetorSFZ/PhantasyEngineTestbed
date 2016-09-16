@@ -8,6 +8,7 @@
 
 #include <phantasy_engine/PhantasyEngine.hpp>
 #include <phantasy_engine/Config.hpp>
+#include <phantasy_engine/level/SponzaLoader.hpp>
 
 #include "Helpers.hpp"
 #include "TestbedLogic.hpp"
@@ -43,7 +44,6 @@ int main(int, char**)
 	// Retrieve global config and add testbed specific settings
 	GlobalConfig& cfg = GlobalConfig::instance();
 	Setting* renderingBackendSetting = cfg.sanitizeInt("PhantasyEngineTestbed", "renderingBackend", 0, 0, 2);
-	Setting* useSponzaSetting = cfg.sanitizeBool("PhantasyEngineTestbed", "useSponza", true);
 
 	// Print all settings
 	DynArray<Setting*> settings;
@@ -80,55 +80,31 @@ int main(int, char**)
 	
 	SharedPtr<Level> level = makeShared<Level>();
 	level->staticScene = makeShared<StaticScene>();
-	if (useSponzaSetting->boolValue()) {
-		
-		using time_point = std::chrono::high_resolution_clock::time_point;
-		time_point before = std::chrono::high_resolution_clock::now();
 
-		assimpLoadSponza(modelsPath.str, "sponzaPBR/sponzaPBR.obj", *level->staticScene, scalingMatrix4(0.05f));
+	using time_point = std::chrono::high_resolution_clock::time_point;
+	time_point before = std::chrono::high_resolution_clock::now();
 
-		time_point after = std::chrono::high_resolution_clock::now();
-		using FloatSecond = std::chrono::duration<float>;
-		float delta = std::chrono::duration_cast<FloatSecond>(after - before).count();
-		printf("Time spent loading sponza: %.3f seconds\n", delta);
+	loadStaticSceneSponza(modelsPath.str, "sponzaPBR/sponzaPBR.obj", *level, scalingMatrix4(0.05f));
 
-		// Add lights to the scene
-		vec3 colours[]{
-			vec3{ 1.0f, 0.0f, 0.0f },
-			vec3{ 1.0f, 0.0f, 1.0f },
-			vec3{ 0.0f, 1.0f, 1.0f },
-			vec3{ 1.0f, 1.0f, 0.0f },
-			vec3{ 0.0f, 1.0f, 0.0f }
-		};
-		for (int i = 0; i < 5; i++) {
-			PointLight pointLight;
-			pointLight.pos = vec3{ -50.0f + 25.0f * i , 5.0f, 0.0f };
-			pointLight.range = 50.0f;
-			pointLight.strength = 100.0f * colours[i];
-			level->staticScene->pointLights.add(pointLight);
-		}
-	}
-	else {
-		RenderableComponent testComponent;
-		Vertex v1;
-		v1.pos ={-0.5f, 2.0f, -2.0f};
-		v1.normal ={0.0f, 0.0f, 0.0f};
-		v1.uv ={0.0f, 1.0f};
+	time_point after = std::chrono::high_resolution_clock::now();
+	using FloatSecond = std::chrono::duration<float>;
+	float delta = std::chrono::duration_cast<FloatSecond>(after - before).count();
+	printf("Time spent loading sponza: %.3f seconds\n", delta);
 
-		Vertex v2;
-		v2.pos ={0.0f, 2.0f, -2.0f};
-		v2.uv ={1.0f, 1.0f};
-
-		Vertex v3;
-		v3.pos ={0.0f, 2.5f, -2.0f};
-		v3.uv ={1.0f, 0.0f};
-
-		Vertex testVertices[3] ={v1, v2, v3};
-		uint32_t indices[3] ={0, 1, 2};
-		testComponent.geometry.vertices.add(testVertices, 3);
-		testComponent.geometry.indices.add(indices, 3);
-
-		level->staticScene->opaqueComponents.add(std::move(testComponent));
+	// Add lights to the scene
+	vec3 colours[]{
+		vec3{ 1.0f, 0.0f, 0.0f },
+		vec3{ 1.0f, 0.0f, 1.0f },
+		vec3{ 0.0f, 1.0f, 1.0f },
+		vec3{ 1.0f, 1.0f, 0.0f },
+		vec3{ 0.0f, 1.0f, 0.0f }
+	};
+	for (int i = 0; i < 5; i++) {
+		PointLight pointLight;
+		pointLight.pos = vec3{ -50.0f + 25.0f * i , 5.0f, 0.0f };
+		pointLight.range = 50.0f;
+		pointLight.strength = 100.0f * colours[i];
+		level->staticScene->pointLights.add(pointLight);
 	}
 
 	// Run gameloop

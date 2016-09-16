@@ -1,6 +1,6 @@
 // See 'LICENSE_PHANTASY_ENGINE' for copyright and contributors.
 
-#include "phantasy_engine/level/StaticScene.hpp"
+#include "phantasy_engine/level/SponzaLoader.hpp"
 
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
@@ -9,33 +9,38 @@
 #include <sfz/containers/DynString.hpp>
 #include <sfz/containers/HashMap.hpp>
 
+#include "phantasy_engine/level/StaticScene.hpp"
 #include "phantasy_engine/util/IOUtil.hpp"
 
 namespace phe {
+
+using namespace sfz;
 
 static vec3 toSFZ(const aiVector3D& v)
 {
 	return vec3(v.x, v.y, v.z);
 }
 
-static void processNode(const char* basePath, StaticScene& staticScene, sfz::HashMap<std::string, uint32_t>& texMapping,
-	const aiScene* scene, aiNode* node, const mat4& modelMatrix, const mat4& normalMatrix) noexcept
+static void processNode(const char* basePath, Level& level, sfz::HashMap<std::string, uint32_t>& texMapping,
+                        const aiScene* scene, aiNode* node, const mat4& modelMatrix, const mat4& normalMatrix) noexcept
 {
 	aiString tmpPath;
 
 	// Process all meshes in current node
 	for (uint32_t meshIndex = 0; meshIndex < node->mNumMeshes; meshIndex++) {
+		
 		const aiMesh* mesh = scene->mMeshes[node->mMeshes[meshIndex]];
-		RenderableComponent tmp;
+		RawMesh meshTmp;
+		Material materialTmp;
 
 		// Allocate memory for vertices
-		tmp.geometry.vertices = DynArray<Vertex>(mesh->mNumVertices, mesh->mNumVertices);// .setCapacity(mesh->mNumVertices);
+		meshTmp.vertices = DynArray<Vertex>(mesh->mNumVertices, mesh->mNumVertices);
 
 		// Fill vertices with positions, normals and uv coordinates
 		sfz_assert_debug(mesh->HasPositions());
 		sfz_assert_debug(mesh->HasNormals());
 		for (uint32_t i = 0; i < mesh->mNumVertices; i++) {
-			Vertex& v = tmp.geometry.vertices[i];
+			Vertex& v = meshTmp.vertices[i];
 			v.pos = sfz::transformPoint(modelMatrix, toSFZ(mesh->mVertices[i]));
 			v.normal = sfz::transformDir(normalMatrix, toSFZ(mesh->mNormals[i]));
 			if (mesh->mTextureCoords[0] != nullptr) {
@@ -47,10 +52,10 @@ static void processNode(const char* basePath, StaticScene& staticScene, sfz::Has
 		}
 
 		// Fill geometry with indices
-		tmp.geometry.indices.setCapacity(mesh->mNumFaces * 3);
+		meshTmp.indices.setCapacity(mesh->mNumFaces * 3u);
 		for (uint32_t i = 0; i < mesh->mNumFaces; i++) {
 			const aiFace& face = mesh->mFaces[i];
-			tmp.geometry.indices.add(face.mIndices, face.mNumIndices);
+			meshTmp.indices.add(face.mIndices, face.mNumIndices);
 		}
 
 		// Retrieve mesh's material
@@ -67,13 +72,13 @@ static void processNode(const char* basePath, StaticScene& staticScene, sfz::Has
 			if (indexPtr == nullptr) {
 				//printf("Loaded albedo texture: %s\n", tmpPath.C_Str());
 
-				const uint32_t nextIndex = staticScene.images.size();
+				const uint32_t nextIndex = level.textures.size();
 				texMapping.put(tmpPath.C_Str(), nextIndex);
 				indexPtr = texMapping.get(tmpPath.C_Str());
 
-				staticScene.images.add(loadImage(basePath, convertToOSPath(tmpPath.C_Str()).str()));
+				level.textures.add(loadImage(basePath, convertToOSPath(tmpPath.C_Str()).str()));
 			}
-			tmp.material.albedoIndex = *indexPtr;
+			materialTmp.albedoIndex = *indexPtr;
 		}
 
 		// Roughness (stored in map_Ns, specular highlight component)
@@ -87,13 +92,13 @@ static void processNode(const char* basePath, StaticScene& staticScene, sfz::Has
 			if (indexPtr == nullptr) {
 				//printf("Loaded roughness texture: %s\n", tmpPath.C_Str());
 
-				const uint32_t nextIndex = staticScene.images.size();
+				const uint32_t nextIndex = level.textures.size();
 				texMapping.put(tmpPath.C_Str(), nextIndex);
 				indexPtr = texMapping.get(tmpPath.C_Str());
 
-				staticScene.images.add(loadImage(basePath, convertToOSPath(tmpPath.C_Str()).str()));
+				level.textures.add(loadImage(basePath, convertToOSPath(tmpPath.C_Str()).str()));
 			}
-			tmp.material.roughnessIndex = *indexPtr;
+			materialTmp.roughnessIndex = *indexPtr;
 		}
 
 		// Metallic (stored in map_Ka, ambient texture map)
@@ -107,30 +112,32 @@ static void processNode(const char* basePath, StaticScene& staticScene, sfz::Has
 			if (indexPtr == nullptr) {
 				//printf("Loaded metallic texture: %s\n", tmpPath.C_Str());
 
-				const uint32_t nextIndex = staticScene.images.size();
+				const uint32_t nextIndex = level.textures.size();
 				texMapping.put(tmpPath.C_Str(), nextIndex);
 				indexPtr = texMapping.get(tmpPath.C_Str());
 
-				staticScene.images.add(loadImage(basePath, convertToOSPath(tmpPath.C_Str()).str()));
+				level.textures.add(loadImage(basePath, convertToOSPath(tmpPath.C_Str()).str()));
 			}
-			tmp.material.metallicIndex = *indexPtr;
+			materialTmp.metallicIndex = *indexPtr;
 		}
-		// Add the components
-		staticScene.opaqueComponents.add(std::move(tmp));
+
+		// Add material index
+		uint16_t nextMaterialIndex = uint16_t(level.materials.size());
+		meshTmp.materialIndices = DynArray<uint16_t>(meshTmp.vertices.size(), nextMaterialIndex, 0u);
+
+		// Add the mesh and material
+		level.staticScene->meshes.add(std::move(meshTmp));
+		level.materials.add(materialTmp);
 	}
 
 	// Process all children
 	for (uint32_t i = 0; i < node->mNumChildren; i++) {
-		processNode(basePath, staticScene, texMapping, scene, node->mChildren[i], modelMatrix, normalMatrix);
+		processNode(basePath, level, texMapping, scene, node->mChildren[i], modelMatrix, normalMatrix);
 	}
 }
 
-void assimpLoadSponza(const char* basePath, const char* fileName, StaticScene& staticScene) noexcept
-{
-	assimpLoadSponza(basePath, fileName, staticScene, sfz::identityMatrix4<float>());
-}
-
-void assimpLoadSponza(const char* basePath, const char* fileName, StaticScene& staticScene, const mat4& modelMatrix) noexcept
+void loadStaticSceneSponza(const char* basePath, const char* fileName, Level& level,
+                           const mat4& modelMatrix) noexcept
 {
 	// Create full path
 	size_t basePathLen = std::strlen(basePath);
@@ -166,10 +173,17 @@ void assimpLoadSponza(const char* basePath, const char* fileName, StaticScene& s
 		return;
 	}
 
+	// Ensure level has a static scene and clear it
+	if (level.staticScene == nullptr) {
+		level.staticScene = makeShared<StaticScene>();
+	}
+	level.staticScene->meshes.clear();
+	level.staticScene->pointLights.clear();
+
 	// Process tree, filling up the list of renderable components along the way
 	sfz::HashMap<std::string, uint32_t> texMapping(uint32_t(scene->mNumTextures));
 	const mat4 normalMatrix = inverse(transpose(modelMatrix));
-	processNode(realBasePath.str(), staticScene, texMapping, scene, scene->mRootNode, modelMatrix, normalMatrix);
+	processNode(realBasePath.str(), level, texMapping, scene, scene->mRootNode, modelMatrix, normalMatrix);
 }
 
 } // namespace phe

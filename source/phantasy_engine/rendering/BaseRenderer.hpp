@@ -9,7 +9,6 @@
 
 #include "phantasy_engine/level/StaticScene.hpp"
 #include "phantasy_engine/level/PointLight.hpp"
-#include "phantasy_engine/resources/Renderable.hpp"
 
 namespace phe {
 

@@ -9,6 +9,7 @@
 
 #include "phantasy_engine/rendering/BaseRenderer.hpp"
 #include "phantasy_engine/ray_tracer_common/BVH.hpp"
+#include "phantasy_engine/rendering/RawImage.hpp"
 
 namespace phe {
 

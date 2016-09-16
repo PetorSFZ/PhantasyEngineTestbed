@@ -276,47 +276,41 @@ BVH buildStaticFrom(const StaticScene& scene) noexcept
 	DynArray<TriangleVertices> inTriangles;
 	DynArray<TriangleData> inTriangleDatas;
 
-	inTriangles.ensureCapacity((scene.opaqueComponents.size() + scene.transparentComponents.size()) * 2u);
-	inTriangleDatas.ensureCapacity((scene.opaqueComponents.size() + scene.transparentComponents.size()) * 2u);
+	inTriangles.ensureCapacity(scene.meshes.size() * 32u);
+	inTriangleDatas.ensureCapacity(scene.meshes.size() * 32u);
 
 	uint32_t componentIndex = 0;
-	for (const DynArray<RenderableComponent>* renderableComponentList : {&scene.opaqueComponents, &scene.transparentComponents}) {
-		for (const RenderableComponent& component : *renderableComponentList) {
-			const RawGeometry& rawGeometry = component.geometry;
+	for (const RawMesh& mesh : scene.meshes) {
+		uint32_t newSize = inTriangles.size() + mesh.indices.size() / 3;
+		inTriangles.ensureCapacity(newSize);
 
-			uint32_t newSize = inTriangles.size() + rawGeometry.indices.size() / 3;
-			inTriangles.ensureCapacity(newSize);
+		for (uint32_t i = 0; i < mesh.indices.size() - 2; i += 3) {
+			const Vertex& v0 = mesh.vertices[mesh.indices[i]];
+			const Vertex& v1 = mesh.vertices[mesh.indices[i + 1]];
+			const Vertex& v2 = mesh.vertices[mesh.indices[i + 2]];
 
-			for (uint32_t i = 0; i < rawGeometry.indices.size() - 2; i += 3) {
-				const Vertex& v0 = rawGeometry.vertices[rawGeometry.indices[i]];
-				const Vertex& v1 = rawGeometry.vertices[rawGeometry.indices[i + 1]];
-				const Vertex& v2 = rawGeometry.vertices[rawGeometry.indices[i + 2]];
+			TriangleVertices triTmp;
+			triTmp.v0 = v0.pos;
+			triTmp.v1 = v1.pos;
+			triTmp.v2 = v2.pos;
+			inTriangles.add(triTmp);
 
-				TriangleVertices triTmp;
-				triTmp.v0 = v0.pos;
-				triTmp.v1 = v1.pos;
-				triTmp.v2 = v2.pos;
-				inTriangles.add(triTmp);
+			TriangleData dataTmp;
+			dataTmp.n0 = v0.normal;
+			dataTmp.n1 = v1.normal;
+			dataTmp.n2 = v2.normal;
+			dataTmp.uv0 = v0.uv;
+			dataTmp.uv1 = v1.uv;
+			dataTmp.uv2 = v2.uv;
 
-				TriangleData dataTmp;
-				dataTmp.n0 = v0.normal;
-				dataTmp.n1 = v1.normal;
-				dataTmp.n2 = v2.normal;
-				dataTmp.uv0 = v0.uv;
-				dataTmp.uv1 = v1.uv;
-				dataTmp.uv2 = v2.uv;
+			dataTmp.materialIndex = mesh.materialIndices[mesh.indices[i]]; // Should be same for i, i+1 and i+2
 
-				// TODO: Get material from separate list in StaticScene, or some other more consistent solution.
-				dataTmp.materialIndex = componentIndex;
-
-				inTriangleDatas.add(dataTmp);
-			}
-			componentIndex++;
+			inTriangleDatas.add(dataTmp);
 		}
+		componentIndex++;
 	}
-	BVH bvh = buildStaticFrom(inTriangles, inTriangleDatas);
 
-	return bvh; // Copy will be optimized away
+	return buildStaticFrom(inTriangles, inTriangleDatas); 
 }
 
 BVH buildStaticFrom(const DynArray<TriangleVertices>& inTriangles,

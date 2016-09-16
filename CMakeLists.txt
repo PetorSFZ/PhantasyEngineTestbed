@@ -98,6 +98,16 @@ set(PHANTASY_ENGINE_LIB_FILES
 	${PH_INCLUDE_DIR}/DeferredRenderer.hpp
 	${PH_INCLUDE_DIR}/deferred_renderer/DeferredRenderer.hpp
 	 ${PH_SOURCE_DIR}/deferred_renderer/DeferredRenderer.cpp
+	${PH_INCLUDE_DIR}/deferred_renderer/GLModel.hpp
+	 ${PH_SOURCE_DIR}/deferred_renderer/GLModel.cpp
+	${PH_INCLUDE_DIR}/deferred_renderer/GLTexture.hpp
+	 ${PH_SOURCE_DIR}/deferred_renderer/GLTexture.cpp
+
+	${PH_INCLUDE_DIR}/level/Level.hpp
+	${PH_INCLUDE_DIR}/level/PointLight.hpp
+	${PH_INCLUDE_DIR}/level/SponzaLoader.hpp
+	 ${PH_SOURCE_DIR}/level/SponzaLoader.cpp
+	${PH_INCLUDE_DIR}/level/StaticScene.hpp
 
 	${PH_INCLUDE_DIR}/RayTracerCommon.hpp
 	${PH_INCLUDE_DIR}/ray_tracer_common/BVH.hpp
@@ -118,28 +128,16 @@ set(PHANTASY_ENGINE_LIB_FILES
 	${PH_INCLUDE_DIR}/rendering/BaseRenderer.hpp
 	${PH_INCLUDE_DIR}/rendering/FullscreenTriangle.hpp
 	 ${PH_SOURCE_DIR}/rendering/FullscreenTriangle.cpp
-	${PH_INCLUDE_DIR}/rendering/ViewFrustum.hpp
-	 ${PH_SOURCE_DIR}/rendering/ViewFrustum.cpp
 	${PH_INCLUDE_DIR}/rendering/Material.hpp
-	${PH_INCLUDE_DIR}/rendering/RawGeometry.hpp
 	${PH_INCLUDE_DIR}/rendering/RawImage.hpp
 	 ${PH_SOURCE_DIR}/rendering/RawImage.cpp
-
-	${PH_INCLUDE_DIR}/resources/GLModel.hpp
-	 ${PH_SOURCE_DIR}/resources/GLModel.cpp
-	${PH_INCLUDE_DIR}/resources/GLTexture.hpp
-	 ${PH_SOURCE_DIR}/resources/GLTexture.cpp
-	${PH_INCLUDE_DIR}/resources/Renderable.hpp
-	 ${PH_SOURCE_DIR}/resources/Renderable.cpp
+	${PH_INCLUDE_DIR}/rendering/RawMesh.hpp
+	${PH_INCLUDE_DIR}/rendering/ViewFrustum.hpp
+	 ${PH_SOURCE_DIR}/rendering/ViewFrustum.cpp
 
 	${PH_INCLUDE_DIR}/Screens.hpp
 	${PH_INCLUDE_DIR}/screens/GameScreen.hpp
 	 ${PH_SOURCE_DIR}/screens/GameScreen.cpp
-
-	${PH_INCLUDE_DIR}/level/Level.hpp
-	${PH_INCLUDE_DIR}/level/PointLight.hpp
-	${PH_INCLUDE_DIR}/level/StaticScene.hpp
-	 ${PH_SOURCE_DIR}/level/StaticScene.cpp
 
 	${PH_INCLUDE_DIR}/util/IOUtil.hpp
 	 ${PH_SOURCE_DIR}/util/IOUtil.cpp)

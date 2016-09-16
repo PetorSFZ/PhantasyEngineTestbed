@@ -158,7 +158,7 @@ void CUDARayTracerRenderer::staticSceneChanged() noexcept
 	mImpl->staticSceneCuda.numPointLights = mStaticScene->pointLights.size();
 
 	// Create CUDA bindless textures from static scene textures
-	mImpl->staticSceneTextures.clear();
+	/*mImpl->staticSceneTextures.clear();
 	mImpl->staticSceneTexturesHandles.clear();
 	for (const RawImage& image : mStaticScene->images) {
 		CudaBindlessTexture tmp;
@@ -172,7 +172,7 @@ void CUDARayTracerRenderer::staticSceneChanged() noexcept
 	CHECK_CUDA_ERROR(cudaFree(gpuTextures));
 	size_t numGpuTexturesBytes = mImpl->staticSceneTextures.size() * sizeof(cudaSurfaceObject_t);
 	CHECK_CUDA_ERROR(cudaMalloc(&gpuTextures, numGpuTexturesBytes));
-	CHECK_CUDA_ERROR(cudaMemcpy(gpuTextures, mImpl->staticSceneTexturesHandles.data(), numGpuTexturesBytes, cudaMemcpyHostToDevice));
+	CHECK_CUDA_ERROR(cudaMemcpy(gpuTextures, mImpl->staticSceneTexturesHandles.data(), numGpuTexturesBytes, cudaMemcpyHostToDevice));*/
 }
 
 void CUDARayTracerRenderer::targetResolutionUpdated() noexcept

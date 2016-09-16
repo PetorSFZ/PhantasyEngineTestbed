@@ -1,6 +1,6 @@
 // See 'LICENSE_PHANTASY_ENGINE' for copyright and contributors.
 
-#include "phantasy_engine/resources/GLModel.hpp"
+#include "phantasy_engine/deferred_renderer/GLModel.hpp"
 
 #include <algorithm>
 #include <cstddef> // offsetof()
@@ -8,13 +8,13 @@
 #include <sfz/gl/IncludeOpenGL.hpp>
 
 namespace phe {
-/*
+
 // GLModel: Constructors & destructors
 // ------------------------------------------------------------------------------------------------
 
-GLModel::GLModel(const RawGeometry& geometry) noexcept
+GLModel::GLModel(const RawMesh& mesh) noexcept
 {
-	this->load(geometry);
+	this->load(mesh);
 }
 
 GLModel::GLModel(GLModel&& other) noexcept
@@ -36,7 +36,7 @@ GLModel::~GLModel() noexcept
 // GLModel: Methods
 // ------------------------------------------------------------------------------------------------
 
-void GLModel::load(const RawGeometry& geometry) noexcept
+void GLModel::load(const RawMesh& mesh) noexcept
 {
 	if (mVAO != 0) this->destroy();
 
@@ -47,8 +47,8 @@ void GLModel::load(const RawGeometry& geometry) noexcept
 	// Create and fill vertex buffer
 	glGenBuffers(1, &mVertexBuffer);
 	glBindBuffer(GL_ARRAY_BUFFER, mVertexBuffer);
-	glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(geometry.vertices.size() * sizeof(Vertex)),
-	             geometry.vertices.data(), GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(mesh.vertices.size() * sizeof(Vertex)),
+	             mesh.vertices.data(), GL_STATIC_DRAW);
 
 	// Locate components in vertex buffer
 	glEnableVertexAttribArray(0);
@@ -61,9 +61,9 @@ void GLModel::load(const RawGeometry& geometry) noexcept
 	// Create and fill index buffer
 	glGenBuffers(1, &mIndexBuffer);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mIndexBuffer);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, static_cast<GLsizeiptr>(sizeof(uint32_t) * geometry.indices.size()),
-	             geometry.indices.data(), GL_STATIC_DRAW);
-	mNumIndices = geometry.indices.size();
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, static_cast<GLsizeiptr>(sizeof(uint32_t) * mesh.indices.size()),
+	             mesh.indices.data(), GL_STATIC_DRAW);
+	mNumIndices = mesh.indices.size();
 
 	// Cleanup
 	glBindVertexArray(0);
@@ -97,5 +97,5 @@ void GLModel::draw() const noexcept
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mIndexBuffer);
 	glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(mNumIndices), GL_UNSIGNED_INT, 0);
 }
-*/
+
 } // namespace phe

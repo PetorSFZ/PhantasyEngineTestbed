@@ -4,10 +4,10 @@
 
 #include <cstdint>
 
-#include "phantasy_engine/rendering/RawGeometry.hpp"
+#include "phantasy_engine/rendering/RawMesh.hpp"
 
 namespace phe {
-/*
+
 using std::uint32_t;
 
 // GLModel class
@@ -22,7 +22,7 @@ public:
 	GLModel(const GLModel&) = delete;
 	GLModel& operator= (const GLModel&) = delete;
 
-	GLModel(const RawGeometry& geometry) noexcept;
+	GLModel(const RawMesh& geometry) noexcept;
 	GLModel(GLModel&& other) noexcept;
 	GLModel& operator= (GLModel&& other) noexcept;
 	~GLModel() noexcept;
@@ -31,7 +31,7 @@ public:
 	// --------------------------------------------------------------------------------------------
 
 	/// Loads this GLModel
-	void load(const RawGeometry& geometry) noexcept;
+	void load(const RawMesh& mesh) noexcept;
 
 	/// Destroys this GLModel
 	void destroy() noexcept;
@@ -50,6 +50,6 @@ private:
 	uint32_t mVertexBuffer = 0;
 	uint32_t mIndexBuffer = 0;
 	uint32_t mNumIndices = 0;
-};*/
+};
 
 } // namespace phe

@@ -12,6 +12,7 @@ namespace phe {
 using sfz::DynArray;
 using sfz::vec2;
 using sfz::vec3;
+using std::uint16_t;
 using std::uint32_t;
 
 // Vertex struct
@@ -25,11 +26,12 @@ struct Vertex final {
 
 static_assert(sizeof(Vertex) == sizeof(float) * 8, "Vertex is padded");
 
-// RawGeometry struct
+// RawMesh struct
 // ------------------------------------------------------------------------------------------------
 
-struct RawGeometry final {
+struct RawMesh final {
 	DynArray<Vertex> vertices;
+	DynArray<uint16_t> materialIndices;
 	DynArray<uint32_t> indices;
 };
 

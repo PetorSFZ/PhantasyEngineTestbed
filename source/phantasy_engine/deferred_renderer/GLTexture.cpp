@@ -1,11 +1,11 @@
 // See 'LICENSE_PHANTASY_ENGINE' for copyright and contributors.
 
-#include "phantasy_engine/resources/GLTexture.hpp"
+#include "phantasy_engine/deferred_renderer/GLTexture.hpp"
 
 #include "sfz/gl/IncludeOpenGL.hpp"
 
 namespace phe {
-/*
+
 // GLTexture: Constructors & destructors
 // ------------------------------------------------------------------------------------------------
 
@@ -115,5 +115,5 @@ void GLTexture::setFilteringFormat(GLTextureFiltering filtering) noexcept
 		break;
 	}
 }
-*/
+
 } // namespace phe

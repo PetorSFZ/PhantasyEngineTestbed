@@ -6,7 +6,6 @@
 
 namespace phe {
 
-/*
 // GLTexture class
 // ------------------------------------------------------------------------------------------------
 
@@ -65,5 +64,5 @@ private:
 	uint32_t mHandle = 0;
 	GLTextureFiltering mFiltering;
 };
-*/
+
 } // namespace phe
