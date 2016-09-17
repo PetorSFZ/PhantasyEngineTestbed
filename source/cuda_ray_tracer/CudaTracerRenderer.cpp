@@ -32,15 +32,16 @@ public:
 	gl::Program transferShader;
 	FullscreenTriangle fullscreenTriangle;
 
+	// Holding the OpenGL Cuda surface data, surface object is in CudaTracerParams.
 	GLuint glTex = 0;
 	cudaGraphicsResource_t cudaResource = 0;
 	cudaArray_t cudaArray = 0; // Probably no need to free, since memory is owned by OpenGL
-	cudaSurfaceObject_t cudaSurface = 0;
 
-	BVH bvh;
-	StaticSceneCuda staticSceneCuda;
-	DynArray<CudaBindlessTexture> staticSceneTextures;
-	DynArray<cudaTextureObject_t> staticSceneTexturesHandles;
+	// Parameters for tracer
+	BVH staticBvh; // TODO: Move out to static scene
+	DynArray<CudaBindlessTexture> textureWrappers;
+	DynArray<cudaTextureObject_t> textureObjectHandles;
+	CudaTracerParams tracerParams;
 
 	CudaTracerRendererImpl() noexcept
 	{
@@ -49,14 +50,22 @@ public:
 
 	~CudaTracerRendererImpl() noexcept
 	{
-		CHECK_CUDA_ERROR(cudaDestroySurfaceObject(cudaSurface));
+		// Target surface and OpenGL data
+		CHECK_CUDA_ERROR(cudaDestroySurfaceObject(tracerParams.targetSurface));
 		CHECK_CUDA_ERROR(cudaGraphicsUnregisterResource(cudaResource));
 		glDeleteTextures(1, &glTex);
 
-		CHECK_CUDA_ERROR(cudaFree(staticSceneCuda.bvhNodes));
-		CHECK_CUDA_ERROR(cudaFree(staticSceneCuda.triangleVertices));
-		CHECK_CUDA_ERROR(cudaFree(staticSceneCuda.triangleDatas));
-		CHECK_CUDA_ERROR(cudaFree(staticSceneCuda.pointLights));
+		// Materials & textures
+		CHECK_CUDA_ERROR(cudaFree(tracerParams.materials));
+		CHECK_CUDA_ERROR(cudaFree(tracerParams.textures));
+
+		// Static Geometry
+		CHECK_CUDA_ERROR(cudaFree(tracerParams.staticBvhNodes));
+		CHECK_CUDA_ERROR(cudaFree(tracerParams.staticTriangleVertices));
+		CHECK_CUDA_ERROR(cudaFree(tracerParams.staticTriangleDatas));
+
+		// Static light sources
+		CHECK_CUDA_ERROR(cudaFree(tracerParams.staticPointLights));
 	}
 };
 
@@ -85,86 +94,95 @@ CudaTracerRenderer::~CudaTracerRenderer() noexcept
 void CudaTracerRenderer::bakeMaterials(const DynArray<RawImage>& textures,
                                        const DynArray<Material>& materials) noexcept
 {
+	// Copy materials to CUDA
+	Material*& gpuMaterials = mImpl->tracerParams.materials;
+	CHECK_CUDA_ERROR(cudaFree(gpuMaterials));
+	size_t numGpuMaterialBytes = materials.size() * sizeof(Material);
+	CHECK_CUDA_ERROR(cudaMalloc(&gpuMaterials, numGpuMaterialBytes));
+	CHECK_CUDA_ERROR(cudaMemcpy(gpuMaterials, materials.data(), numGpuMaterialBytes, cudaMemcpyHostToDevice));
+	mImpl->tracerParams.numMaterials = materials.size();
 
+	// Create CUDA bindless textures from textures
+	mImpl->textureWrappers.clear();
+	mImpl->textureObjectHandles.clear();
+	for (const RawImage& texture : textures) {
+		CudaBindlessTexture tmp;
+		tmp.load(texture);
+		mImpl->textureWrappers.add(std::move(tmp));
+		mImpl->textureObjectHandles.add(mImpl->textureWrappers.last().textureObject());
+	}
+
+	// Copy texture objects into CUDA
+	cudaSurfaceObject_t*& gpuTextures = mImpl->tracerParams.textures;
+	CHECK_CUDA_ERROR(cudaFree(gpuTextures));
+	size_t numGpuTexturesBytes = mImpl->textureObjectHandles.size() * sizeof(cudaSurfaceObject_t);
+	CHECK_CUDA_ERROR(cudaMalloc(&gpuTextures, numGpuTexturesBytes));
+	CHECK_CUDA_ERROR(cudaMemcpy(gpuTextures, mImpl->textureObjectHandles.data(), numGpuTexturesBytes, cudaMemcpyHostToDevice));
+	mImpl->tracerParams.numTextures = textures.size();
 }
 
 void CudaTracerRenderer::addMaterial(RawImage& texture, Material& material) noexcept
 {
+	sfz::error("CudaTracerRenderer: addMaterial() not implemented");
 }
 
 void CudaTracerRenderer::bakeStaticScene(const StaticScene& staticScene) noexcept
 {
 	// Build the BVH
-	BVH& bvh = mImpl->bvh;
+	// TODO: Remove and place in static scene
+	BVH& staticBvh = mImpl->staticBvh;
 	{
 		using time_point = std::chrono::high_resolution_clock::time_point;
 		time_point before = std::chrono::high_resolution_clock::now();
 
-		bvh = std::move(buildStaticFrom(staticScene));
-		optimizeBVHCacheLocality(bvh);
+		staticBvh = std::move(buildStaticFrom(staticScene));
+		optimizeBVHCacheLocality(staticBvh);
 
 		time_point after = std::chrono::high_resolution_clock::now();
 		using FloatSecond = std::chrono::duration<float>;
 		float delta = std::chrono::duration_cast<FloatSecond>(after - before).count();
-		printf("CUDA Ray Tracer: Time spent building BVH: %.3f seconds\n", delta);
+		printf("CudaTracerRenderer: Time spent building BVH: %.3f seconds\n", delta);
 	}
 
-	// Copy BVHNodes to GPU
-	BVHNode*& gpuBVHNodes = mImpl->staticSceneCuda.bvhNodes;
+	// Copy static BVH to GPU
+	BVHNode*& gpuBVHNodes = mImpl->tracerParams.staticBvhNodes;
 	CHECK_CUDA_ERROR(cudaFree(gpuBVHNodes));
-	size_t numBVHNodesBytes = bvh.nodes.size() * sizeof(BVHNode);
+	size_t numBVHNodesBytes = staticBvh.nodes.size() * sizeof(BVHNode);
 	CHECK_CUDA_ERROR(cudaMalloc(&gpuBVHNodes, numBVHNodesBytes));
-	CHECK_CUDA_ERROR(cudaMemcpy(gpuBVHNodes, bvh.nodes.data(), numBVHNodesBytes, cudaMemcpyHostToDevice));
+	CHECK_CUDA_ERROR(cudaMemcpy(gpuBVHNodes, staticBvh.nodes.data(), numBVHNodesBytes, cudaMemcpyHostToDevice));
 
-	// Copy triangle positions to GPU
-	TriangleVertices*& gpuTriangleVertices = mImpl->staticSceneCuda.triangleVertices;
+	// Copy static triangle vertices to GPU
+	TriangleVertices*& gpuTriangleVertices = mImpl->tracerParams.staticTriangleVertices;
 	CHECK_CUDA_ERROR(cudaFree(gpuTriangleVertices));
-	size_t numTrianglePosBytes = bvh.triangles.size() * sizeof(TriangleVertices);
-	CHECK_CUDA_ERROR(cudaMalloc(&gpuTriangleVertices, numTrianglePosBytes));
-	CHECK_CUDA_ERROR(cudaMemcpy(gpuTriangleVertices, mImpl->bvh.triangles.data(), numTrianglePosBytes, cudaMemcpyHostToDevice));
+	size_t numTriangleVertBytes = staticBvh.triangles.size() * sizeof(TriangleVertices);
+	CHECK_CUDA_ERROR(cudaMalloc(&gpuTriangleVertices, numTriangleVertBytes));
+	CHECK_CUDA_ERROR(cudaMemcpy(gpuTriangleVertices, staticBvh.triangles.data(), numTriangleVertBytes, cudaMemcpyHostToDevice));
 
-	// Copy Triangle datas to GPU
-	TriangleData*& gpuTriangleDatas = mImpl->staticSceneCuda.triangleDatas;
+	// Copy static triangle datas to GPU
+	TriangleData*& gpuTriangleDatas = mImpl->tracerParams.staticTriangleDatas;
 	CHECK_CUDA_ERROR(cudaFree(gpuTriangleDatas));
-	size_t numTriangleDatasBytes = bvh.triangleDatas.size() * sizeof(TriangleData);
+	size_t numTriangleDatasBytes = staticBvh.triangleDatas.size() * sizeof(TriangleData);
 	CHECK_CUDA_ERROR(cudaMalloc(&gpuTriangleDatas, numTriangleDatasBytes));
-	CHECK_CUDA_ERROR(cudaMemcpy(gpuTriangleDatas, mImpl->bvh.triangleDatas.data(), numTriangleDatasBytes, cudaMemcpyHostToDevice));
+	CHECK_CUDA_ERROR(cudaMemcpy(gpuTriangleDatas, staticBvh.triangleDatas.data(), numTriangleDatasBytes, cudaMemcpyHostToDevice));
 
-	// Copy pointlights to GPU
-	/*PointLight*& gpuPointLights = mImpl->staticSceneCuda.pointLights;
+	// Copy static point lights to GPU
+	PointLight*& gpuPointLights = mImpl->tracerParams.staticPointLights;
 	CHECK_CUDA_ERROR(cudaFree(gpuPointLights));
-	size_t numPointLightBytes = mStaticScene->pointLights.size() * sizeof(PointLight);
+	size_t numPointLightBytes = staticScene.pointLights.size() * sizeof(PointLight);
 	CHECK_CUDA_ERROR(cudaMalloc(&gpuPointLights, numPointLightBytes));
-	CHECK_CUDA_ERROR(cudaMemcpy(gpuPointLights, mStaticScene->pointLights.data(), numPointLightBytes, cudaMemcpyHostToDevice));
-	mImpl->staticSceneCuda.numPointLights = mStaticScene->pointLights.size();
-
-	// Create CUDA bindless textures from static scene textures
-	mImpl->staticSceneTextures.clear();
-	mImpl->staticSceneTexturesHandles.clear();
-	for (const RawImage& image : mStaticScene->images) {
-		CudaBindlessTexture tmp;
-		tmp.load(image);
-		mImpl->staticSceneTextures.add(std::move(tmp));
-		mImpl->staticSceneTexturesHandles.add(mImpl->staticSceneTextures.last().textureObject());
-	}
-
-	// Copy static scene texture pointers into GPU array
-	cudaSurfaceObject_t*& gpuTextures = mImpl->staticSceneCuda.textures;
-	CHECK_CUDA_ERROR(cudaFree(gpuTextures));
-	size_t numGpuTexturesBytes = mImpl->staticSceneTextures.size() * sizeof(cudaSurfaceObject_t);
-	CHECK_CUDA_ERROR(cudaMalloc(&gpuTextures, numGpuTexturesBytes));
-	CHECK_CUDA_ERROR(cudaMemcpy(gpuTextures, mImpl->staticSceneTexturesHandles.data(), numGpuTexturesBytes, cudaMemcpyHostToDevice));*/
+	CHECK_CUDA_ERROR(cudaMemcpy(gpuPointLights, staticScene.pointLights.data(), numPointLightBytes, cudaMemcpyHostToDevice));
+	mImpl->tracerParams.numStaticPointLights = staticScene.pointLights.size();
 }
 
 RenderResult CudaTracerRenderer::render(Framebuffer& resultFB) noexcept
 {
 	// Calculate camera def in order to generate first rays
 	vec2 resultRes = vec2(mTargetResolution);
-	CameraDef cam = generateCameraDef(mMatrices.position, mMatrices.forward, mMatrices.up,
-	                                  mMatrices.vertFovRad, resultRes);
+	mImpl->tracerParams.cam = generateCameraDef(mMatrices.position, mMatrices.forward, mMatrices.up,
+	                                            mMatrices.vertFovRad, resultRes);
 
 	// Run CUDA ray tracer
-	runCudaRayTracer(mImpl->cudaSurface, mTargetResolution, cam, mImpl->staticSceneCuda);
+	runCudaRayTracer(mImpl->tracerParams);
 	
 	// Transfer result from Cuda texture to result framebuffer
 	glUseProgram(mImpl->transferShader.handle());
@@ -186,12 +204,14 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB) noexcept
 
 void CudaTracerRenderer::targetResolutionUpdated() noexcept
 {
+	mImpl->tracerParams.targetRes = mTargetResolution;
+
 	glActiveTexture(GL_TEXTURE0);
 
 	// Cleanup eventual previous texture and bindings
-	if (mImpl->cudaSurface != 0) {
-		CHECK_CUDA_ERROR(cudaDestroySurfaceObject(mImpl->cudaSurface));
-		mImpl->cudaSurface = 0;
+	if (mImpl->tracerParams.targetSurface != 0) {
+		CHECK_CUDA_ERROR(cudaDestroySurfaceObject(mImpl->tracerParams.targetSurface));
+		mImpl->tracerParams.targetSurface = 0;
 	}
 	if (mImpl->cudaResource != 0) {
 		CHECK_CUDA_ERROR(cudaGraphicsUnregisterResource(mImpl->cudaResource));
@@ -221,7 +241,7 @@ void CudaTracerRenderer::targetResolutionUpdated() noexcept
 	memset(&resDesc, 0, sizeof(cudaResourceDesc));
 	resDesc.resType = cudaResourceTypeArray;
 	resDesc.res.array.array = mImpl->cudaArray;
-	CHECK_CUDA_ERROR(cudaCreateSurfaceObject(&mImpl->cudaSurface, &resDesc));
+	CHECK_CUDA_ERROR(cudaCreateSurfaceObject(&mImpl->tracerParams.targetSurface, &resDesc));
 }
 
 } // namespace phe

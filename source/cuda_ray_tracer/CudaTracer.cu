@@ -34,50 +34,48 @@ inline __device__ vec3 calculateRayDir(const CameraDef& cam, vec2 loc, vec2 surf
 	return normalize(nonNormRayDir);
 }
 
-__global__ void cudaRayTracerKernel(cudaSurfaceObject_t surface, vec2i surfaceRes, CameraDef cam,
-                                    StaticSceneCuda staticScene)
+__global__ void cudaRayTracerKernel(CudaTracerParams params)
 {
 	// Calculate surface coordinates
 	vec2i loc = vec2i(blockIdx.x * blockDim.x + threadIdx.x,
 	                  blockIdx.y * blockDim.y + threadIdx.y);
-	if (loc.x >= surfaceRes.x || loc.y >= surfaceRes.y) return;
+	if (loc.x >= params.targetRes.x || loc.y >= params.targetRes.y) return;
 
 	// Calculate ray direction
-	vec3 rayDir = calculateRayDir(cam, vec2(loc), vec2(surfaceRes));
-	Ray ray(cam.origin, rayDir);
+	vec3 rayDir = calculateRayDir(params.cam, vec2(loc), vec2(params.targetRes));
+	Ray ray(params.cam.origin, rayDir);
 
 	// Ray cast against BVH
-	RayCastResult hit = castRay(staticScene.bvhNodes, staticScene.triangleVertices, ray);
+	RayCastResult hit = castRay(params.staticBvhNodes, params.staticTriangleVertices, ray);
 	if (hit.triangleIndex == ~0u) {
-		writeSurface(surface, loc, vec4(0.0f));
+		writeSurface(params.targetSurface, loc, vec4(0.0f));
 		return;
 	}
 
-	HitInfo info = interpretHit(staticScene.triangleDatas, hit, ray);
-	vec3 color = info.normal;
+	HitInfo info = interpretHit(params.staticTriangleDatas, hit, ray);
 
+	cudaTextureObject_t texture = params.textures[10];
 
-	/*cudaTextureObject_t texture = staticScene.textures[10];
-
-	vec3 lightPos = staticScene.pointLights[0].pos;
+	vec3 lightPos = params.staticPointLights[0].pos;
 	vec3 l = -normalize(info.pos - lightPos);
 	float diffuseFactor = max(dot(l, info.normal), 0.0f);
 
 	vec4 texRes = readTexture(texture, info.uv);
-	vec3 color = texRes.xyz * diffuseFactor;*/
-	writeSurface(surface, loc, vec4(color, 1.0));
+	vec3 color = texRes.xyz * diffuseFactor;
+	writeSurface(params.targetSurface, loc, vec4(color, 1.0));
 }
 
-void runCudaRayTracer(cudaSurfaceObject_t surface, vec2i surfaceRes, const CameraDef& cam,
-                      const StaticSceneCuda& staticScene) noexcept
-{	
+void runCudaRayTracer(const CudaTracerParams& params) noexcept
+{
+	vec2i surfaceRes = params.targetRes;
+
 	// Calculate number of threads and blocks to run
 	dim3 threadsPerBlock(8, 8);
 	dim3 numBlocks((surfaceRes.x + threadsPerBlock.x - 1) / threadsPerBlock.x,
 	               (surfaceRes.y + threadsPerBlock.y  - 1) / threadsPerBlock.y);
 
 	// Run cuda ray tracer kernel
-	cudaRayTracerKernel<<<numBlocks, threadsPerBlock>>>(surface, surfaceRes, cam, staticScene);
+	cudaRayTracerKernel<<<numBlocks, threadsPerBlock>>>(params);
 	CHECK_CUDA_ERROR(cudaGetLastError());
 	CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 }
