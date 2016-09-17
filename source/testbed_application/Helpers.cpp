@@ -5,6 +5,11 @@
 #include <sfz/memory/New.hpp>
 
 #include <phantasy_engine/Config.hpp>
+#include <phantasy_engine/CPUTracerRenderer.hpp>
+#include <phantasy_engine/DeferredRenderer.hpp>
+#ifdef CUDA_TRACER_AVAILABLE
+#include <CudaTracerRenderer.hpp>
+#endif
 
 using namespace sfz;
 
@@ -18,7 +23,7 @@ DynArray<RendererAndStatus> createRenderers(uint32_t& indexSelected) noexcept
 
 	// 1 == CUDA ray tracer
 #ifdef CUDA_TRACER_AVAILABLE
-	renderers.add({SharedPtr<BaseRenderer>(sfz_new<phe::CUDARayTracerRenderer>()), false});
+	renderers.add({SharedPtr<BaseRenderer>(sfz_new<phe::CudaTracerRenderer>()), false});
 #else
 	printf("%s\n", "CUDA not available in this build, using deferred renderer instead.");
 	renderers.add({renderers.first().renderer, false});

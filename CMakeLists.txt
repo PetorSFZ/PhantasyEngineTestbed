@@ -153,7 +153,7 @@ target_link_libraries(
 	${IMGUI_LIBRARIES}
 )
 
-# CUDA Ray Tracer Renderer Library
+# CUDA Tracer Renderer Library
 # ------------------------------------------------------------------------------------------------
 
 if(CUDA_TRACER)
@@ -170,21 +170,21 @@ if(CUDA_TRACER)
 	include_directories(${CT_INCLUDE_DIR})
 
 	# Source files
-	set(CUDA_RAY_TRACER_FILES
+	set(CUDA_TRACER_FILES
 		${CT_INCLUDE_DIR}/CudaBindlessTexture.hpp
 		 ${CT_SOURCE_DIR}/CudaBindlessTexture.cpp
 		${CT_INCLUDE_DIR}/CudaHelpers.hpp
-		${CT_INCLUDE_DIR}/CudaRayTracerRenderer.hpp
-		 ${CT_SOURCE_DIR}/CudaRayTracerRenderer.cpp
 		${CT_INCLUDE_DIR}/CudaSfzVectorCompatibility.cuh
 		${CT_INCLUDE_DIR}/CudaTracer.cuh
-		 ${CT_SOURCE_DIR}/CudaTracer.cu)
-	set_directory_source_group(${CUDA_RAY_TRACER_FILES})
+		 ${CT_SOURCE_DIR}/CudaTracer.cu
+		${CT_INCLUDE_DIR}/CudaTracerRenderer.hpp
+		 ${CT_SOURCE_DIR}/CudaTracerRenderer.cpp)
+	set_directory_source_group(${CUDA_TRACER_FILES})
 
-	# CUDA Ray Tracer Library
-	cuda_add_library(CudaRayTracerLib ${CUDA_RAY_TRACER_FILES})
+	# CUDA Tracer Library
+	cuda_add_library(CudaTracerLib ${CUDA_TRACER_FILES})
 	target_link_libraries(
-		CudaRayTracerLib
+		CudaTracerLib
 
 		PhantasyEngineLib
 		${SFZ_CORE_LIBRARIES}
@@ -220,7 +220,7 @@ if(CUDA_TRACER)
 	target_link_libraries(
 		PhantasyEngineTestbed
 
-		CudaRayTracerLib
+		CudaTracerLib
 	)
 endif()
 

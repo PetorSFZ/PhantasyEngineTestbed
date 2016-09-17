@@ -1,6 +1,6 @@
 // See 'LICENSE_PHANTASY_ENGINE' for copyright and contributors.
 
-#include "CudaRayTracerRenderer.hpp"
+#include "CudaTracerRenderer.hpp"
 
 #include <chrono>
 
@@ -24,10 +24,10 @@ namespace phe {
 
 using namespace sfz;
 
-// CUDARayTracerRendererImpl
+// CudaTracerRendererImpl
 // ------------------------------------------------------------------------------------------------
 
-class CUDARayTracerRendererImpl final {
+class CudaTracerRendererImpl final {
 public:
 	gl::Program transferShader;
 	FullscreenTriangle fullscreenTriangle;
@@ -42,12 +42,12 @@ public:
 	DynArray<CudaBindlessTexture> staticSceneTextures;
 	DynArray<cudaTextureObject_t> staticSceneTexturesHandles;
 
-	CUDARayTracerRendererImpl() noexcept
+	CudaTracerRendererImpl() noexcept
 	{
 		
 	}
 
-	~CUDARayTracerRendererImpl() noexcept
+	~CudaTracerRendererImpl() noexcept
 	{
 		CHECK_CUDA_ERROR(cudaDestroySurfaceObject(cudaSurface));
 		CHECK_CUDA_ERROR(cudaGraphicsUnregisterResource(cudaResource));
@@ -60,13 +60,12 @@ public:
 	}
 };
 
-
-// CUDARayTracerRenderer: Constructors & destructors
+// CudaTracerRenderer: Constructors & destructors
 // ------------------------------------------------------------------------------------------------
 
-CUDARayTracerRenderer::CUDARayTracerRenderer() noexcept
+CudaTracerRenderer::CudaTracerRenderer() noexcept
 {
-	mImpl = sfz_new<CUDARayTracerRendererImpl>();
+	mImpl = sfz_new<CudaTracerRendererImpl>();
 
 	StackString128 shadersPath;
 	shadersPath.printf("%sresources/shaders/", basePath());
@@ -75,26 +74,25 @@ CUDARayTracerRenderer::CUDARayTracerRenderer() noexcept
 	gl::setUniform(mImpl->transferShader, "uSrcTexture", 0);
 }
 
-CUDARayTracerRenderer::~CUDARayTracerRenderer() noexcept
+CudaTracerRenderer::~CudaTracerRenderer() noexcept
 {
 	sfz_delete(mImpl);
 }
 
-// CUDARayTracerRenderer: Virtual methods from BaseRenderer interface
+// CudaTracerRenderer: Virtual methods from BaseRenderer interface
 // ------------------------------------------------------------------------------------------------
 
-void CUDARayTracerRenderer::bakeMaterials(const DynArray<RawImage>& textures,
-                                          const DynArray<Material>& materials) noexcept
+void CudaTracerRenderer::bakeMaterials(const DynArray<RawImage>& textures,
+                                       const DynArray<Material>& materials) noexcept
 {
 
 }
 
-void CUDARayTracerRenderer::addMaterial(RawImage& texture, Material& material) noexcept
+void CudaTracerRenderer::addMaterial(RawImage& texture, Material& material) noexcept
 {
-
 }
 
-void CUDARayTracerRenderer::bakeStaticScene(const StaticScene& staticScene) noexcept
+void CudaTracerRenderer::bakeStaticScene(const StaticScene& staticScene) noexcept
 {
 	// Build the BVH
 	BVH& bvh = mImpl->bvh;
@@ -158,7 +156,7 @@ void CUDARayTracerRenderer::bakeStaticScene(const StaticScene& staticScene) noex
 	CHECK_CUDA_ERROR(cudaMemcpy(gpuTextures, mImpl->staticSceneTexturesHandles.data(), numGpuTexturesBytes, cudaMemcpyHostToDevice));*/
 }
 
-RenderResult CUDARayTracerRenderer::render(Framebuffer& resultFB) noexcept
+RenderResult CudaTracerRenderer::render(Framebuffer& resultFB) noexcept
 {
 	// Calculate camera def in order to generate first rays
 	vec2 resultRes = vec2(mTargetResolution);
@@ -183,10 +181,10 @@ RenderResult CUDARayTracerRenderer::render(Framebuffer& resultFB) noexcept
 	return tmp;
 }
 
-// CUDARayTracerRenderer: Protected virtual methods from BaseRenderer interface
+// CudaTracerRenderer: Protected virtual methods from BaseRenderer interface
 // ------------------------------------------------------------------------------------------------
 
-void CUDARayTracerRenderer::targetResolutionUpdated() noexcept
+void CudaTracerRenderer::targetResolutionUpdated() noexcept
 {
 	glActiveTexture(GL_TEXTURE0);
 

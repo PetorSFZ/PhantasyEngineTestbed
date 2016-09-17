@@ -6,24 +6,24 @@
 
 namespace phe {
 
-// CUDARayTracerRenderer
+// CudaTracerRenderer
 // ------------------------------------------------------------------------------------------------
 
-class CUDARayTracerRendererImpl; // Pimpl pattern
+class CudaTracerRendererImpl; // Pimpl pattern
 
-class CUDARayTracerRenderer final : public BaseRenderer {
+class CudaTracerRenderer final : public BaseRenderer {
 public:
 
 	// Constructors & destructors
 	// --------------------------------------------------------------------------------------------
 
-	CUDARayTracerRenderer(const CUDARayTracerRenderer&) = delete;
-	CUDARayTracerRenderer& operator= (const CUDARayTracerRenderer&) = delete;
-	CUDARayTracerRenderer(CUDARayTracerRenderer&&) = delete;
-	CUDARayTracerRenderer& operator= (CUDARayTracerRenderer&&) = delete;
+	CudaTracerRenderer(const CudaTracerRenderer&) = delete;
+	CudaTracerRenderer& operator= (const CudaTracerRenderer&) = delete;
+	CudaTracerRenderer(CudaTracerRenderer&&) = delete;
+	CudaTracerRenderer& operator= (CudaTracerRenderer&&) = delete;
 	
-	CUDARayTracerRenderer() noexcept;
-	~CUDARayTracerRenderer() noexcept;
+	CudaTracerRenderer() noexcept;
+	~CudaTracerRenderer() noexcept;
 
 	// Virtual methods from BaseRenderer interface
 	// --------------------------------------------------------------------------------------------
@@ -47,7 +47,7 @@ private:
 	// Private members
 	// --------------------------------------------------------------------------------------------
 	
-	CUDARayTracerRendererImpl* mImpl = nullptr;
+	CudaTracerRendererImpl* mImpl = nullptr;
 };
 
 } // namespace phe
