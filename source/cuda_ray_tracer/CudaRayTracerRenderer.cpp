@@ -83,35 +83,18 @@ CUDARayTracerRenderer::~CUDARayTracerRenderer() noexcept
 // CUDARayTracerRenderer: Virtual methods from BaseRenderer interface
 // ------------------------------------------------------------------------------------------------
 
-RenderResult CUDARayTracerRenderer::render(Framebuffer& resultFB) noexcept
+void CUDARayTracerRenderer::bakeMaterials(const DynArray<RawImage>& textures,
+                                          const DynArray<Material>& materials) noexcept
 {
-	// Calculate camera def in order to generate first rays
-	vec2 resultRes = vec2(mTargetResolution);
-	CameraDef cam = generateCameraDef(mMatrices.position, mMatrices.forward, mMatrices.up,
-	                                  mMatrices.vertFovRad, resultRes);
 
-	// Run CUDA ray tracer
-	runCudaRayTracer(mImpl->cudaSurface, mTargetResolution, cam, mImpl->staticSceneCuda);
-	
-	// Transfer result from Cuda texture to result framebuffer
-	glUseProgram(mImpl->transferShader.handle());
-	resultFB.bindViewportClearColorDepth(vec4(0.0f, 0.0f, 0.0f, 0.0f), 0.0f);
-
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, mImpl->glTex);
-
-	mImpl->fullscreenTriangle.render();
-
-	// Return result
-	RenderResult tmp;
-	tmp.renderedRes = mTargetResolution;
-	return tmp;
 }
 
-// CUDARayTracerRenderer: Protected virtual methods from BaseRenderer interface
-// ------------------------------------------------------------------------------------------------
+void CUDARayTracerRenderer::addMaterial(RawImage& texture, Material& material) noexcept
+{
 
-void CUDARayTracerRenderer::staticSceneChanged() noexcept
+}
+
+void CUDARayTracerRenderer::bakeStaticScene(const SharedPtr<StaticScene>& staticScene) noexcept
 {
 	// Build the BVH
 	BVH& bvh = mImpl->bvh;
@@ -119,7 +102,7 @@ void CUDARayTracerRenderer::staticSceneChanged() noexcept
 		using time_point = std::chrono::high_resolution_clock::time_point;
 		time_point before = std::chrono::high_resolution_clock::now();
 
-		bvh = std::move(buildStaticFrom(*mStaticScene.get()));
+		bvh = std::move(buildStaticFrom(*staticScene));
 		optimizeBVHCacheLocality(bvh);
 
 		time_point after = std::chrono::high_resolution_clock::now();
@@ -150,7 +133,7 @@ void CUDARayTracerRenderer::staticSceneChanged() noexcept
 	CHECK_CUDA_ERROR(cudaMemcpy(gpuTriangleDatas, mImpl->bvh.triangleDatas.data(), numTriangleDatasBytes, cudaMemcpyHostToDevice));
 
 	// Copy pointlights to GPU
-	PointLight*& gpuPointLights = mImpl->staticSceneCuda.pointLights;
+	/*PointLight*& gpuPointLights = mImpl->staticSceneCuda.pointLights;
 	CHECK_CUDA_ERROR(cudaFree(gpuPointLights));
 	size_t numPointLightBytes = mStaticScene->pointLights.size() * sizeof(PointLight);
 	CHECK_CUDA_ERROR(cudaMalloc(&gpuPointLights, numPointLightBytes));
@@ -158,7 +141,7 @@ void CUDARayTracerRenderer::staticSceneChanged() noexcept
 	mImpl->staticSceneCuda.numPointLights = mStaticScene->pointLights.size();
 
 	// Create CUDA bindless textures from static scene textures
-	/*mImpl->staticSceneTextures.clear();
+	mImpl->staticSceneTextures.clear();
 	mImpl->staticSceneTexturesHandles.clear();
 	for (const RawImage& image : mStaticScene->images) {
 		CudaBindlessTexture tmp;
@@ -174,6 +157,34 @@ void CUDARayTracerRenderer::staticSceneChanged() noexcept
 	CHECK_CUDA_ERROR(cudaMalloc(&gpuTextures, numGpuTexturesBytes));
 	CHECK_CUDA_ERROR(cudaMemcpy(gpuTextures, mImpl->staticSceneTexturesHandles.data(), numGpuTexturesBytes, cudaMemcpyHostToDevice));*/
 }
+
+RenderResult CUDARayTracerRenderer::render(Framebuffer& resultFB) noexcept
+{
+	// Calculate camera def in order to generate first rays
+	vec2 resultRes = vec2(mTargetResolution);
+	CameraDef cam = generateCameraDef(mMatrices.position, mMatrices.forward, mMatrices.up,
+	                                  mMatrices.vertFovRad, resultRes);
+
+	// Run CUDA ray tracer
+	runCudaRayTracer(mImpl->cudaSurface, mTargetResolution, cam, mImpl->staticSceneCuda);
+	
+	// Transfer result from Cuda texture to result framebuffer
+	glUseProgram(mImpl->transferShader.handle());
+	resultFB.bindViewportClearColorDepth(vec4(0.0f, 0.0f, 0.0f, 0.0f), 0.0f);
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, mImpl->glTex);
+
+	mImpl->fullscreenTriangle.render();
+
+	// Return result
+	RenderResult tmp;
+	tmp.renderedRes = mTargetResolution;
+	return tmp;
+}
+
+// CUDARayTracerRenderer: Protected virtual methods from BaseRenderer interface
+// ------------------------------------------------------------------------------------------------
 
 void CUDARayTracerRenderer::targetResolutionUpdated() noexcept
 {

@@ -32,6 +32,35 @@ CPURayTracerRenderer::CPURayTracerRenderer() noexcept
 // CPURayTracerRenderer: Virtual methods from BaseRenderer interface
 // ------------------------------------------------------------------------------------------------
 
+void CPURayTracerRenderer::bakeMaterials(const DynArray<RawImage>& textures,
+                                         const DynArray<Material>& materials) noexcept
+{
+
+}
+
+void CPURayTracerRenderer::addMaterial(RawImage& texture, Material& material) noexcept
+{
+
+}
+
+void CPURayTracerRenderer::bakeStaticScene(const SharedPtr<StaticScene>& staticScene) noexcept
+{
+	{
+		using time_point = std::chrono::high_resolution_clock::time_point;
+		time_point before = std::chrono::high_resolution_clock::now();
+
+		mBVH = std::move(buildStaticFrom(*staticScene));
+		optimizeBVHCacheLocality(mBVH);
+
+		time_point after = std::chrono::high_resolution_clock::now();
+		using FloatSecond = std::chrono::duration<float>;
+		float delta = std::chrono::duration_cast<FloatSecond>(after - before).count();
+		printf("CPU Ray Tracer: Time spent building BVH: %.3f seconds\n", delta);
+
+		printBVHMetrics(mBVH);
+	}
+}
+
 RenderResult CPURayTracerRenderer::render(Framebuffer& resultFB) noexcept
 {
 	// Calculate camera def in order to generate first rays
@@ -99,24 +128,6 @@ RenderResult CPURayTracerRenderer::render(Framebuffer& resultFB) noexcept
 
 // CPURayTracerRenderer: Protected virtual methods from BaseRenderer interface
 // ------------------------------------------------------------------------------------------------
-
-void CPURayTracerRenderer::staticSceneChanged() noexcept
-{
-	{
-		using time_point = std::chrono::high_resolution_clock::time_point;
-		time_point before = std::chrono::high_resolution_clock::now();
-
-		mBVH = std::move(buildStaticFrom(*mStaticScene.get()));
-		optimizeBVHCacheLocality(mBVH);
-
-		time_point after = std::chrono::high_resolution_clock::now();
-		using FloatSecond = std::chrono::duration<float>;
-		float delta = std::chrono::duration_cast<FloatSecond>(after - before).count();
-		printf("CPU Ray Tracer: Time spent building BVH: %.3f seconds\n", delta);
-
-		printBVHMetrics(mBVH);
-	}
-}
 
 void CPURayTracerRenderer::targetResolutionUpdated() noexcept
 {

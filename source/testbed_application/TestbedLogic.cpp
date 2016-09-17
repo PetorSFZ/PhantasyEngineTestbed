@@ -68,7 +68,8 @@ UpdateOp TestbedLogic::update(GameScreen& screen, UpdateState& state) noexcept
 
 	// Check if current renderer needs to be baked or not
 	if (!mRenderers[mCurrentRenderer].baked) {
-		screen.renderer->setAndBakeStaticScene(screen.level->staticScene);
+		screen.renderer->bakeMaterials(screen.level->textures, screen.level->materials);
+		screen.renderer->bakeStaticScene(screen.level->staticScene);
 		mRenderers[mCurrentRenderer].baked = true;
 	}
 

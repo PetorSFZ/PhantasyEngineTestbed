@@ -9,6 +9,8 @@
 
 #include "phantasy_engine/level/StaticScene.hpp"
 #include "phantasy_engine/level/PointLight.hpp"
+#include "phantasy_engine/rendering/Material.hpp"
+#include "phantasy_engine/rendering/RawImage.hpp"
 
 namespace phe {
 
@@ -70,6 +72,13 @@ public:
 	// Virtual methods
 	// --------------------------------------------------------------------------------------------
 	
+	virtual void bakeMaterials(const DynArray<RawImage>& textures,
+	                           const DynArray<Material>& materials) noexcept = 0;
+
+	virtual void addMaterial(RawImage& texture, Material& material) noexcept = 0;
+
+	virtual void bakeStaticScene(const SharedPtr<StaticScene>& staticScene) noexcept = 0;
+
 	/// The resultFB framebuffer is required to have a color texture (rgba 16bit float) and a
 	/// depth texture of type 32bit float, the resolution of the framebuffer must be the same
 	/// as the target resolution of the renderer.
@@ -77,12 +86,6 @@ public:
 
 	// Non-virtual methods
 	// --------------------------------------------------------------------------------------------
-
-	inline void setAndBakeStaticScene(const SharedPtr<StaticScene>& staticScene) noexcept
-	{
-		this->mStaticScene = staticScene;
-		this->staticSceneChanged();
-	}
 
 	inline void updateMatrices(const CameraMatrices& matrices) noexcept { mMatrices = matrices; }
 
@@ -99,14 +102,11 @@ protected:
 	// Protected virtual methods
 	// --------------------------------------------------------------------------------------------
 
-	virtual void staticSceneChanged() noexcept = 0;
-
 	virtual void targetResolutionUpdated() noexcept = 0;
 
 	// Protected members
 	// --------------------------------------------------------------------------------------------
 
-	SharedPtr<StaticScene> mStaticScene;
 	CameraMatrices mMatrices;
 	vec2i mTargetResolution = vec2i(0, 0);
 };

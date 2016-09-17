@@ -43,7 +43,8 @@ GameScreen::GameScreen(SharedPtr<GameLogic> gameLogicIn, SharedPtr<Level> levelI
 	gl::setUniform(mGammaCorrectionShader, "uLinearTexture", 0);
 
 	// Set and bake static scene
-	this->renderer->setAndBakeStaticScene(this->level->staticScene);
+	this->renderer->bakeMaterials(this->level->textures, this->level->materials);
+	this->renderer->bakeStaticScene(this->level->staticScene);
 }
 
 // GameScreen: Overriden methods from sfz::BaseScreen

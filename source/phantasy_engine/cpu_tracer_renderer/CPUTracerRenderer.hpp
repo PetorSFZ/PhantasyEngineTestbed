@@ -44,13 +44,18 @@ public:
 	// Virtual methods from BaseRenderer interface
 	// --------------------------------------------------------------------------------------------
 
+	void bakeMaterials(const DynArray<RawImage>& textures,
+	                   const DynArray<Material>& materials) noexcept override final;
+
+	void addMaterial(RawImage& texture, Material& material) noexcept override final;
+
+	void bakeStaticScene(const SharedPtr<StaticScene>& staticScene) noexcept override final;
+
 	RenderResult render(Framebuffer& resultFB) noexcept override final;
 
 protected:
 	// Protected virtual methods from BaseRenderer interface
 	// --------------------------------------------------------------------------------------------
-
-	void staticSceneChanged() noexcept override final;
 
 	void targetResolutionUpdated() noexcept override final;
 

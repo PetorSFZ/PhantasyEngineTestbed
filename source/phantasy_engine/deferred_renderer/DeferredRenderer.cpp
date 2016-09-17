@@ -39,6 +39,22 @@ DeferredRenderer::DeferredRenderer() noexcept
 // DeferredRenderer: Virtual methods from BaseRenderer interface
 // ------------------------------------------------------------------------------------------------
 
+void DeferredRenderer::bakeMaterials(const DynArray<RawImage>& textures,
+                                     const DynArray<Material>& materials) noexcept
+{
+
+}
+
+void DeferredRenderer::addMaterial(RawImage& texture, Material& material) noexcept
+{
+
+}
+
+void DeferredRenderer::bakeStaticScene(const SharedPtr<StaticScene>& staticScene) noexcept
+{
+
+}
+
 RenderResult DeferredRenderer::render(Framebuffer& resultFB) noexcept
 {
 	/*const mat4 viewMatrix = mMatrices.headMatrix * mMatrices.originMatrix;
@@ -177,11 +193,6 @@ RenderResult DeferredRenderer::render(Framebuffer& resultFB) noexcept
 
 // DeferredRenderer: Protected virtual methods from BaseRenderer interface
 // ------------------------------------------------------------------------------------------------
-
-void DeferredRenderer::staticSceneChanged() noexcept
-{
-	// TODO: Bake shadow maps for all static lights
-}
 
 void DeferredRenderer::targetResolutionUpdated() noexcept
 {
