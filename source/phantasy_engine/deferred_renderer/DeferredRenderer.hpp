@@ -36,7 +36,7 @@ public:
 
 	void addMaterial(RawImage& texture, Material& material) noexcept override final;
 
-	void bakeStaticScene(const SharedPtr<StaticScene>& staticScene) noexcept override final;
+	void bakeStaticScene(const StaticScene& staticScene) noexcept override final;
 
 	RenderResult render(Framebuffer& resultFB) noexcept override final;
 

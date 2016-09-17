@@ -126,7 +126,7 @@ static void processNode(const char* basePath, Level& level, sfz::HashMap<std::st
 		meshTmp.materialIndices = DynArray<uint16_t>(meshTmp.vertices.size(), nextMaterialIndex, 0u);
 
 		// Add the mesh and material
-		level.staticScene->meshes.add(std::move(meshTmp));
+		level.staticScene.meshes.add(std::move(meshTmp));
 		level.materials.add(materialTmp);
 	}
 
@@ -173,12 +173,9 @@ void loadStaticSceneSponza(const char* basePath, const char* fileName, Level& le
 		return;
 	}
 
-	// Ensure level has a static scene and clear it
-	if (level.staticScene == nullptr) {
-		level.staticScene = makeShared<StaticScene>();
-	}
-	level.staticScene->meshes.clear();
-	level.staticScene->pointLights.clear();
+	// Clear existing static scene
+	level.staticScene.meshes.clear();
+	level.staticScene.pointLights.clear();
 
 	// Process tree, filling up the list of renderable components along the way
 	sfz::HashMap<std::string, uint32_t> texMapping(uint32_t(scene->mNumTextures));

@@ -17,7 +17,7 @@ using sfz::SharedPtr;
 struct Level final {
 	DynArray<RawImage> textures;
 	DynArray<Material> materials;
-	SharedPtr<StaticScene> staticScene;
+	StaticScene staticScene;
 
 	//DynArray<Renderable&transform> opaqueObjects;
 	//DynArray<Renderable&transform> transparentObjects;

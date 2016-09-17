@@ -43,13 +43,13 @@ void CPURayTracerRenderer::addMaterial(RawImage& texture, Material& material) no
 
 }
 
-void CPURayTracerRenderer::bakeStaticScene(const SharedPtr<StaticScene>& staticScene) noexcept
+void CPURayTracerRenderer::bakeStaticScene(const StaticScene& staticScene) noexcept
 {
 	{
 		using time_point = std::chrono::high_resolution_clock::time_point;
 		time_point before = std::chrono::high_resolution_clock::now();
 
-		mBVH = std::move(buildStaticFrom(*staticScene));
+		mBVH = std::move(buildStaticFrom(staticScene));
 		optimizeBVHCacheLocality(mBVH);
 
 		time_point after = std::chrono::high_resolution_clock::now();

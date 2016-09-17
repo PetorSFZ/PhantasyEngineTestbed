@@ -79,7 +79,6 @@ int main(int, char**)
 	modelsPath.printf("%sresources/models/", basePath());
 	
 	SharedPtr<Level> level = makeShared<Level>();
-	level->staticScene = makeShared<StaticScene>();
 
 	using time_point = std::chrono::high_resolution_clock::time_point;
 	time_point before = std::chrono::high_resolution_clock::now();
@@ -104,7 +103,7 @@ int main(int, char**)
 		pointLight.pos = vec3{ -50.0f + 25.0f * i , 5.0f, 0.0f };
 		pointLight.range = 50.0f;
 		pointLight.strength = 100.0f * colours[i];
-		level->staticScene->pointLights.add(pointLight);
+		level->staticScene.pointLights.add(pointLight);
 	}
 
 	// Run gameloop

@@ -94,7 +94,7 @@ void CUDARayTracerRenderer::addMaterial(RawImage& texture, Material& material) n
 
 }
 
-void CUDARayTracerRenderer::bakeStaticScene(const SharedPtr<StaticScene>& staticScene) noexcept
+void CUDARayTracerRenderer::bakeStaticScene(const StaticScene& staticScene) noexcept
 {
 	// Build the BVH
 	BVH& bvh = mImpl->bvh;
@@ -102,7 +102,7 @@ void CUDARayTracerRenderer::bakeStaticScene(const SharedPtr<StaticScene>& static
 		using time_point = std::chrono::high_resolution_clock::time_point;
 		time_point before = std::chrono::high_resolution_clock::now();
 
-		bvh = std::move(buildStaticFrom(*staticScene));
+		bvh = std::move(buildStaticFrom(staticScene));
 		optimizeBVHCacheLocality(bvh);
 
 		time_point after = std::chrono::high_resolution_clock::now();

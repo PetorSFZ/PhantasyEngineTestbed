@@ -50,7 +50,7 @@ void DeferredRenderer::addMaterial(RawImage& texture, Material& material) noexce
 
 }
 
-void DeferredRenderer::bakeStaticScene(const SharedPtr<StaticScene>& staticScene) noexcept
+void DeferredRenderer::bakeStaticScene(const StaticScene& staticScene) noexcept
 {
 
 }
