@@ -2,18 +2,14 @@
 
 #pragma once
 
-#include <sfz/gl/Program.hpp>
-
 #include "phantasy_engine/rendering/BaseRenderer.hpp"
-#include "phantasy_engine/rendering/FullscreenTriangle.hpp"
 
 namespace phe {
 
-using sfz::gl::Framebuffer;
-using sfz::gl::Program;
-
 // DeferredRenderer
 // ------------------------------------------------------------------------------------------------
+
+class DeferredRendererImpl; // Pimpl pattern
 
 class DeferredRenderer final : public BaseRenderer {
 public:
@@ -23,10 +19,11 @@ public:
 
 	DeferredRenderer(const DeferredRenderer&) = delete;
 	DeferredRenderer& operator= (const DeferredRenderer&) = delete;
-	DeferredRenderer(DeferredRenderer&&) noexcept = default;
-	DeferredRenderer& operator= (DeferredRenderer&&) noexcept = default;
-
+	
 	DeferredRenderer() noexcept;
+	DeferredRenderer(DeferredRenderer&& other) noexcept;
+	DeferredRenderer& operator= (DeferredRenderer&& other) noexcept;
+	~DeferredRenderer() noexcept;
 
 	// Virtual methods from BaseRenderer interface
 	// --------------------------------------------------------------------------------------------
@@ -50,9 +47,7 @@ private:
 	// Private members
 	// --------------------------------------------------------------------------------------------
 	
-	Program mGBufferGenShader, mShadingShader;
-	Framebuffer mGBuffer;
-	FullscreenTriangle mFullscreenTriangle;
+	DeferredRendererImpl* mImpl = nullptr;
 };
 
 } // namespace phe
