@@ -2,6 +2,8 @@
 
 #include "phantasy_engine/ray_tracer_common/BVHMetrics.hpp"
 
+#include <sfz/math/MathHelpers.hpp>
+
 #include "phantasy_engine/ray_tracer_common/Intersection.hpp"
 
 namespace phe {
@@ -13,6 +15,9 @@ struct InternalBVHMetrics
 {
 	uint64_t totalLeafDepth;
 	uint64_t totalTrianglesPerLeaf;
+	double totalLeftSAProportion;
+	double totalRightSAProportion;
+	double totalOverlapVolumeProportion;
 };
 
 struct TestRayCastResult
@@ -38,11 +43,21 @@ static void computeTraversalMetrics(BVHMetrics& metrics, const BVH& bvh) noexcep
 static TestRayCastResult castTestRay(const BVH& bvh, const Ray& ray,
                                      float tMin = 0.0001f, float tMax = FLT_MAX) noexcept;
 
-template<typename T>
-void updateMin(T& currentMin, const T& newCandidate) noexcept;
+static float surfaceArea(const sfz::AABB& aabb) noexcept;
+
+static float surfaceArea(const vec3& boxSize) noexcept;
+
+static float volume(const sfz::AABB& aabb) noexcept;
+
+static float volume(const vec3& boxSize) noexcept;
+
+static float overlapVolume(const sfz::AABB& box1, const sfz::AABB& box2) noexcept;
 
 template<typename T>
-void updateMax(T& currentMin, const T& newCandidate) noexcept;
+static void updateMin(T& currentMin, const T& newCandidate) noexcept;
+
+template<typename T>
+static void updateMax(T& currentMin, const T& newCandidate) noexcept;
 
 // Functions
 // ------------------------------------------------------------------------------------------------
@@ -70,19 +85,24 @@ BVHMetrics computeBVHMetrics(const BVH& bvh)
 	metrics.medianTrianglesPerLeaf = 0.0f;
 	metrics.trianglesPerLeafDeviation = 0.0f;
 
-	metrics.averageChildVolumeOverlap = 0.0f;
-	metrics.averageLeftVolumeProportion = 0.0f;
-	metrics.averageRightVolumeProportion = 0.0f;
-
 	// Initialize internal members
 	internalMetrics.totalLeafDepth = 0;
 	internalMetrics.totalTrianglesPerLeaf = 0;
+	internalMetrics.totalOverlapVolumeProportion = 0.0;
+	internalMetrics.totalLeftSAProportion = 0.0;
+	internalMetrics.totalRightSAProportion = 0.0;
 
 	// Traverse tree starting at root
 	processNode(bvh, 0, 1, metrics, internalMetrics);
 
+	uint32_t innerCount = metrics.nodeCount - metrics.leafCount;
+
+	// Compute averages
 	metrics.averageLeafDepth = float(internalMetrics.totalLeafDepth) / float(metrics.leafCount);
 	metrics.averageTrianglesPerLeaf = float(internalMetrics.totalTrianglesPerLeaf) / float(metrics.leafCount);
+	metrics.averageChildOverlapVolumeProportion = float(internalMetrics.totalOverlapVolumeProportion / double(innerCount));
+	metrics.averageLeftSAProportion = float(internalMetrics.totalLeftSAProportion / double(innerCount));
+	metrics.averageRightSAProportion = float(internalMetrics.totalRightSAProportion / double(innerCount));
 
 	computeTraversalMetrics(metrics, bvh);
 
@@ -99,6 +119,9 @@ maxLeafDepth: %u
 minLeafDepth: %u
 averageLeafDepth: %f
 averageTrianglesPerLeaf: %f
+averageChildOverlapVolumeProportion: %f
+averageLeftSAProportion: %f
+averageRightSAProportion: %f
 
 Traversal metrics:
     maxVisitedNodes: %u
@@ -124,6 +147,9 @@ Traversal metrics:
 	       metrics.minLeafDepth,
 	       metrics.averageLeafDepth,
 	       metrics.averageTrianglesPerLeaf,
+	       metrics.averageChildOverlapVolumeProportion,
+	       metrics.averageLeftSAProportion,
+	       metrics.averageRightSAProportion,
 	       metrics.traversalMetrics.maxVisitedNodes,
 	       metrics.traversalMetrics.maxTriangleIntersectionTests,
 	       metrics.traversalMetrics.maxTrianglesIntersected,
@@ -151,6 +177,25 @@ static void processNode(const BVH& bvh, uint32_t nodeIndex, uint32_t depth, BVHM
 		updateMax(metrics.maxLeafDepth, depth);
 	}
 	else {
+		const BVHNode& leftNode = bvh.nodes[node.leftChildIndex()];
+		const BVHNode& rightNode = bvh.nodes[node.rightChildIndex()];
+
+		const sfz::AABB parentAABB = sfz::AABB(node.min, node.max);
+		const sfz::AABB leftAABB = sfz::AABB(leftNode.min, leftNode.max);
+		const sfz::AABB rightAABB = sfz::AABB(rightNode.min, rightNode.max);
+
+		float parentSurfaceArea = surfaceArea(parentAABB);
+		float parentVolume = volume(parentAABB);
+		float leftSurfaceArea = surfaceArea(leftAABB);
+		float rightSurfaceArea = surfaceArea(rightAABB);
+		float childOverlapVolume = overlapVolume(leftAABB, rightAABB);
+
+		internalMetrics.totalLeftSAProportion += leftSurfaceArea / parentSurfaceArea;
+		internalMetrics.totalRightSAProportion += rightSurfaceArea / parentSurfaceArea;
+		if (!sfz::approxEqual(0.0f, parentVolume)) {
+			internalMetrics.totalOverlapVolumeProportion += childOverlapVolume / parentVolume;
+		}
+
 		processNode(bvh, node.leftChildIndex(), depth + 1, metrics, internalMetrics);
 		processNode(bvh, node.rightChildIndex(), depth + 1, metrics, internalMetrics);
 	}
@@ -272,14 +317,46 @@ static TestRayCastResult castTestRay(const BVH& bvh, const Ray& ray,
 	return result;
 }
 
+static float surfaceArea(const sfz::AABB& aabb) noexcept
+{
+	vec3 boxSize = aabb.extents();
+	return surfaceArea(boxSize);
+}
+
+static float surfaceArea(const vec3& boxSize) noexcept
+{
+	return 2.0f * (
+		boxSize.x * boxSize.y +
+		boxSize.x * boxSize.z +
+		boxSize.y * boxSize.z
+	);
+}
+
+static float volume(const sfz::AABB& aabb) noexcept
+{
+	vec3 boxSize = aabb.extents();
+	return volume(boxSize);
+}
+
+static float volume(const vec3& boxSize) noexcept
+{
+	return boxSize.x * boxSize.y * boxSize.z;
+}
+
+static float overlapVolume(const sfz::AABB& box1, const sfz::AABB& box2) noexcept
+{
+	vec3 overlapSize = sfz::max(vec3(0.0f), sfz::min(box1.max, box2.max) - sfz::max(box1.min, box1.min));
+	return volume(overlapSize);
+}
+
 template<typename T>
-void updateMin(T& currentMin, const T& newCandidate) noexcept
+static void updateMin(T& currentMin, const T& newCandidate) noexcept
 {
 	currentMin = std::min(currentMin, newCandidate);
 }
 
 template<typename T>
-void updateMax(T& currentMax, const T& newCandidate) noexcept
+static void updateMax(T& currentMax, const T& newCandidate) noexcept
 {
 	currentMax = std::max(currentMax, newCandidate);
 }

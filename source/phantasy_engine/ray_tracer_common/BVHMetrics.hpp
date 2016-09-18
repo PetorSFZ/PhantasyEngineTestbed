@@ -44,9 +44,9 @@ struct BVHMetrics {
 	float medianTrianglesPerLeaf; // Not implemented
 	float trianglesPerLeafDeviation; // Not implemented
 
-	float averageChildVolumeOverlap; // Not implemented
-	float averageLeftVolumeProportion; // Not implemented
-	float averageRightVolumeProportion; // Not implemented
+	float averageChildOverlapVolumeProportion;
+	float averageLeftSAProportion;
+	float averageRightSAProportion;
 
 	TraversalMetrics traversalMetrics;
 };
