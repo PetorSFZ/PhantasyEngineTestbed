@@ -279,7 +279,6 @@ BVH buildStaticFrom(const StaticScene& scene) noexcept
 	inTriangles.ensureCapacity(scene.meshes.size() * 32u);
 	inTriangleDatas.ensureCapacity(scene.meshes.size() * 32u);
 
-	uint32_t componentIndex = 0;
 	for (const RawMesh& mesh : scene.meshes) {
 		uint32_t newSize = inTriangles.size() + mesh.indices.size() / 3;
 		inTriangles.ensureCapacity(newSize);
@@ -307,7 +306,6 @@ BVH buildStaticFrom(const StaticScene& scene) noexcept
 
 			inTriangleDatas.add(dataTmp);
 		}
-		componentIndex++;
 	}
 
 	return buildStaticFrom(inTriangles, inTriangleDatas); 

@@ -6,7 +6,7 @@ namespace phe {
 
 using sfz::DynString;
 
-DynString convertToOSPath(const char *path) noexcept
+DynString convertToOSPath(const char* path) noexcept
 {
 	size_t pathLen = std::strlen(path);
 	DynString outPath;

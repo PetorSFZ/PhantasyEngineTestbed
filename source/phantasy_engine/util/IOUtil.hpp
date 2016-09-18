@@ -2,8 +2,6 @@
 
 #pragma once
 
-#include <cstdint>
-
 #include <sfz/containers/DynString.hpp>
 
 namespace phe {
