@@ -26,9 +26,7 @@ void main()
 	vec2 offs = dstFragSize * 0.25;
 
 	vec2 coord = uvCoord;
-	//coord.y = 1.0 - coord.y;
 	coord = coord * uViewportRes / srcRes;
-	//coord.y = 1.0 - coord.y;
 
 	vec3 sample1 = texture(uSrcTexture, coord + vec2(-offs.x, -offs.y)).rgb;
 	vec3 sample2 = texture(uSrcTexture, coord + vec2(offs.x, -offs.y)).rgb;
