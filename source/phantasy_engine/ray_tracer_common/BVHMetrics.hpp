@@ -6,6 +6,27 @@
 
 namespace phe {
 
+// TraversalMetrics struct
+// ------------------------------------------------------------------------------------------------
+
+struct TraversalMetrics
+{
+	uint32_t maxVisitedNodes;
+	uint32_t maxTriangleIntersectionTests;
+	uint32_t maxTrianglesIntersected;
+	uint32_t maxAABBIntersectionTests;
+	uint32_t maxAABBIntersections;
+
+	float averageVisitedNodes;
+	float averageTriangleIntersectionTests;
+	float averageTrianglesIntersected;
+	float averageAABBIntersectionTests;
+	float averageAABBIntersections;
+};
+
+// BVHMetrics struct
+// ------------------------------------------------------------------------------------------------
+
 struct BVHMetrics {
 	uint32_t nodeCount;
 	uint32_t leafCount;
@@ -17,16 +38,21 @@ struct BVHMetrics {
 	float medianLeafDepth; // Not implemented
 	float leafDepthDeviation; // Not implemented
 
-	uint32_t minLeavesInNodes; // Not implemented
-	uint32_t maxLeavesInNodes; // Not implemented
-	float averageLeavesInNodes;
-	float medianLeavesInNodes; // Not implemented
-	float leavesInNodesDeviation; // Not implemented
+	uint32_t minTrianglesPerLeaf; // Not implemented
+	uint32_t maxTrianglesPerLeaf; // Not implemented
+	float averageTrianglesPerLeaf;
+	float medianTrianglesPerLeaf; // Not implemented
+	float trianglesPerLeafDeviation; // Not implemented
 
-	float averageChildOverlap; // Not implemented
-	float leftVolumeProportion; // Not implemented
-	float rightVolumeProportion; // Not implemented
+	float averageChildVolumeOverlap; // Not implemented
+	float averageLeftVolumeProportion; // Not implemented
+	float averageRightVolumeProportion; // Not implemented
+
+	TraversalMetrics traversalMetrics;
 };
+
+// Functions
+// ------------------------------------------------------------------------------------------------
 
 BVHMetrics computeBVHMetrics(const BVH& bvh);
 
