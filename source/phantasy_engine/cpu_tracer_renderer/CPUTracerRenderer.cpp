@@ -35,7 +35,9 @@ CPURayTracerRenderer::CPURayTracerRenderer() noexcept
 void CPURayTracerRenderer::bakeMaterials(const DynArray<RawImage>& textures,
                                          const DynArray<Material>& materials) noexcept
 {
-
+	// Assume lifetime of DynArrays are not less than this
+	this->mTextures = &textures;
+	this->mMaterials = &materials;
 }
 
 void CPURayTracerRenderer::addMaterial(RawImage& texture, Material& material) noexcept
@@ -45,6 +47,9 @@ void CPURayTracerRenderer::addMaterial(RawImage& texture, Material& material) no
 
 void CPURayTracerRenderer::bakeStaticScene(const StaticScene& staticScene) noexcept
 {
+	// Assume lifetime of StaticScene is not less than this
+	this->mStaticScene = &staticScene;
+
 	{
 		using time_point = std::chrono::high_resolution_clock::time_point;
 		time_point before = std::chrono::high_resolution_clock::now();
@@ -169,24 +174,16 @@ const uint8_t* CPURayTracerRenderer::sampleImage(const RawImage& image, const ve
 
 vec4 CPURayTracerRenderer::shadeHit(const Ray& ray, const RayCastResult& hit, const HitInfo& info) noexcept
 {
-	/*BVHNode* nodes = this->mBVH.nodes.data();
+	BVHNode* nodes = this->mBVH.nodes.data();
 	TriangleVertices* triangles = this->mBVH.triangles.data();
 	TriangleData* datas = this->mBVH.triangleDatas.data();
 
 	const TriangleData& data = datas[hit.triangleIndex];
 
-	// Use opaque component index as material index. This Would not work for materials of
-	// transparent components.
-	// TODO: Get material from separate list in StaticScene, or some other more consistent solution.
-	const DynArray<RenderableComponent>& opaqueComponents = mStaticScene->opaqueComponents;
-	Material material;
-	if (data.materialIndex < opaqueComponents.size()) {
-		material = opaqueComponents[data.materialIndex].material;
-	} else {
-		material.albedoValue = vec4(0.5f, 0.5f, 0.5f, 1.0f);
-	}
+	const DynArray<Material>& materials = *mMaterials;
+	const DynArray<RawImage>& images = *mTextures;
 
-	const DynArray<RawImage>& images = mStaticScene->images;
+	const Material& material = materials[data.materialIndex];
 
 	vec3 albedoColor = material.albedoValue.xyz;
 
@@ -222,7 +219,7 @@ vec4 CPURayTracerRenderer::shadeHit(const Ray& ray, const RayCastResult& hit, co
 
 	vec3 color = vec3(0.0f);
 
-	for (PointLight& light : mStaticScene.get()->pointLights) {
+	for (const PointLight& light : mStaticScene->pointLights) {
 		vec3 toLight = light.pos - pos;
 		float toLightDist = length(toLight);
 		vec3 l = toLight / toLightDist;
@@ -266,8 +263,7 @@ vec4 CPURayTracerRenderer::shadeHit(const Ray& ray, const RayCastResult& hit, co
 
 		color += (diffuse + specular) * lighting * nDotL;
 	}
-	return vec4(color, 1.0f);*/
-	return vec4(1.0f, 0.0f, 0.0f, 1.0f);
+	return vec4(color, 1.0f);
 }
 
 } // namespace phe

@@ -73,6 +73,9 @@ private:
 	DynArray<vec4> mTexture;
 	DynArray<std::thread> mThreads;
 	BVH mBVH;
+	const DynArray<Material>* mMaterials = nullptr;
+	const DynArray<RawImage>* mTextures = nullptr;
+	const StaticScene* mStaticScene = nullptr;
 };
 
 } // namespace phe
