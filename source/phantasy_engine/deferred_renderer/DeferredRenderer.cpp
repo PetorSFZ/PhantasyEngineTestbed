@@ -30,8 +30,8 @@ static const uint32_t GBUFFER_MATERIAL = 2;
 
 class DeferredRendererImpl final {
 public:
-	Program GBufferGenShader, shadingShader;
-	Framebuffer GBuffer;
+	Program gbufferGenShader, shadingShader;
+	Framebuffer gbuffer;
 	FullscreenTriangle fullscreenTriangle;
 
 	// Static scene
@@ -58,7 +58,7 @@ DeferredRenderer::DeferredRenderer() noexcept
 	StackString128 shadersPath;
 	shadersPath.printf("%sresources/shaders/deferred_renderer/", basePath());
 
-	mImpl->GBufferGenShader = Program::fromFile(shadersPath.str, "gbuffer_gen.vert", "gbuffer_gen.frag",
+	mImpl->gbufferGenShader = Program::fromFile(shadersPath.str, "gbuffer_gen.vert", "gbuffer_gen.frag",
 	[](uint32_t shaderProgram) {
 		glBindAttribLocation(shaderProgram, 0, "inPosition");
 		glBindAttribLocation(shaderProgram, 1, "inNormal");
@@ -111,6 +111,10 @@ void DeferredRenderer::bakeStaticScene(const StaticScene& staticScene) noexcept
 
 RenderResult DeferredRenderer::render(Framebuffer& resultFB) noexcept
 {
+	auto& gbufferGenShader = mImpl->gbufferGenShader;
+	auto& shadingShader = mImpl->shadingShader;
+	auto& gbuffer = mImpl->gbuffer;
+
 	const mat4 viewMatrix = mMatrices.headMatrix * mMatrices.originMatrix;
 	const mat4 projMatrix = mMatrices.projMatrix;
 	const mat4 invProjMatrix = inverse(projMatrix);
@@ -123,34 +127,33 @@ RenderResult DeferredRenderer::render(Framebuffer& resultFB) noexcept
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_GREATER); // reversed-z
 
-//	mImpl->GBuffer.bindViewportClearColorDepth(vec2i(0), mTargetResolution, vec4(0.0f), 0.0f);
-	resultFB.bindViewportClearColorDepth(vec2i(0), mTargetResolution, vec4(0.0f), 0.0f);
-	mImpl->GBufferGenShader.useProgram();
+	gbuffer.bindViewportClearColorDepth(vec2i(0), mTargetResolution, vec4(0.0f), 0.0f);
+	gbufferGenShader.useProgram();
 
 	const mat4 modelMatrix = identityMatrix4<float>();
-	gl::setUniform(mImpl->GBufferGenShader, "uProjMatrix", projMatrix);
-	gl::setUniform(mImpl->GBufferGenShader, "uViewMatrix", viewMatrix);
+	gl::setUniform(gbufferGenShader, "uProjMatrix", projMatrix);
+	gl::setUniform(gbufferGenShader, "uViewMatrix", viewMatrix);
 
-	gl::setUniform(mImpl->GBufferGenShader, "uAlbedoTexture", 0);
-	gl::setUniform(mImpl->GBufferGenShader, "uRoughnessTexture", 1);
-	gl::setUniform(mImpl->GBufferGenShader, "uMetallicTexture", 2);
-	gl::setUniform(mImpl->GBufferGenShader, "uSpecularTexture", 3);
+	gl::setUniform(gbufferGenShader, "uAlbedoTexture", 0);
+	gl::setUniform(gbufferGenShader, "uRoughnessTexture", 1);
+	gl::setUniform(gbufferGenShader, "uMetallicTexture", 2);
+	gl::setUniform(gbufferGenShader, "uSpecularTexture", 3);
 
 	// For the static scene the model matrix should be identity
-	gl::setUniform(mImpl->GBufferGenShader, "uModelMatrix", identityMatrix4<float>());
-	gl::setUniform(mImpl->GBufferGenShader, "uNormalMatrix", inverse(transpose(viewMatrix)));
+	gl::setUniform(gbufferGenShader, "uModelMatrix", identityMatrix4<float>());
+	gl::setUniform(gbufferGenShader, "uNormalMatrix", inverse(transpose(viewMatrix)));
 
 	//const int modelMatrixLoc = glGetUniformLocation(mGBufferGenShader.handle(), "uModelMatrix");
 	//const int normalMatrixLoc = glGetUniformLocation(mGBufferGenShader.handle(), "uNormalMatrix");
 
-	const int hasAlbedoTextureLoc = glGetUniformLocation(mImpl->GBufferGenShader.handle(), "uHasAlbedoTexture");
-	const int albedoValueLoc = glGetUniformLocation(mImpl->GBufferGenShader.handle(), "uAlbedoValue");
+	const int hasAlbedoTextureLoc = glGetUniformLocation(gbufferGenShader.handle(), "uHasAlbedoTexture");
+	const int albedoValueLoc = glGetUniformLocation(gbufferGenShader.handle(), "uAlbedoValue");
 
-	const int hasRoughnessTextureLoc = glGetUniformLocation(mImpl->GBufferGenShader.handle(), "uHasRoughnessTexture");
-	const int rougnessValueLoc = glGetUniformLocation(mImpl->GBufferGenShader.handle(), "uRoughnessValue");
+	const int hasRoughnessTextureLoc = glGetUniformLocation(gbufferGenShader.handle(), "uHasRoughnessTexture");
+	const int rougnessValueLoc = glGetUniformLocation(gbufferGenShader.handle(), "uRoughnessValue");
 
-	const int hasMetallicTextureLoc = glGetUniformLocation(mImpl->GBufferGenShader.handle(), "uHasMetallicTexture");
-	const int metallicValueLoc = glGetUniformLocation(mImpl->GBufferGenShader.handle(), "uMetallicValue");
+	const int hasMetallicTextureLoc = glGetUniformLocation(gbufferGenShader.handle(), "uHasMetallicTexture");
+	const int metallicValueLoc = glGetUniformLocation(gbufferGenShader.handle(), "uMetallicValue");
 
 	for (const GLModel& model : mImpl->staticGLModels) {
 		
@@ -200,7 +203,7 @@ RenderResult DeferredRenderer::render(Framebuffer& resultFB) noexcept
 
 		// Render model
 		component.glModel.draw();
-	}
+	}*/
 
 	// Shading
 	// --------------------------------------------------------------------------------------------
@@ -214,39 +217,39 @@ RenderResult DeferredRenderer::render(Framebuffer& resultFB) noexcept
 	glBlendFunc(GL_ONE, GL_ONE);
 
 	resultFB.bindViewportClearColorDepth(vec2i(0.0), mTargetResolution, vec4(0.0f), 0.0f);
-	mShadingShader.useProgram();
+	shadingShader.useProgram();
 
-	gl::setUniform(mShadingShader, "uInvProjMatrix", invProjMatrix);
+	gl::setUniform(shadingShader, "uInvProjMatrix", invProjMatrix);
 
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, mGBuffer.depthTexture());
-	gl::setUniform(mShadingShader, "uDepthTexture", 0);
+	glBindTexture(GL_TEXTURE_2D, gbuffer.depthTexture());
+	gl::setUniform(shadingShader, "uDepthTexture", 0);
 
 	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_2D, mGBuffer.texture(GBUFFER_NORMAL));
-	gl::setUniform(mShadingShader, "uNormalTexture", 1);
+	glBindTexture(GL_TEXTURE_2D, gbuffer.texture(GBUFFER_NORMAL));
+	gl::setUniform(shadingShader, "uNormalTexture", 1);
 
 	glActiveTexture(GL_TEXTURE2);
-	glBindTexture(GL_TEXTURE_2D, mGBuffer.texture(GBUFFER_ALBEDO));
-	gl::setUniform(mShadingShader, "uAlbedoTexture", 2);
+	glBindTexture(GL_TEXTURE_2D, gbuffer.texture(GBUFFER_ALBEDO));
+	gl::setUniform(shadingShader, "uAlbedoTexture", 2);
 
 	glActiveTexture(GL_TEXTURE3);
-	glBindTexture(GL_TEXTURE_2D, mGBuffer.texture(GBUFFER_MATERIAL));
-	gl::setUniform(mShadingShader, "uMaterialTexture", 3);
+	glBindTexture(GL_TEXTURE_2D, gbuffer.texture(GBUFFER_MATERIAL));
+	gl::setUniform(shadingShader, "uMaterialTexture", 3);
 
-	const int lightPosLoc = glGetUniformLocation(mShadingShader.handle(), "uLightPos");
-	const int lightStrengthLoc = glGetUniformLocation(mShadingShader.handle(), "uLightStrength");
-	const int lightRangeLoc = glGetUniformLocation(mShadingShader.handle(), "uLightRange");
+	const int lightPosLoc = glGetUniformLocation(shadingShader.handle(), "uLightPos");
+	const int lightStrengthLoc = glGetUniformLocation(shadingShader.handle(), "uLightStrength");
+	const int lightRangeLoc = glGetUniformLocation(shadingShader.handle(), "uLightRange");
 
-	for (const PointLight& pointLight : mStaticScene->pointLights) {
+	for (const PointLight& pointLight : mImpl->statigPointLights) {
 		const vec3 lightPosVS = transformPoint(viewMatrix, pointLight.pos);
 		gl::setUniform(lightPosLoc, lightPosVS);
 		gl::setUniform(lightStrengthLoc, pointLight.strength);
 		gl::setUniform(lightRangeLoc, pointLight.range);
 
-		mFullscreenTriangle.render();
+		mImpl->fullscreenTriangle.render();
 	}
-	*/
+	
 	RenderResult tmp;
 	tmp.renderedRes = mTargetResolution;
 	return tmp;
@@ -262,7 +265,7 @@ void DeferredRenderer::targetResolutionUpdated() noexcept
 	using gl::FBTextureFormat;
 	using gl::FramebufferBuilder;
 
-	mImpl->GBuffer = FramebufferBuilder(mTargetResolution)
+	mImpl->gbuffer = FramebufferBuilder(mTargetResolution)
 	    .addDepthTexture(FBDepthFormat::F32, FBTextureFiltering::NEAREST)
 	    .addTexture(GBUFFER_NORMAL, FBTextureFormat::RGB_F16, FBTextureFiltering::LINEAR)
 	    .addTexture(GBUFFER_ALBEDO, FBTextureFormat::RGB_U8, FBTextureFiltering::LINEAR)

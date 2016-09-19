@@ -125,6 +125,9 @@ void main()
 	vec3 material = texture(uMaterialTexture, uvCoord).rgb; // Linear space
 	float roughness = material.r;
 	float metallic = material.g;
+	roughness = 0.5;
+	metallic = 0.0;
+	albedo = vec3(1.0);
 
 	// Lambert diffuse
 	vec3 diffuse = albedo / PI;
