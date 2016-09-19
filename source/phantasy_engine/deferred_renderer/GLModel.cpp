@@ -58,6 +58,16 @@ void GLModel::load(const RawMesh& mesh) noexcept
 	glEnableVertexAttribArray(2);
 	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, uv));
 
+	// Create and fill material id buffer
+	glGenBuffers(1, &mMaterialIdBuffer);
+	glBindBuffer(GL_ARRAY_BUFFER, mMaterialIdBuffer);
+	glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(mesh.materialIndices.size() * sizeof(uint16_t)),
+	             mesh.materialIndices.data(), GL_STATIC_DRAW);
+
+	// Locate indices in material id buffer
+	glEnableVertexAttribArray(3);
+	glVertexAttribPointer(3, 1, GL_UNSIGNED_SHORT, GL_FALSE, 0, 0);
+
 	// Create and fill index buffer
 	glGenBuffers(1, &mIndexBuffer);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mIndexBuffer);
@@ -75,6 +85,7 @@ void GLModel::destroy() noexcept
 {
 	// Silently ignores values == 0
 	glDeleteBuffers(1, &mVertexBuffer);
+	glDeleteBuffers(1, &mMaterialIdBuffer);
 	glDeleteBuffers(1, &mIndexBuffer);
 	glDeleteVertexArrays(1, &mVAO);
 	mVertexBuffer = 0;
@@ -87,6 +98,7 @@ void GLModel::swap(GLModel& other) noexcept
 {
 	std::swap(this->mVAO, other.mVAO);
 	std::swap(this->mVertexBuffer, other.mVertexBuffer);
+	std::swap(this->mMaterialIdBuffer, other.mMaterialIdBuffer);
 	std::swap(this->mIndexBuffer, other.mIndexBuffer);
 	std::swap(this->mNumIndices, other.mNumIndices);
 }

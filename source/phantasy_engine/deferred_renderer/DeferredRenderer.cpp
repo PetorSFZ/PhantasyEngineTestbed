@@ -25,6 +25,28 @@ static const uint32_t GBUFFER_NORMAL = 0;
 static const uint32_t GBUFFER_ALBEDO = 1;
 static const uint32_t GBUFFER_MATERIAL = 2;
 
+static void stupidSetMaterialUniforms(Program& shader, const char* uniformName,
+                                      const DynArray<Material>& materials)
+{
+	StackString tmpStr;
+	for (uint32_t i = 0; i < materials.size(); i++) {
+		tmpStr.printf("%s[%u].%s", uniformName, i, "albedoValue");
+		gl::setUniform(shader, tmpStr.str, materials[i].albedoValue);
+		tmpStr.printf("%s[%u].%s", uniformName, i, "albedoIndex");
+		gl::setUniform(shader, tmpStr.str, materials[i].albedoIndex);
+
+		tmpStr.printf("%s[%u].%s", uniformName, i, "roughnessValue");
+		gl::setUniform(shader, tmpStr.str, materials[i].roughnessValue);
+		tmpStr.printf("%s[%u].%s", uniformName, i, "roughnessIndex");
+		gl::setUniform(shader, tmpStr.str, materials[i].roughnessIndex);
+
+		tmpStr.printf("%s[%u].%s", uniformName, i, "metallicValue");
+		gl::setUniform(shader, tmpStr.str, materials[i].metallicValue);
+		tmpStr.printf("%s[%u].%s", uniformName, i, "metallicIndex");
+		gl::setUniform(shader, tmpStr.str, materials[i].metallicIndex);
+	}
+}
+
 // DeferredRendererImpl
 // ------------------------------------------------------------------------------------------------
 
@@ -90,7 +112,8 @@ DeferredRenderer::~DeferredRenderer() noexcept
 void DeferredRenderer::bakeMaterials(const DynArray<RawImage>& textures,
                                      const DynArray<Material>& materials) noexcept
 {
-	
+	glUseProgram(mImpl->gbufferGenShader.handle());
+	stupidSetMaterialUniforms(mImpl->gbufferGenShader, "uMaterials", materials);
 }
 
 void DeferredRenderer::addMaterial(RawImage& texture, Material& material) noexcept

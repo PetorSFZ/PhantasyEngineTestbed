@@ -48,6 +48,7 @@ private:
 
 	uint32_t mVAO = 0;
 	uint32_t mVertexBuffer = 0;
+	uint32_t mMaterialIdBuffer = 0;
 	uint32_t mIndexBuffer = 0;
 	uint32_t mNumIndices = 0;
 };

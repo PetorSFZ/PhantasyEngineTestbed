@@ -1,5 +1,25 @@
 #version 450
 
+// Material struct
+// ------------------------------------------------------------------------------------------------
+
+struct Material {
+	vec4 albedoValue;
+	uint albedoIndex;
+
+	float roughnessValue;
+	uint roughnessIndex;
+
+	float metallicValue;
+	uint metallicIndex;
+};
+
+struct ParsedMaterial {
+	vec4 albedo;
+	float roughness;
+	float metallic;
+};
+
 // Input, output and uniforms
 // ------------------------------------------------------------------------------------------------
 
@@ -24,6 +44,8 @@ uniform float uRoughnessValue = 0.0;
 uniform int uHasMetallicTexture = 0;
 uniform sampler2D uMetallicTexture;
 uniform float uMetallicValue = 0.0;
+
+uniform Material uMaterials[256];
 
 // Main
 // ------------------------------------------------------------------------------------------------
