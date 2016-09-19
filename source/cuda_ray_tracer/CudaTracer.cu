@@ -29,7 +29,6 @@ inline __device__ vec3 calculateRayDir(const CameraDef& cam, vec2 loc, vec2 surf
 {
 	vec2 locNormalized = loc / surfaceRes; // [0, 1]
 	vec2 centerOffsCoord = locNormalized * 2.0f - vec2(1.0f); // [-1.0, 1.0]
-	centerOffsCoord.y = -centerOffsCoord.y;
 	vec3 nonNormRayDir = cam.dir + cam.dX * centerOffsCoord.x + cam.dY * centerOffsCoord.y;
 	return normalize(nonNormRayDir);
 }
