@@ -84,7 +84,7 @@ mat4 perspectiveProjectionGL(float yFovDeg, float aspectRatio, float zNear, floa
 	return perspectiveProjectionGL(-xMax, -yMax, xMax, yMax, zNear, zFar);
 }
 
-// Projection matrices (D3D/Vulkan [0, 1] left-handed clip space, right handed view space)
+// Projection matrices (D3D/Vulkan [0, 1] left-handed clip space, GL view space)
 // ------------------------------------------------------------------------------------------------
 
 mat4 perspectiveProjectionVkD3d(float l, float b, float r, float t, float n, float f) noexcept
@@ -105,14 +105,51 @@ mat4 perspectiveProjectionVkD3d(float yFovDeg, float aspectRatio, float zNear, f
 	return perspectiveProjectionVkD3d(-xMax, -yMax, xMax, yMax, zNear, zFar);
 }
 
-mat4 reversePerspectiveProjectionVkD3d(float l, float b, float r, float t, float n, float f) noexcept
+
+mat4 reverseInfinitePerspectiveProjectionVkD3d(float l, float b, float r, float t, float n) noexcept
 {
-	return perspectiveProjectionVkD3d(l, b, r, t, f, n);
+	// Non infinite version, essentially:
+	// {1, 0, 0, 0}
+	// {0, 1, 0, 0}
+	// {0, 0, -1, 1}
+	// {0, 0, 1, 0}  * perspectiveProjectionVkD3d()
+	/*return mat4{
+		{(2.0f * n) / (r - l),  0.0f,                  (l + r) / (r - l),  0.0f},
+		{0.0f,                  (2.0f * n) / (t - b),  (t + b) / (t - b),  0.0f},
+		{0.0f,                  0.0f,                  (-f / (n - f)) - 1.0f,         -n * f / (n - f)},
+		{0.0f,                  0.0f,                  f / (n - f),               n * f / (n - f)}
+	};*/
+
+	// Same as above, but let f -> inf.
+	// http://www.geometry.caltech.edu/pubs/UD12.pdf
+	/*return mat4{
+		{(2.0f * n) / (r - l),  0.0f,                  (l + r) / (r - l),  0.0f},
+		{0.0f,                  (2.0f * n) / (t - b),  (t + b) / (t - b),  0.0f},
+		{0.0f,                  0.0f,                  0.0f,               n},
+		{0.0f,                  0.0f,                  -1.0f,              -n}
+	};*/
+
+	// {1, 0, 0, 0}
+	// {0, -1, 0, 0}
+	// {0, 0, 1, 0}
+	// {0, 0, 0, 1} * before
+	// In order to flip the screen vertically and make the result correct on OpenGL with
+	// glClipControl(GL_UPPER_LEFT, GL_ZERO_TO_ONE), also needs to change front face to clockwise,
+	// i.e. glFrontFace(GL_CW)
+	return mat4{
+		{(2.0f * n) / (r - l),  0.0f,                   (l + r) / (r - l),    0.0f},
+		{0.0f,                  (-2.0f * n) / (t - b),   -(t + b) / (t - b),  0.0f},
+		{0.0f,                  0.0f,                   0.0f,                 n},
+		{0.0f,                  0.0f,                   -1.0f,                -n}
+	};
 }
 
-mat4 reversePerspectiveProjectionVkD3d(float yFovDeg, float aspectRatio, float zNear, float zFar) noexcept
+mat4 reverseInfinitePerspectiveProjectionVkD3d(float yFovDeg, float aspect, float zNear) noexcept
 {
-	return perspectiveProjectionVkD3d(yFovDeg, aspectRatio, zFar, zNear);
+	float yFov = sfz::DEG_TO_RAD() * yFovDeg;
+	float yMax = std::tan(yFov * 0.5f) * zNear;
+	float xMax = yMax * aspect;
+	return reverseInfinitePerspectiveProjectionVkD3d(-xMax, -yMax, xMax, yMax, zNear);
 }
 
 } // namespace sfz

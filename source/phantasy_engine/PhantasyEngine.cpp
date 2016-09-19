@@ -125,6 +125,7 @@ void PhantasyEngine::init(const char* projectName, const char* iniBasePath, cons
 		sfz::error("OpenGL error: ARB_clip_control not available");
 	}
 	glClipControl(GL_UPPER_LEFT, GL_ZERO_TO_ONE);
+	glFrontFace(GL_CW); // Changes to D3D standard where we use clock wise winding order for front face
 
 	// Make sure selected display index is valid
 	const int numDisplays = SDL_GetNumVideoDisplays();

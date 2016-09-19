@@ -154,7 +154,6 @@ void GameScreen::render(UpdateState& state)
 	RenderResult res = renderer->render(mResultFB);
 
 	glDisable(GL_BLEND);
-	glCullFace(GL_BACK);
 	glEnable(GL_CULL_FACE);
 	glDisable(GL_DEPTH_TEST);
 	glActiveTexture(GL_TEXTURE0);

@@ -23,7 +23,7 @@ FullscreenTriangle::FullscreenTriangle() noexcept
 		2.0f, 0.0f, // bottom-right UV
 	};
 	const unsigned int indices[] = {
-		2, 1, 0
+		0, 1, 2
 	};
 
 	// Buffer objects

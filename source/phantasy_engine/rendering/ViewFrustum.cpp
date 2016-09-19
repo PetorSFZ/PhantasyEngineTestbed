@@ -139,7 +139,7 @@ void ViewFrustum::update() noexcept
 void ViewFrustum::updateMatrices() noexcept
 {
 	mViewMatrix = viewMatrixGL(mPos, mDir, mUp);
-	mProjMatrix = reversePerspectiveProjectionVkD3d(mVerticalFovDeg, mAspectRatio, mNear, mFar);
+	mProjMatrix = reverseInfinitePerspectiveProjectionVkD3d(mVerticalFovDeg, mAspectRatio, mNear);
 }
 
 void ViewFrustum::updatePlanes() noexcept
