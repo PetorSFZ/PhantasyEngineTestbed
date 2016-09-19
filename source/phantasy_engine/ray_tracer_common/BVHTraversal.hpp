@@ -24,6 +24,14 @@ struct RayCastResult final {
 	float v = FLT_MAX;
 };
 
+struct DebugRayCastData final {
+	uint32_t nodesVisited = 0;
+	uint32_t trianglesIntersected = 0;
+	uint32_t triangleIntersectionTests = 0;
+	uint32_t aabbIntersectionTests = 0;
+	uint32_t aabbIntersections = 0;
+};
+
 template<size_t STACK_MAX_SIZE = 144>
 SFZ_CUDA_CALLABLE RayCastResult castRay(const BVHNode* nodes, const TriangleVertices* triangles,
                                         const Ray& ray, float tMin = 0.0001f, float tMax = FLT_MAX) noexcept
@@ -71,6 +79,78 @@ SFZ_CUDA_CALLABLE RayCastResult castRay(const BVHNode* nodes, const TriangleVert
 				TriangleHit hit = intersects(tri, ray.origin, ray.dir);
 
 				if (hit.hit && hit.t < closest.t && tMin <= hit.t && hit.t <= tMax) {
+					closest.triangleIndex = (triList - triangles) + i;
+					closest.t = hit.t;
+					closest.u = hit.u;
+					closest.v = hit.v;
+
+					// Possible early exit
+					// if (hit.t == tMin) return closest;
+				}
+			}
+		}
+	}
+
+	return closest;
+}
+
+/// Version of castRay that stores additional data about the traversal
+template <size_t STACK_MAX_SIZE = 144>
+SFZ_CUDA_CALLABLE RayCastResult castDebugRay(const BVHNode* nodes, const TriangleVertices* triangles,
+                                             const Ray& ray, DebugRayCastData* debugData,
+                                             float tMin = 0.0001f, float tMax = FLT_MAX) noexcept
+{
+	sfz_assert_debug(debugData != nullptr);
+
+	// Create local stack
+	uint32_t stack[STACK_MAX_SIZE];
+#ifndef SFZ_NO_DEBUG
+	for (uint32_t& s : stack) s = ~0u;
+#endif
+
+	// Place initial node on stack
+	stack[0] = 0u;
+	uint32_t stackSize = 1u;
+
+	// Traverse through the tree
+	RayCastResult closest;
+	while (stackSize > 0u) {
+
+		// Retrieve node on top of stack
+		stackSize--;
+		const BVHNode& node = nodes[stack[stackSize]];
+
+		debugData->nodesVisited++;
+
+		// Node is a not leaf
+		if (!node.isLeaf()) {
+
+			float tCurrMax = std::min(tMax, closest.t);
+			AABBHit hit = intersects(ray, node.min, node.max);
+			debugData->aabbIntersectionTests++;
+			if (hit.hit &&
+				hit.tOut > tMin &&
+				hit.tIn < tCurrMax) {
+				debugData->aabbIntersections++;
+
+				stack[stackSize] = node.rightChildIndex();
+				stack[stackSize + 1] = node.leftChildIndex();
+				stackSize += 2;
+			}
+		}
+		// Node is a leaf
+		else {
+			uint32_t triCount = node.numTriangles();
+			const TriangleVertices* triList = triangles + node.triangleListIndex();
+
+			for (uint32_t i = 0; i < triCount; i++) {
+				const TriangleVertices& tri = triList[i];
+				TriangleHit hit = intersects(tri, ray.origin, ray.dir);
+				debugData->triangleIntersectionTests++;
+
+				if (hit.hit && hit.t < closest.t && tMin <= hit.t && hit.t <= tMax) {
+					debugData->trianglesIntersected++;
+
 					closest.triangleIndex = (triList - triangles) + i;
 					closest.t = hit.t;
 					closest.u = hit.u;
