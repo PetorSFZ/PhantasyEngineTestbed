@@ -22,7 +22,12 @@
 
 namespace sfz {
 
-// Projection matrices (Standard OpenGL [-1, 1] right-handed clip space, right-handed view space)
+// GL View matrix (OGL right-handed, negative z into screen, positive x to the right)
+// ------------------------------------------------------------------------------------------------
+
+mat4 viewMatrixGL(const vec3& origin, const vec3& dir, const vec3& up) noexcept;
+
+// Projection matrices (Standard OpenGL [-1, 1] right-handed clip space, GL view space)
 // ------------------------------------------------------------------------------------------------
 
 mat4 orthogonalProjectionGL(float left, float bottom, float right, float top,

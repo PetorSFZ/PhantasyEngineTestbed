@@ -138,7 +138,7 @@ void ViewFrustum::update() noexcept
 
 void ViewFrustum::updateMatrices() noexcept
 {
-	mViewMatrix = lookAt(mPos, mPos + mDir, mUp);
+	mViewMatrix = viewMatrixGL(mPos, mDir, mUp);
 	mProjMatrix = reversePerspectiveProjectionVkD3d(mVerticalFovDeg, mAspectRatio, mNear, mFar);
 }
 

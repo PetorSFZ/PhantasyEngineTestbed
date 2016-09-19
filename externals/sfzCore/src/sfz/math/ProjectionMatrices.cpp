@@ -20,7 +20,24 @@
 
 namespace sfz {
 
-// Projection matrices (Standard OpenGL [-1, 1] clip space)
+// GL View matrix (OGL right-handed, negative z into screen, positive x to the right)
+// ------------------------------------------------------------------------------------------------
+
+mat4 viewMatrixGL(const vec3& origin, const vec3& dir, const vec3& up) noexcept
+{
+	vec3 zAxis = -normalize(dir); // Away from screen
+	vec3 xAxis = normalize(cross(up, zAxis)); // To the right
+	vec3 yAxis = cross(zAxis, xAxis); // Up
+
+	return mat4{
+		{xAxis.x, xAxis.y, xAxis.z, -dot(xAxis, origin)},
+		{yAxis.x, yAxis.y, yAxis.z, -dot(yAxis, origin)},
+		{zAxis.x, zAxis.y, zAxis.z, -dot(zAxis, origin)},
+		{0.0f,    0.0f,    0.0f,    1.0f}
+	};
+}
+
+// Projection matrices (Standard OpenGL [-1, 1] right-handed clip space, GL view space)
 // ------------------------------------------------------------------------------------------------
 
 mat4 orthogonalProjectionGL(float l, float b, float r, float t, float n, float f) noexcept
