@@ -11,13 +11,13 @@ namespace phe {
 
 struct TraversalMetrics
 {
-	uint32_t maxVisitedNodes;
+	uint32_t maxNodesVisited;
 	uint32_t maxTriangleIntersectionTests;
 	uint32_t maxTrianglesIntersected;
 	uint32_t maxAABBIntersectionTests;
 	uint32_t maxAABBIntersections;
 
-	float averageVisitedNodes;
+	float averageNodesVisited;
 	float averageTriangleIntersectionTests;
 	float averageTrianglesIntersected;
 	float averageAABBIntersectionTests;

@@ -4,6 +4,7 @@
 
 #include <sfz/math/MathHelpers.hpp>
 
+#include "phantasy_engine/ray_tracer_common/BVHTraversal.hpp"
 #include "phantasy_engine/ray_tracer_common/Intersection.hpp"
 
 namespace phe {
@@ -20,18 +21,6 @@ struct InternalBVHMetrics
 	double totalOverlapVolumeProportion;
 };
 
-struct TestRayCastResult
-{
-	float t = FLT_MAX;
-
-	// Store additional data for computing metrics
-	uint32_t visitedNodes = 0;
-	uint32_t trianglesIntersected = 0;
-	uint32_t triangleIntersectionTests = 0;
-	uint32_t aabbIntersectionTests = 0;
-	uint32_t aabbIntersections = 0;
-};
-
 // Forward declarations
 // ------------------------------------------------------------------------------------------------
 
@@ -39,9 +28,6 @@ static void processNode(const BVH& bvh, uint32_t nodeIndex, uint32_t depth, BVHM
                         InternalBVHMetrics& internalMetrics) noexcept;
 
 static void computeTraversalMetrics(BVHMetrics& metrics, const BVH& bvh) noexcept;
-
-static TestRayCastResult castTestRay(const BVH& bvh, const Ray& ray,
-                                     float tMin = 0.0001f, float tMax = FLT_MAX) noexcept;
 
 static float surfaceArea(const sfz::AABB& aabb) noexcept;
 
@@ -124,13 +110,13 @@ averageLeftSAProportion: %f
 averageRightSAProportion: %f
 
 Traversal metrics:
-    maxVisitedNodes: %u
+    maxNodesVisited: %u
     maxTriangleIntersectionTests: %u
     maxTrianglesIntersected: %u
     maxAABBIntersectionTests: %u
     maxAABBIntersections: %u
 
-    averageVisitedNodes: %f
+    averageNodesVisited: %f
     averageTriangleIntersectionTests: %f
     averageTrianglesIntersected: %f
     averageAABBIntersectionTests: %f
@@ -150,12 +136,12 @@ Traversal metrics:
 	       metrics.averageChildOverlapVolumeProportion,
 	       metrics.averageLeftSAProportion,
 	       metrics.averageRightSAProportion,
-	       metrics.traversalMetrics.maxVisitedNodes,
+	       metrics.traversalMetrics.maxNodesVisited,
 	       metrics.traversalMetrics.maxTriangleIntersectionTests,
 	       metrics.traversalMetrics.maxTrianglesIntersected,
 	       metrics.traversalMetrics.maxAABBIntersectionTests,
 	       metrics.traversalMetrics.maxAABBIntersections,
-	       metrics.traversalMetrics.averageVisitedNodes,
+	       metrics.traversalMetrics.averageNodesVisited,
 	       metrics.traversalMetrics.averageTriangleIntersectionTests,
 	       metrics.traversalMetrics.averageTrianglesIntersected,
 	       metrics.traversalMetrics.averageAABBIntersectionTests,
@@ -208,7 +194,7 @@ static void computeTraversalMetrics(BVHMetrics& metrics, const BVH& bvh) noexcep
 
 	// Initialize result members
 
-	traversalMetrics.maxVisitedNodes = 0;
+	traversalMetrics.maxNodesVisited = 0;
 	traversalMetrics.maxTriangleIntersectionTests = 0;
 	traversalMetrics.maxTrianglesIntersected = 0;
 	traversalMetrics.maxAABBIntersectionTests = 0;
@@ -231,90 +217,34 @@ static void computeTraversalMetrics(BVHMetrics& metrics, const BVH& bvh) noexcep
 	};
 	static const size_t sampleRayCount = sizeof(SAMPLE_RAYS) / sizeof(Ray);
 
-	uint64_t totalVisitedNodes = 0;
+	uint64_t totalNodesVisited = 0;
 	uint64_t totalTriangleIntersectionTests = 0;
 	uint64_t totalTrianglesIntersected = 0;
 	uint64_t totalAABBIntersectionTests = 0;
 	uint64_t totalAABBIntersections = 0;
 
 	for (const auto& ray : SAMPLE_RAYS) {
-		TestRayCastResult rayResult = castTestRay(bvh, ray);
+		DebugRayCastData debugData;
+		RayCastResult rayResult = castDebugRay(bvh.nodes.data(), bvh.triangles.data(), ray, &debugData);
 
-		updateMax(traversalMetrics.maxVisitedNodes, rayResult.visitedNodes);
-		updateMax(traversalMetrics.maxTriangleIntersectionTests, rayResult.triangleIntersectionTests);
-		updateMax(traversalMetrics.maxTrianglesIntersected, rayResult.trianglesIntersected);
-		updateMax(traversalMetrics.maxAABBIntersectionTests, rayResult.aabbIntersectionTests);
-		updateMax(traversalMetrics.maxAABBIntersections, rayResult.aabbIntersections);
+		updateMax(traversalMetrics.maxNodesVisited, debugData.nodesVisited);
+		updateMax(traversalMetrics.maxTriangleIntersectionTests, debugData.triangleIntersectionTests);
+		updateMax(traversalMetrics.maxTrianglesIntersected, debugData.trianglesIntersected);
+		updateMax(traversalMetrics.maxAABBIntersectionTests, debugData.aabbIntersectionTests);
+		updateMax(traversalMetrics.maxAABBIntersections, debugData.aabbIntersections);
 
-		totalVisitedNodes += rayResult.visitedNodes;
-		totalTriangleIntersectionTests += rayResult.triangleIntersectionTests;
-		totalTrianglesIntersected += rayResult.trianglesIntersected;
-		totalAABBIntersectionTests += rayResult.aabbIntersectionTests;
-		totalAABBIntersections += rayResult.aabbIntersections;
+		totalNodesVisited += debugData.nodesVisited;
+		totalTriangleIntersectionTests += debugData.triangleIntersectionTests;
+		totalTrianglesIntersected += debugData.trianglesIntersected;
+		totalAABBIntersectionTests += debugData.aabbIntersectionTests;
+		totalAABBIntersections += debugData.aabbIntersections;
 	}
 
-	traversalMetrics.averageVisitedNodes = float(totalVisitedNodes) / float(sampleRayCount);
+	traversalMetrics.averageNodesVisited = float(totalNodesVisited) / float(sampleRayCount);
 	traversalMetrics.averageTriangleIntersectionTests = float(totalTriangleIntersectionTests) / float(sampleRayCount);
 	traversalMetrics.averageTrianglesIntersected = float(totalTrianglesIntersected) / float(sampleRayCount);
 	traversalMetrics.averageAABBIntersectionTests = float(totalAABBIntersectionTests) / float(sampleRayCount);
 	traversalMetrics.averageAABBIntersections = float(totalAABBIntersections) / float(sampleRayCount);
-}
-
-/// Version of castRay that stores additional data about the traversal
-static TestRayCastResult castTestRay(const BVH& bvh, const Ray& ray,
-                                     float tMin, float tMax) noexcept
-{
-	// Create local stack
-	DynArray<uint32_t> stack;
-	stack.setCapacity(bvh.maxDepth);
-
-	// Place initial node on stack
-	stack.add(0);
-
-	// Traverse through the tree
-	TestRayCastResult result;
-	while (stack.size() > 0) {
-
-		// Retrieve node on top of stack
-		const BVHNode& node = bvh.nodes[stack.last()];
-		stack.remove(stack.size() - 1);
-		result.visitedNodes++;
-
-		// Process inner node
-		if (!node.isLeaf()) {
-			float tCurrMax = std::min(tMax, result.t);
-			AABBHit hit = intersects(ray, node.min, node.max);
-			result.aabbIntersectionTests++;
-
-			if (hit.hit &&
-				hit.tOut > tMin &&
-				hit.tIn < tCurrMax) {
-
-				result.aabbIntersections++;
-
-				stack.add(node.rightChildIndex());
-				stack.add(node.leftChildIndex());
-			}
-		}
-		// Process leaf node
-		else {
-			uint32_t triCount = node.numTriangles();
-			const TriangleVertices* triList = bvh.triangles.data() + node.triangleListIndex();
-
-			for (uint32_t i = 0; i < triCount; i++) {
-				const TriangleVertices& tri = triList[i];
-				TriangleHit hit = intersects(tri, ray.origin, ray.dir);
-				result.triangleIntersectionTests++;
-
-				if (hit.hit && hit.t < result.t && tMin <= hit.t && hit.t <= tMax) {
-					result.trianglesIntersected++;
-					result.t = hit.t;
-				}
-			}
-		}
-	}
-
-	return result;
 }
 
 static float surfaceArea(const sfz::AABB& aabb) noexcept
