@@ -90,8 +90,8 @@ mat4 perspectiveProjectionGL(float yFovDeg, float aspectRatio, float zNear, floa
 mat4 perspectiveProjectionVkD3d(float l, float b, float r, float t, float n, float f) noexcept
 {
 	return mat4{
-		{(2.0f * n) / (r - l),  0.0f,                  -(r + l) / (r - l),  0.0f},
-		{0.0f,                  (2.0f * n) / (t - b),  -(t + b) / (t - b),  0.0f},
+		{(2.0f * n) / (r - l),  0.0f,                  (l + r) / (r - l),  0.0f},
+		{0.0f,                  (2.0f * n) / (t - b),  (t + b) / (t - b),  0.0f},
 		{0.0f,                  0.0f,                  f / (n - f),         n * f / (n - f)},
 		{0.0f,                  0.0f,                  -1.0f,               0.0f}
 	};
@@ -99,7 +99,8 @@ mat4 perspectiveProjectionVkD3d(float l, float b, float r, float t, float n, flo
 
 mat4 perspectiveProjectionVkD3d(float yFovDeg, float aspectRatio, float zNear, float zFar) noexcept
 {
-	float yMax = zNear * std::tan(yFovDeg * (PI() / 360.f));
+	float yFov = sfz::DEG_TO_RAD() * yFovDeg;
+	float yMax = std::tan(yFov * 0.5f) * zNear;
 	float xMax = yMax * aspectRatio;
 	return perspectiveProjectionVkD3d(-xMax, -yMax, xMax, yMax, zNear, zFar);
 }
