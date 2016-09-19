@@ -16,7 +16,7 @@ using namespace sfz;
 inline __device__ vec4 readTexture(cudaTextureObject_t texture, vec2 coord) noexcept
 {
 	uchar4 res = tex2D<uchar4>(texture, coord.x, coord.y);
-	return vec4(float(res.x), float(res.y), float(res.z), float(res.w)) / 256.0f;
+	return vec4(float(res.x), float(res.y), float(res.z), float(res.w)) / 255.0f;
 }
 
 inline __device__ void writeSurface(const cudaSurfaceObject_t& surface, vec2i loc, const vec4& data) noexcept
