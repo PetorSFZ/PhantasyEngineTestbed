@@ -13,6 +13,7 @@
 #include <cuda_gl_interop.h>
 #include <cuda_runtime.h>
 
+#include <phantasy_engine/config/GlobalConfig.hpp>
 #include <phantasy_engine/RayTracerCommon.hpp>
 #include <phantasy_engine/rendering/FullscreenTriangle.hpp>
 
@@ -42,6 +43,8 @@ public:
 	DynArray<CudaBindlessTexture> textureWrappers;
 	DynArray<cudaTextureObject_t> textureObjectHandles;
 	CudaTracerParams tracerParams;
+
+	Setting* mCudaDebugRender = nullptr;
 
 	CudaTracerRendererImpl() noexcept
 	{
@@ -81,6 +84,9 @@ CudaTracerRenderer::CudaTracerRenderer() noexcept
 	mImpl->transferShader = gl::Program::postProcessFromFile(shadersPath.str, "transfer.frag");
 	glUseProgram(mImpl->transferShader.handle());
 	gl::setUniform(mImpl->transferShader, "uSrcTexture", 0);
+
+	GlobalConfig& cfg = GlobalConfig::instance();
+	mImpl->mCudaDebugRender = cfg.sanitizeBool("CudaTracer", "cudaDebugRender", false);
 }
 
 CudaTracerRenderer::~CudaTracerRenderer() noexcept
@@ -182,7 +188,11 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB) noexcept
 	                                            mMatrices.vertFovRad, resultRes);
 
 	// Run CUDA ray tracer
-	runCudaRayTracer(mImpl->tracerParams);
+	if (!mImpl->mCudaDebugRender->boolValue()) {
+		runCudaRayTracer(mImpl->tracerParams);
+	} else {
+		runCudaDebugRayTracer(mImpl->tracerParams);
+	}
 	
 	// Transfer result from Cuda texture to result framebuffer
 	glUseProgram(mImpl->transferShader.handle());

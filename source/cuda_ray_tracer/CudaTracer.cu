@@ -71,10 +71,54 @@ void runCudaRayTracer(const CudaTracerParams& params) noexcept
 	// Calculate number of threads and blocks to run
 	dim3 threadsPerBlock(8, 8);
 	dim3 numBlocks((surfaceRes.x + threadsPerBlock.x - 1) / threadsPerBlock.x,
-	               (surfaceRes.y + threadsPerBlock.y  - 1) / threadsPerBlock.y);
+	               (surfaceRes.y + threadsPerBlock.y - 1) / threadsPerBlock.y);
 
 	// Run cuda ray tracer kernel
 	cudaRayTracerKernel<<<numBlocks, threadsPerBlock>>>(params);
+	CHECK_CUDA_ERROR(cudaGetLastError());
+	CHECK_CUDA_ERROR(cudaDeviceSynchronize());
+}
+
+// Debug versions of tracing functions
+// ------------------------------------------------------------------------------------------------
+
+__global__ void cudaDebugRayTracerKernel(CudaTracerParams params)
+{
+	// Calculate surface coordinates
+	vec2i loc = vec2i(blockIdx.x * blockDim.x + threadIdx.x,
+	                  blockIdx.y * blockDim.y + threadIdx.y);
+	if (loc.x >= params.targetRes.x || loc.y >= params.targetRes.y) return;
+
+	// Calculate ray direction
+	vec3 rayDir = calculateRayDir(params.cam, vec2(loc), vec2(params.targetRes));
+	Ray ray(params.cam.origin, rayDir);
+
+	// Ray cast against BVH
+	DebugRayCastData debugData;
+	RayCastResult hit = castDebugRay(params.staticBvhNodes, params.staticTriangleVertices, ray, &debugData);
+
+	const float NODES_VISITED_CUTOFF = 600.0f;
+	const vec3 WHITE(1.0f);
+	const vec3 RED(1.0f, 0.0f, 0.0f);
+
+	// Set color according to the number of nodes needed to be visited, so red marks an area which
+	// takes longer to trace.
+	vec3 color = sfz::lerp(WHITE, RED, float(debugData.nodesVisited) / NODES_VISITED_CUTOFF);
+
+	writeSurface(params.targetSurface, loc, vec4(color, 1.0));
+}
+
+void runCudaDebugRayTracer(const CudaTracerParams& params) noexcept
+{
+	vec2i surfaceRes = params.targetRes;
+
+	// Calculate number of threads and blocks to run
+	dim3 threadsPerBlock(8, 8);
+	dim3 numBlocks((surfaceRes.x + threadsPerBlock.x - 1) / threadsPerBlock.x,
+	               (surfaceRes.y + threadsPerBlock.y - 1) / threadsPerBlock.y);
+
+	// Run cuda ray tracer kernel
+	cudaDebugRayTracerKernel<<<numBlocks, threadsPerBlock>>>(params);
 	CHECK_CUDA_ERROR(cudaGetLastError());
 	CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 }

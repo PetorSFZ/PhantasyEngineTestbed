@@ -42,4 +42,6 @@ struct CudaTracerParams final {
 
 void runCudaRayTracer(const CudaTracerParams& params) noexcept;
 
+void runCudaDebugRayTracer(const CudaTracerParams& params) noexcept;
+
 } // namespace phe
