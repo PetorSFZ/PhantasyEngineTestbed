@@ -66,7 +66,7 @@ void GLModel::load(const RawMesh& mesh) noexcept
 
 	// Locate indices in material id buffer
 	glEnableVertexAttribArray(3);
-	glVertexAttribPointer(3, 1, GL_UNSIGNED_SHORT, GL_FALSE, 0, 0);
+	glVertexAttribIPointer(3, 1, GL_UNSIGNED_SHORT, 0, 0);
 
 	// Create and fill index buffer
 	glGenBuffers(1, &mIndexBuffer);
@@ -89,6 +89,7 @@ void GLModel::destroy() noexcept
 	glDeleteBuffers(1, &mIndexBuffer);
 	glDeleteVertexArrays(1, &mVAO);
 	mVertexBuffer = 0;
+	mMaterialIdBuffer = 0;
 	mIndexBuffer = 0;
 	mVAO = 0;
 	mNumIndices = 0;

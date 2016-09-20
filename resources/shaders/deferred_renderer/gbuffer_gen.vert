@@ -7,10 +7,12 @@
 in vec3 inPosition;
 in vec3 inNormal;
 in vec2 inUV;
+in uint inMaterialId;
 
 // Output
 out vec3 normal;
 out vec2 uv;
+flat out uint materialId;
 
 // Uniforms
 uniform mat4 uProjMatrix;
@@ -26,4 +28,5 @@ void main()
 	gl_Position = uProjMatrix * uViewMatrix * uModelMatrix * vec4(inPosition, 1.0);
 	normal = (uNormalMatrix * vec4(inNormal, 0.0)).xyz;
 	uv = inUV;
+	materialId = inMaterialId;
 }

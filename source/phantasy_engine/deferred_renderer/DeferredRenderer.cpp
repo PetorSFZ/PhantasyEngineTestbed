@@ -33,17 +33,20 @@ static void stupidSetMaterialUniforms(Program& shader, const char* uniformName,
 		tmpStr.printf("%s[%u].%s", uniformName, i, "albedoValue");
 		gl::setUniform(shader, tmpStr.str, materials[i].albedoValue);
 		tmpStr.printf("%s[%u].%s", uniformName, i, "albedoIndex");
-		gl::setUniform(shader, tmpStr.str, materials[i].albedoIndex);
+		int32_t albedoIndex = (materials[i].albedoIndex == ~0u) ? int32_t(-1) : int32_t(materials[i].albedoIndex);
+		gl::setUniform(shader, tmpStr.str, albedoIndex);
 
 		tmpStr.printf("%s[%u].%s", uniformName, i, "roughnessValue");
 		gl::setUniform(shader, tmpStr.str, materials[i].roughnessValue);
 		tmpStr.printf("%s[%u].%s", uniformName, i, "roughnessIndex");
-		gl::setUniform(shader, tmpStr.str, materials[i].roughnessIndex);
+		int32_t roughnessIndex = (materials[i].roughnessIndex == ~0u) ? int32_t(-1) : int32_t(materials[i].roughnessIndex);
+		gl::setUniform(shader, tmpStr.str, roughnessIndex);
 
 		tmpStr.printf("%s[%u].%s", uniformName, i, "metallicValue");
 		gl::setUniform(shader, tmpStr.str, materials[i].metallicValue);
 		tmpStr.printf("%s[%u].%s", uniformName, i, "metallicIndex");
-		gl::setUniform(shader, tmpStr.str, materials[i].metallicIndex);
+		int32_t metallicIndex = (materials[i].metallicIndex == ~0u) ? int32_t(-1) : int32_t(materials[i].metallicIndex);
+		gl::setUniform(shader, tmpStr.str, metallicIndex);
 	}
 }
 
@@ -85,6 +88,7 @@ DeferredRenderer::DeferredRenderer() noexcept
 		glBindAttribLocation(shaderProgram, 0, "inPosition");
 		glBindAttribLocation(shaderProgram, 1, "inNormal");
 		glBindAttribLocation(shaderProgram, 2, "inUV");
+		glBindAttribLocation(shaderProgram, 3, "inMaterialId");
 	});
 
 	mImpl->shadingShader = Program::postProcessFromFile(shadersPath.str, "shading.frag");
@@ -112,6 +116,7 @@ DeferredRenderer::~DeferredRenderer() noexcept
 void DeferredRenderer::bakeMaterials(const DynArray<RawImage>& textures,
                                      const DynArray<Material>& materials) noexcept
 {
+	sfz_assert_debug(materials.size() <= 512);
 	glUseProgram(mImpl->gbufferGenShader.handle());
 	stupidSetMaterialUniforms(mImpl->gbufferGenShader, "uMaterials", materials);
 }
@@ -179,6 +184,7 @@ RenderResult DeferredRenderer::render(Framebuffer& resultFB) noexcept
 	const int metallicValueLoc = glGetUniformLocation(gbufferGenShader.handle(), "uMetallicValue");
 
 	for (const GLModel& model : mImpl->staticGLModels) {
+		
 		
 
 		model.draw();
