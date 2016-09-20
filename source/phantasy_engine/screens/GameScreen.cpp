@@ -27,7 +27,7 @@ GameScreen::GameScreen(SharedPtr<GameLogic> gameLogicIn, SharedPtr<Level> levelI
 {
 	auto& cfg = GlobalConfig::instance();
 
-	cam = ViewFrustum(vec3(0.0f, 3.0f, -6.0f), normalize(vec3(0.0f, -0.25f, 1.0f)),
+	cam = ViewFrustum(vec3(0.0f, 3.0f, -6.0f), normalize(vec3(1.0f, -0.25f, 0.0f)),
 	                  normalize(vec3(0.0f, 1.0f, 0.0)), 60.0f, 1.0f, 0.01f, 10000.0f);
 	
 	// Load shaders
