@@ -46,6 +46,8 @@ public:
 
 	Setting* mCudaDebugRender = nullptr;
 
+	CameraDef lastCamera;
+
 	CudaTracerRendererImpl() noexcept
 	{
 		
@@ -81,7 +83,7 @@ CudaTracerRenderer::CudaTracerRenderer() noexcept
 
 	StackString128 shadersPath;
 	shadersPath.printf("%sresources/shaders/", basePath());
-	mImpl->transferShader = gl::Program::postProcessFromFile(shadersPath.str, "transfer.frag");
+	mImpl->transferShader = gl::Program::postProcessFromFile(shadersPath.str, "cuda_transfer.frag");
 	glUseProgram(mImpl->transferShader.handle());
 	gl::setUniform(mImpl->transferShader, "uSrcTexture", 0);
 
@@ -187,15 +189,30 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB) noexcept
 	mImpl->tracerParams.cam = generateCameraDef(mMatrices.position, mMatrices.forward, mMatrices.up,
 	                                            mMatrices.vertFovRad, resultRes);
 
+	CudaTracerParams& params = mImpl->tracerParams;
+
+	// Check if camera has moved. If so, forget accumulated color.
+	if (mImpl->lastCamera.origin != params.cam.origin ||
+	    mImpl->lastCamera.dir != params.cam.dir) {
+		clearSurface(params.targetSurface, params.targetRes, vec4(0.0f));
+		params.frameCount = 0;
+
+		mImpl->lastCamera = params.cam;
+	}
+	params.frameCount++;
+
 	// Run CUDA ray tracer
-	if (!mImpl->mCudaDebugRender->boolValue()) {
-		runCudaRayTracer(mImpl->tracerParams);
+	bool cudaDebugRender = mImpl->mCudaDebugRender->boolValue();
+	if (!cudaDebugRender) {
+		runCudaRayTracer(params);
 	} else {
-		runCudaDebugRayTracer(mImpl->tracerParams);
+		runCudaDebugRayTracer(params);
 	}
 	
 	// Transfer result from Cuda texture to result framebuffer
 	glUseProgram(mImpl->transferShader.handle());
+	gl::setUniform(mImpl->transferShader, "uAccumulationPasses", !cudaDebugRender ? float(params.frameCount) : 1.0f);
+
 	resultFB.bindViewportClearColorDepth(vec4(0.0f, 0.0f, 0.0f, 0.0f), 0.0f);
 
 	glActiveTexture(GL_TEXTURE0);

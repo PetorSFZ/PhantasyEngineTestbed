@@ -37,8 +37,11 @@ struct CudaTracerParams final {
 	PointLight* staticPointLights = nullptr;
 	uint32_t numStaticPointLights = ~0u;
 
+	uint32_t frameCount = 0;
 	// TODO: Dynamic geometry & dynamic light sources
 };
+
+void clearSurface(const cudaSurfaceObject_t& surface, const vec2i& targetRes, const vec4& color);
 
 void runCudaRayTracer(const CudaTracerParams& params) noexcept;
 
