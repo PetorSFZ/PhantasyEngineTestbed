@@ -2,6 +2,8 @@
 
 #pragma once
 
+#include <cfloat>
+
 #include <sfz/CUDACallable.hpp>
 
 #include "phantasy_engine/ray_tracer_common/BVHNode.hpp"
