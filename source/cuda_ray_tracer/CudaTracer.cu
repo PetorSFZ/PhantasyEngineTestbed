@@ -2,10 +2,13 @@
 
 #include "CudaTracer.cuh"
 
-#include <math.h>
+#include "cuda.h"
+#include "cuda_runtime.h"
+#include "device_launch_parameters.h"
 
 #include <sfz/math/Vector.hpp>
 
+#include "BVHTraversal.cuh"
 #include "CudaHelpers.hpp"
 #include "CudaSfzVectorCompatibility.cuh"
 
@@ -85,7 +88,7 @@ __global__ void cudaRayTracerKernel(CudaTracerParams params)
 
 	const uint32_t PATH_LENGTH = 2;
 	for (int pathDepth = 0; pathDepth < PATH_LENGTH; pathDepth++) {
-		RayCastResult hit = castRay(params.staticBvhNodes, params.staticTriangleVertices, ray);
+		RayCastResult hit = cudaCastRay(params.staticBvhNodes, params.staticTriangleVertices, ray);
 		if (hit.triangleIndex == ~0u) {
 			break;
 		}
