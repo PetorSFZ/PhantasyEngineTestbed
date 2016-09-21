@@ -8,76 +8,126 @@
 namespace phe {
 
 using sfz::vec3;
+using sfz::vec4;
+using sfz::vec4u;
 
 // BVHNode
 // ------------------------------------------------------------------------------------------------
 
-// Based on the BVH created for https://www.thanassis.space/cudarenderer-BVH.html
-// https://github.com/ttsiodras/renderer-cuda/blob/master/src/BVH.h
-
-struct BVHNode final {
-
-	// Members
+struct BVHNode {
+	
+	// Data (You are not meant to access these directly, use the getters and setters!)
 	// --------------------------------------------------------------------------------------------
 
-	// AABB
-	vec3 min;
-	vec3 max;
-	
-	// The first bit (most significant bit in indices[0]) is set if this node is a leaf.
-	// This node is not a leaf: indices[0] contains index of left child, indices[1] of right
-	// This node is a leaf: indices[0] (after masking away msb) contains number of triangles,
-	// indices[1] is index to first triangle in list
-	uint32_t indices[2];
+	// fData contains the following (lc == left child, rc == right child):
+	// [lc.aabbMin.x, lc.aabbMin.y, lc.aabbMin.z, lc.aabbMax.x]
+	// [lc.aabbMax.y, lc.aabbMax.z, rc.aabbMin.x, rc.aabbMin.y]
+	// [rc.aabbMin.z, rc.aabbMax.x, rc.aabbMax.y, rc.aabbMax.z]
+	vec4 fData[3];
+
+	// iData contains the following:
+	// [lcIndex, rcIndex, lcNumTriangles, rcNumTriangles]
+	// In an inner node lcIndex and rcIndex are the indices of the children inner nodes. In a
+	// leaf node they are indices to the first triangles.
+	// lcNumTriangles and rcNumTriangles are 0 in inner nodes, in leaf nodes they tell the number
+	// of triangles pointed to by the leaf node 
+	vec4u iData;
 
 	// Getters
 	// --------------------------------------------------------------------------------------------
 
+	SFZ_CUDA_CALLABLE vec3 leftChildAABBMin() const noexcept
+	{ 
+		return fData[0].xyz;
+	}
+
+	SFZ_CUDA_CALLABLE vec3 leftChildAABBMax() const noexcept
+	{
+		return vec3(fData[0].w, fData[1].xy);
+	}
+
+	SFZ_CUDA_CALLABLE vec3 rightChildAABBMin() const noexcept
+	{
+		return vec3(fData[1].zw, fData[2].x);
+	}
+
+	SFZ_CUDA_CALLABLE vec3 rightChildAABBMax() const noexcept
+	{
+		return fData[2].yzw;
+	}
+
 	SFZ_CUDA_CALLABLE uint32_t leftChildIndex() const noexcept
 	{
-		return this->indices[0];
+		return iData.x;
 	}
 
 	SFZ_CUDA_CALLABLE uint32_t rightChildIndex() const noexcept
 	{
-		return this->indices[1];
+		return iData.y;
 	}
 
-	SFZ_CUDA_CALLABLE bool isLeaf() const noexcept
+	SFZ_CUDA_CALLABLE uint32_t leftChildNumTriangles() const noexcept
 	{
-		uint32_t val = this->indices[0];
-		val &= 0x80000000u;
-		return val != 0u;
+		 return iData.z;
 	}
 
-	SFZ_CUDA_CALLABLE uint32_t numTriangles() const noexcept
+	SFZ_CUDA_CALLABLE uint32_t rightChildNumTriangles() const noexcept
 	{
-		uint32_t val = this->indices[0];
-		val &= 0x7FFFFFFFu;
-		return val;
+		return iData.w;
 	}
 
-	SFZ_CUDA_CALLABLE uint32_t triangleListIndex() const noexcept
+	SFZ_CUDA_CALLABLE bool leftChildIsLeaf() const noexcept
 	{
-		return this->indices[1];
+		return leftChildNumTriangles() == 0;
+	}
+
+	SFZ_CUDA_CALLABLE bool rightChildIsLeaf() const noexcept
+	{
+		return rightChildNumTriangles() == 0;
 	}
 
 	// Setters
 	// --------------------------------------------------------------------------------------------
 
-	SFZ_CUDA_CALLABLE void setInner(uint32_t leftChildIndex, uint32_t rightChildIndex) noexcept
+	SFZ_CUDA_CALLABLE void setLeftChildAABB(const vec3& min, const vec3& max) noexcept
 	{
-		this->indices[0] = leftChildIndex;
-		this->indices[1] = rightChildIndex;
+		fData[0].xyz = min;
+		fData[0].w = max.x;
+		fData[1].xy = max.yz;
 	}
 
-	SFZ_CUDA_CALLABLE void setLeaf(uint32_t numTriangles, uint32_t triangleListIndex) noexcept
+	SFZ_CUDA_CALLABLE void setRightChildAABB(const vec3& min, const vec3& max) noexcept
 	{
-		this->indices[0] = numTriangles | 0x80000000u;
-		this->indices[1] = triangleListIndex;
+		fData[1].zw = min.xy;
+		fData[2].x = min.z;
+		fData[2].yzw = max;
+	}
+
+	SFZ_CUDA_CALLABLE void setLeftChildInner(uint32_t nodeIndex) noexcept
+	{
+		iData.x = nodeIndex;
+		iData.z = 0u;
+	}
+
+	SFZ_CUDA_CALLABLE void setLeftChildLeaf(uint32_t triangleIndex, uint32_t numTriangles) noexcept
+	{
+		iData.x = triangleIndex;
+		iData.z = numTriangles;
+	}
+
+	SFZ_CUDA_CALLABLE void setRightChildInner(uint32_t nodeIndex) noexcept
+	{
+		iData.y = nodeIndex;
+		iData.w = 0u;
+	}
+
+	SFZ_CUDA_CALLABLE void setRightChildLeaf(uint32_t triangleIndex, uint32_t numTriangles) noexcept
+	{
+		iData.y = triangleIndex;
+		iData.w = numTriangles;
 	}
 };
 
-static_assert(sizeof(BVHNode) == 32, "BVHNode is padded");
+static_assert(sizeof(BVHNode) == 64, "BVHNode is padded");
 
 } // namespace phe
