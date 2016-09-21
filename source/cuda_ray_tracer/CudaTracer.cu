@@ -83,7 +83,12 @@ __global__ void cudaRayTracerKernel(CudaTracerParams params)
 	// having been passed along the path
 	vec3 mask = vec3(1.0f);
 
-	uint32_t bounces = 2;
+	RayCastResult hit = castRay(params.staticBvhNodes, params.staticTriangleVertices, ray);
+	if (hit.triangleIndex != ~0u) {
+		color = vec3(hit.t, hit.u, hit.v);
+	}
+
+	/*uint32_t bounces = 2;
 	for (int bounce = 0; bounce < bounces; bounce++) {
 		RayCastResult hit = castRay(params.staticBvhNodes, params.staticTriangleVertices, ray);
 		if (hit.triangleIndex == ~0u) {
@@ -164,7 +169,7 @@ __global__ void cudaRayTracerKernel(CudaTracerParams params)
 			         info.normal * sqrtf(1 - r2);
 		}
 		ray = Ray(offsetHitPos, rayDir);
-	}
+	}*/
 
 	addToSurface(params.targetSurface, loc, vec4(color, 1.0));
 
