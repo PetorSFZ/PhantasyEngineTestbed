@@ -13,15 +13,15 @@ void convertRecursively(phe::BVH& bvh, uint32_t& currentTriangleIndex, const nv:
 	uint32_t nodeIndex = bvh.nodes.size();
 
 	bvh.nodes.add(BVHNode());
-
+	
 	nv::BVHNode* leftChild = node->getChildNode(0);
 	nv::BVHNode* rightChild = node->getChildNode(1);
-
+	
 	bvh.nodes[nodeIndex].setLeftChildAABB(leftChild->m_bounds.min(), leftChild->m_bounds.max());
 	bvh.nodes[nodeIndex].setRightChildAABB(rightChild->m_bounds.min(), rightChild->m_bounds.max());
 
 	if (rightChild->isLeaf()) {
-		bvh.nodes[nodeIndex].setRightChildLeaf(rightChild->getNumTriangles(), currentTriangleIndex);
+		bvh.nodes[nodeIndex].setRightChildLeaf(currentTriangleIndex, rightChild->getNumTriangles());
 		currentTriangleIndex += rightChild->getNumTriangles();
 	}
 	else {
@@ -30,13 +30,33 @@ void convertRecursively(phe::BVH& bvh, uint32_t& currentTriangleIndex, const nv:
 	}
 
 	if (leftChild->isLeaf()) {
-		bvh.nodes[nodeIndex].setLeftChildLeaf(leftChild->getNumTriangles(), currentTriangleIndex);
+		bvh.nodes[nodeIndex].setLeftChildLeaf(currentTriangleIndex, leftChild->getNumTriangles());
 		currentTriangleIndex += leftChild->getNumTriangles();
 	}
 	else {
 		bvh.nodes[nodeIndex].setLeftChildInner(bvh.nodes.size());
 		convertRecursively(bvh, currentTriangleIndex, leftChild);
 	}
+	
+	/*
+	void (BVHNode::*setChildAABBFunctions[])(const sfz::vec3& min, const sfz::vec3& max) = { &BVHNode::setLeftChildAABB, &BVHNode::setRightChildAABB };
+	void (BVHNode::*setChildLeafFunctions[])(uint32_t triangleIndex, uint32_t numTriangles) = { &BVHNode::setLeftChildLeaf, &BVHNode::setRightChildLeaf };
+	void (BVHNode::*setChildInnerFunctions[])(uint32_t nodeIndex) = { &BVHNode::setLeftChildInner, &BVHNode::setRightChildInner };
+
+	for (int64_t i = 1; i >= 0; --i) {
+		nv::BVHNode* child = node->getChildNode(i);
+		(bvh.nodes[nodeIndex].*setChildAABBFunctions[i])(child->m_bounds.min(), child->m_bounds.max());
+
+		if (child->isLeaf()) {
+			(bvh.nodes[nodeIndex].*setChildLeafFunctions[i])(child->getNumTriangles(), currentTriangleIndex);
+			currentTriangleIndex += child->getNumTriangles();
+		}
+		else {
+			(bvh.nodes[nodeIndex].*setChildInnerFunctions[i])(bvh.nodes.size());
+			convertRecursively(bvh, currentTriangleIndex, child);
+		}
+	}
+	*/
 }
 
 // Members
