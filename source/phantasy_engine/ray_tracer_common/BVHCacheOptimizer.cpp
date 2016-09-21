@@ -14,19 +14,18 @@ static uint32_t optimizeInternal(const DynArray<BVHNode>& oldNodes, uint32_t old
 {
 	const BVHNode& oldNode = oldNodes[oldNodeIndex];
 
-	if (oldNode.isLeaf()) {
-		newNodes.add(oldNode);
-		return newNodes.size() - 1u;
-	}
-
 	uint32_t newNodeIndex = newNodes.size();
 	newNodes.add(oldNode);
 	BVHNode& newNode = newNodes[newNodeIndex];
 
-	uint32_t leftChildIndex = optimizeInternal(oldNodes, oldNode.leftChildIndex(), newNodes);
-	uint32_t rightChildIndex = optimizeInternal(oldNodes, oldNode.rightChildIndex(), newNodes);
-	
-	newNode.setInner(leftChildIndex, rightChildIndex);
+	if (!oldNode.leftChildIsLeaf()) {
+		newNode.setLeftChildInner(optimizeInternal(oldNodes, newNode.leftChildIndex(), newNodes));
+	}
+
+	if (!oldNode.rightChildIsLeaf()) {
+		newNode.setRightChildInner(optimizeInternal(oldNodes, newNode.rightChildIndex(), newNodes));
+	}
+
 	return newNodeIndex;
 }
 
