@@ -269,6 +269,15 @@ void CudaTracerRenderer::targetResolutionUpdated() noexcept
 	resDesc.resType = cudaResourceTypeArray;
 	resDesc.res.array.array = mImpl->cudaArray;
 	CHECK_CUDA_ERROR(cudaCreateSurfaceObject(&mImpl->tracerParams.targetSurface, &resDesc));
+
+	if (mImpl->tracerParams.curandStates != nullptr) {
+		cudaFree(mImpl->tracerParams.curandStates);
+	}
+
+	mImpl->tracerParams.numCurandStates = mTargetResolution.x * mTargetResolution.y;
+	size_t curandStateBytes = mImpl->tracerParams.numCurandStates * sizeof(curandState);
+	CHECK_CUDA_ERROR(cudaMalloc(&mImpl->tracerParams.curandStates, curandStateBytes));
+	initCurand(mImpl->tracerParams);
 }
 
 } // namespace phe

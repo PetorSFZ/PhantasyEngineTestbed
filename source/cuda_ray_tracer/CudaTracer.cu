@@ -2,9 +2,6 @@
 
 #include "CudaTracer.cuh"
 
-#include <curand.h>
-#include <curand_kernel.h>
-
 #include <math.h>
 
 #include <sfz/math/Vector.hpp>
@@ -60,14 +57,10 @@ __global__ void cudaRayTracerKernel(CudaTracerParams params)
 	if (loc.x >= params.targetRes.x || loc.y >= params.targetRes.y) return;
 
 	// Find identifier for this pixel, to use as random seed 
-	uint32_t x = threadIdx.x + blockIdx.x * blockDim.x;
-	uint32_t y = threadIdx.y + blockIdx.y * blockDim.y;
-	uint32_t id = x + y * blockDim.x * gridDim.x;
-	uint32_t temporalID = id + params.frameCount * (gridDim.x * gridDim.y);
+	uint32_t id = loc.x + loc.y * params.targetRes.x;
 
-	// Initialize RNG
-	curandState randState;
-	curand_init(temporalID, 0, 0, &randState);
+	// Copy RNG state to local memory
+	curandState randState = params.curandStates[id];
 
 	// Find initial ray from camera
 	vec3 rayDir = calculatePrimaryRayDir(params.cam, vec2(loc), vec2(params.targetRes));
@@ -164,6 +157,9 @@ __global__ void cudaRayTracerKernel(CudaTracerParams params)
 	}
 
 	addToSurface(params.targetSurface, loc, vec4(color, 1.0));
+
+	// Copy back updated RNG state
+	params.curandStates[id] = randState;
 }
 
 void runCudaRayTracer(const CudaTracerParams& params) noexcept
@@ -181,6 +177,27 @@ void runCudaRayTracer(const CudaTracerParams& params) noexcept
 	CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 }
 
+__global__ void initCurandKernel(CudaTracerParams params) {
+	// Calculate surface coordinates
+	vec2i loc = vec2i(blockIdx.x * blockDim.x + threadIdx.x,
+	                  blockIdx.y * blockDim.y + threadIdx.y);
+	if (loc.x >= params.targetRes.x || loc.y >= params.targetRes.y) return;
+
+	uint32_t id = loc.x + loc.y * params.targetRes.x;
+	curand_init(id, 0, 0, &params.curandStates[id]);
+}
+
+void initCurand(const CudaTracerParams& params) {
+	// Calculate number of threads and blocks to run
+	dim3 threadsPerBlock(8, 8);
+	dim3 numBlocks((params.targetRes.x + threadsPerBlock.x - 1) / threadsPerBlock.x,
+	               (params.targetRes.y + threadsPerBlock.y - 1) / threadsPerBlock.y);
+
+	// Initialize all cuRand states
+	initCurandKernel<<<numBlocks, threadsPerBlock>>>(params);
+	CHECK_CUDA_ERROR(cudaGetLastError());
+	CHECK_CUDA_ERROR(cudaDeviceSynchronize());
+}
 
 __global__ void clearSurfaceKernel(cudaSurfaceObject_t targetSurface, vec2i targetRes, vec4 color)
 {
