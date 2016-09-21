@@ -60,6 +60,9 @@ public:
 		CHECK_CUDA_ERROR(cudaGraphicsUnregisterResource(cudaResource));
 		glDeleteTextures(1, &glTex);
 
+		// Cuda RNG states
+		CHECK_CUDA_ERROR(cudaFree(tracerParams.curandStates));
+
 		// Materials & textures
 		CHECK_CUDA_ERROR(cudaFree(tracerParams.materials));
 		CHECK_CUDA_ERROR(cudaFree(tracerParams.textures));
