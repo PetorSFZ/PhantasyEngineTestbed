@@ -69,7 +69,7 @@ SFZ_CUDA_CALLABLE RayCastResult castRay(const BVHNode* nodes, const TriangleVert
 			uint32_t numTriangles = node.leftChildNumTriangles();
 
 			// Node is inner
-			if (numTriangles > 0) {
+			if (numTriangles == 0) {
 				stack[stackSize] = lcIndex;
 				stackSize += 1;
 			}
@@ -98,7 +98,7 @@ SFZ_CUDA_CALLABLE RayCastResult castRay(const BVHNode* nodes, const TriangleVert
 			uint32_t numTriangles = node.rightChildNumTriangles();
 
 			// Node is inner
-			if (numTriangles > 0) {
+			if (numTriangles == 0) {
 				stack[stackSize] = rcIndex;
 				stackSize += 1;
 			}
