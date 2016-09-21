@@ -33,6 +33,10 @@ public:
 	gl::Program transferShader;
 	FullscreenTriangle fullscreenTriangle;
 
+	Setting* cudaDebugRender = nullptr;
+	CameraDef lastCamera;
+	uint32_t frameCount = 0;
+
 	// Holding the OpenGL Cuda surface data, surface object is in CudaTracerParams.
 	GLuint glTex = 0;
 	cudaGraphicsResource_t cudaResource = 0;
@@ -43,8 +47,6 @@ public:
 	DynArray<CudaBindlessTexture> textureWrappers;
 	DynArray<cudaTextureObject_t> textureObjectHandles;
 	CudaTracerParams tracerParams;
-
-	Setting* mCudaDebugRender = nullptr;
 
 	CudaTracerRendererImpl() noexcept
 	{
@@ -57,6 +59,9 @@ public:
 		CHECK_CUDA_ERROR(cudaDestroySurfaceObject(tracerParams.targetSurface));
 		CHECK_CUDA_ERROR(cudaGraphicsUnregisterResource(cudaResource));
 		glDeleteTextures(1, &glTex);
+
+		// Cuda RNG states
+		CHECK_CUDA_ERROR(cudaFree(tracerParams.curandStates));
 
 		// Materials & textures
 		CHECK_CUDA_ERROR(cudaFree(tracerParams.materials));
@@ -81,12 +86,12 @@ CudaTracerRenderer::CudaTracerRenderer() noexcept
 
 	StackString128 shadersPath;
 	shadersPath.printf("%sresources/shaders/", basePath());
-	mImpl->transferShader = gl::Program::postProcessFromFile(shadersPath.str, "transfer.frag");
+	mImpl->transferShader = gl::Program::postProcessFromFile(shadersPath.str, "cuda_transfer.frag");
 	glUseProgram(mImpl->transferShader.handle());
 	gl::setUniform(mImpl->transferShader, "uSrcTexture", 0);
 
 	GlobalConfig& cfg = GlobalConfig::instance();
-	mImpl->mCudaDebugRender = cfg.sanitizeBool("CudaTracer", "cudaDebugRender", false);
+	mImpl->cudaDebugRender = cfg.sanitizeBool("CudaTracer", "cudaDebugRender", false);
 }
 
 CudaTracerRenderer::~CudaTracerRenderer() noexcept
@@ -187,15 +192,30 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB) noexcept
 	mImpl->tracerParams.cam = generateCameraDef(mMatrices.position, mMatrices.forward, mMatrices.up,
 	                                            mMatrices.vertFovRad, resultRes);
 
+	CudaTracerParams& params = mImpl->tracerParams;
+
+	// Check if camera has moved. If so, forget accumulated color.
+	if (mImpl->lastCamera.origin != params.cam.origin ||
+	    mImpl->lastCamera.dir != params.cam.dir) {
+		clearSurface(params.targetSurface, params.targetRes, vec4(0.0f));
+		mImpl->frameCount = 0;
+
+		mImpl->lastCamera = params.cam;
+	}
+	mImpl->frameCount++;
+
 	// Run CUDA ray tracer
-	if (!mImpl->mCudaDebugRender->boolValue()) {
-		runCudaRayTracer(mImpl->tracerParams);
+	bool cudaDebugRender = mImpl->cudaDebugRender->boolValue();
+	if (!cudaDebugRender) {
+		runCudaRayTracer(params);
 	} else {
-		runCudaDebugRayTracer(mImpl->tracerParams);
+		runCudaDebugRayTracer(params);
 	}
 	
 	// Transfer result from Cuda texture to result framebuffer
 	glUseProgram(mImpl->transferShader.handle());
+	gl::setUniform(mImpl->transferShader, "uAccumulationPasses", !cudaDebugRender ? float(mImpl->frameCount) : 1.0f);
+
 	resultFB.bindViewportClearColorDepth(vec4(0.0f, 0.0f, 0.0f, 0.0f), 0.0f);
 
 	glActiveTexture(GL_TEXTURE0);
@@ -252,6 +272,15 @@ void CudaTracerRenderer::targetResolutionUpdated() noexcept
 	resDesc.resType = cudaResourceTypeArray;
 	resDesc.res.array.array = mImpl->cudaArray;
 	CHECK_CUDA_ERROR(cudaCreateSurfaceObject(&mImpl->tracerParams.targetSurface, &resDesc));
+
+	if (mImpl->tracerParams.curandStates != nullptr) {
+		cudaFree(mImpl->tracerParams.curandStates);
+	}
+
+	mImpl->tracerParams.numCurandStates = mTargetResolution.x * mTargetResolution.y;
+	size_t curandStateBytes = mImpl->tracerParams.numCurandStates * sizeof(curandState);
+	CHECK_CUDA_ERROR(cudaMalloc(&mImpl->tracerParams.curandStates, curandStateBytes));
+	initCurand(mImpl->tracerParams);
 }
 
 } // namespace phe

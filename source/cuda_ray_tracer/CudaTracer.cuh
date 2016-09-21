@@ -3,6 +3,7 @@
 #pragma once
 
 #include <cuda_runtime.h>
+#include <curand_kernel.h>
 
 #include <sfz/math/Vector.hpp>
 
@@ -22,6 +23,10 @@ struct CudaTracerParams final {
 	// Camera definition (for generating rays)
 	CameraDef cam;
 
+	// RNG states
+	curandState* curandStates = nullptr;
+	uint32_t numCurandStates = ~0u;
+
 	// Materials & textures
 	Material* materials = nullptr;
 	uint32_t numMaterials = ~0u;
@@ -39,6 +44,11 @@ struct CudaTracerParams final {
 
 	// TODO: Dynamic geometry & dynamic light sources
 };
+
+
+void initCurand(const CudaTracerParams& params);
+
+void clearSurface(const cudaSurfaceObject_t& surface, const vec2i& targetRes, const vec4& color);
 
 void runCudaRayTracer(const CudaTracerParams& params) noexcept;
 
