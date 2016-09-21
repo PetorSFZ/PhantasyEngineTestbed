@@ -13,19 +13,15 @@ namespace phe {
 
 using namespace sfz;
 
-template<typename T> T readTexture(cudaTextureObject_t texture, vec2 coord) noexcept;
+__device__ float readMaterialTextureGray(cudaTextureObject_t texture, vec2 coord) noexcept {
+	uchar1 res = tex2D<uchar1>(texture, coord.x, coord.y);
+	return float(res.x) / 255.0f;
+}
 
-template<>
-__device__ vec4 readTexture(cudaTextureObject_t texture, vec2 coord) noexcept
+__device__ vec4 readMaterialTextureRGBA(cudaTextureObject_t texture, vec2 coord) noexcept
 {
 	uchar4 res = tex2D<uchar4>(texture, coord.x, coord.y);
 	return vec4(float(res.x), float(res.y), float(res.z), float(res.w)) / 255.0f;
-}
-
-template<>
-__device__ float readTexture(cudaTextureObject_t texture, vec2 coord) noexcept {
-	uchar1 res = tex2D<uchar1>(texture, coord.x, coord.y);
-	return float(res.x) / 255.0f;
 }
 
 inline __device__ void writeToSurface(const cudaSurfaceObject_t& surface, vec2i loc, const vec4& data) noexcept
@@ -104,19 +100,19 @@ __global__ void cudaRayTracerKernel(CudaTracerParams params)
 		vec4 albedoColor = material.albedoValue;
 		if (params.materials[info.materialIndex].albedoIndex != UINT32_MAX) {
 			cudaTextureObject_t albedoTexture = params.textures[material.albedoIndex];
-			albedoColor = readTexture<vec4>(albedoTexture, info.uv);
+			albedoColor = readMaterialTextureRGBA(albedoTexture, info.uv);
 		}
 
 		float metallic = material.metallicValue;
 		if (params.materials[info.materialIndex].metallicIndex != UINT32_MAX) {
 			cudaTextureObject_t metallicTexture = params.textures[material.metallicIndex];
-			metallic = readTexture<float>(metallicTexture, info.uv);
+			metallic = readMaterialTextureGray(metallicTexture, info.uv);
 		}
 
 		float roughness = material.roughnessValue;
 		if (params.materials[info.materialIndex].roughnessIndex != UINT32_MAX) {
 			cudaTextureObject_t roughnessTexture = params.textures[material.roughnessIndex];
-			roughness = readTexture<float>(roughnessTexture, info.uv);
+			roughness = readMaterialTextureGray(roughnessTexture, info.uv);
 		}
 
 		// Any later contrubutions are colored by this material's albedo
