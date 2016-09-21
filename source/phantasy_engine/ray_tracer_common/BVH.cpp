@@ -12,25 +12,30 @@ void convertRecursively(phe::BVH& bvh, uint32_t& currentTriangleIndex, const nv:
 {
 	uint32_t nodeIndex = bvh.nodes.size();
 
-	BVHNode newNode;
-	newNode.min = node->m_bounds.min();
-	newNode.max = node->m_bounds.max();
-	bvh.nodes.add(newNode);
+	bvh.nodes.add(BVHNode());
 
-	if (node->isLeaf()) {
-		bvh.nodes[nodeIndex].setLeaf(node->getNumTriangles(), currentTriangleIndex);
-		currentTriangleIndex += node->getNumTriangles();
+	nv::BVHNode* leftChild = node->getChildNode(0);
+	nv::BVHNode* rightChild = node->getChildNode(1);
+
+	bvh.nodes[nodeIndex].setLeftChildAABB(leftChild->m_bounds.min(), leftChild->m_bounds.max());
+	bvh.nodes[nodeIndex].setRightChildAABB(rightChild->m_bounds.min(), rightChild->m_bounds.max());
+
+	if (rightChild->isLeaf()) {
+		bvh.nodes[nodeIndex].setRightChildLeaf(rightChild->getNumTriangles(), currentTriangleIndex);
+		currentTriangleIndex += rightChild->getNumTriangles();
 	}
 	else {
-		uint32_t left, right;
+		bvh.nodes[nodeIndex].setRightChildInner(bvh.nodes.size());
+		convertRecursively(bvh, currentTriangleIndex, rightChild);
+	}
 
-		right = bvh.nodes.size();
-		convertRecursively(bvh, currentTriangleIndex, node->getChildNode(1));
-
-		left = bvh.nodes.size();
-		convertRecursively(bvh, currentTriangleIndex, node->getChildNode(0));
-
-		bvh.nodes[nodeIndex].setInner(left, right);
+	if (leftChild->isLeaf()) {
+		bvh.nodes[nodeIndex].setLeftChildLeaf(leftChild->getNumTriangles(), currentTriangleIndex);
+		currentTriangleIndex += leftChild->getNumTriangles();
+	}
+	else {
+		bvh.nodes[nodeIndex].setLeftChildInner(bvh.nodes.size());
+		convertRecursively(bvh, currentTriangleIndex, leftChild);
 	}
 }
 
