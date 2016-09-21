@@ -195,8 +195,8 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB) noexcept
 	CudaTracerParams& params = mImpl->tracerParams;
 
 	// Check if camera has moved. If so, forget accumulated color.
-	if (mImpl->lastCamera.origin != params.cam.origin ||
-	    mImpl->lastCamera.dir != params.cam.dir) {
+	if (!approxEqual(mImpl->lastCamera.origin, params.cam.origin) ||
+	    !approxEqual(mImpl->lastCamera.dir, params.cam.dir)) {
 		clearSurface(params.targetSurface, params.targetRes, vec4(0.0f));
 		mImpl->frameCount = 0;
 

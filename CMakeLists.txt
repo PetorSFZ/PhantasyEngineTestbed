@@ -176,8 +176,11 @@ if(CUDA_TRACER)
 	add_definitions(-DCUDA_TRACER_AVAILABLE)
 
 	# CUDA compiler flags
-	set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -O3 -use_fast_math -expt-relaxed-constexpr --gpu-architecture=compute_30 --gpu-code=compute_30)
-	 
+	set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -use_fast_math -expt-relaxed-constexpr --gpu-architecture=compute_30 --gpu-code=compute_30)
+	set(CUDA_NVCC_FLAGS_DEBUG ${CUDA_NVCC_FLAGS_DEBUG} -g -G)
+	set(CUDA_NVCC_FLAGS_RELEASE ${CUDA_NVCC_FLAGS_RELEASE} -O3)
+	set(CUDA_NVCC_FLAGS_RELWITHDEBINFO ${CUDA_NVCC_FLAGS_RELWITHDEBINFO} -O3)
+
 	set(CT_SOURCE_DIR ${SOURCE_DIR}/cuda_ray_tracer)
 	set(CT_INCLUDE_DIR ${INCLUDE_DIR}/cuda_ray_tracer)
 	include_directories(${CT_INCLUDE_DIR})
