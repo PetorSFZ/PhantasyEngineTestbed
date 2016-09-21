@@ -6,13 +6,30 @@
 
 #include <phantasy_engine/ray_tracer_common/BVHTraversal.hpp>
 
+#include "CudaSfzVectorCompatibility.cuh"
+
 namespace phe {
 
 // cudaCastRay
 // ------------------------------------------------------------------------------------------------
 
+__device__ BVHNode loadBvhNode(cudaTextureObject_t bvhNodesTex, uint32_t nodeIndex) noexcept
+{
+	nodeIndex *= 4; // 4 texture reads per index
+	BVHNode node;
+	node.fData[0] = toSFZ(tex1Dfetch<float4>(bvhNodesTex, nodeIndex));
+	node.fData[1] = toSFZ(tex1Dfetch<float4>(bvhNodesTex, nodeIndex + 1));
+	node.fData[2] = toSFZ(tex1Dfetch<float4>(bvhNodesTex, nodeIndex + 2));
+	uint4 dataTmp = tex1Dfetch<uint4>(bvhNodesTex, nodeIndex + 3);
+	node.iData.x = dataTmp.x;
+	node.iData.y = dataTmp.y;
+	node.iData.z = dataTmp.z;
+	node.iData.w = dataTmp.w;
+	return node;
+}
+
 template<size_t STACK_SIZE = 128>
-__device__ RayCastResult cudaCastRay(const BVHNode* nodes, const TriangleVertices* triangles,
+__device__ RayCastResult cudaCastRay(cudaTextureObject_t bvhNodesTex, const TriangleVertices* triangles,
                                      const Ray& ray, float tMin = 0.0001f, float tMax = FLT_MAX) noexcept
 {
 	// Create local stack
@@ -28,7 +45,8 @@ __device__ RayCastResult cudaCastRay(const BVHNode* nodes, const TriangleVertice
 		
 		// Retrieve node on top of stack
 		stackSize--;
-		const BVHNode& node = nodes[stack[stackSize]];
+		uint32_t nodeIndex = stack[stackSize];
+		BVHNode node = loadBvhNode(bvhNodesTex, nodeIndex);
 
 		// Perform AABB intersection tests and figure out which children we want to visit
 		AABBHit lcHit = intersects(ray, node.leftChildAABBMin(), node.leftChildAABBMax());

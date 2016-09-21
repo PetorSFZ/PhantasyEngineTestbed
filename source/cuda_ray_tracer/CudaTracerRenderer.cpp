@@ -68,6 +68,7 @@ public:
 		CHECK_CUDA_ERROR(cudaFree(tracerParams.textures));
 
 		// Static Geometry
+		CHECK_CUDA_ERROR(cudaDestroyTextureObject(tracerParams.staticBvhNodesTex));
 		CHECK_CUDA_ERROR(cudaFree(tracerParams.staticBvhNodes));
 		CHECK_CUDA_ERROR(cudaFree(tracerParams.staticTriangleVertices));
 		CHECK_CUDA_ERROR(cudaFree(tracerParams.staticTriangleDatas));
@@ -161,6 +162,27 @@ void CudaTracerRenderer::bakeStaticScene(const StaticScene& staticScene) noexcep
 	size_t numBVHNodesBytes = staticBvh.nodes.size() * sizeof(BVHNode);
 	CHECK_CUDA_ERROR(cudaMalloc(&gpuBVHNodes, numBVHNodesBytes));
 	CHECK_CUDA_ERROR(cudaMemcpy(gpuBVHNodes, staticBvh.nodes.data(), numBVHNodesBytes, cudaMemcpyHostToDevice));
+
+	// Create texture object for BVH
+	CHECK_CUDA_ERROR(cudaDestroyTextureObject(mImpl->tracerParams.staticBvhNodesTex));
+
+	cudaResourceDesc bvhNodesResDesc;
+	memset(&bvhNodesResDesc, 0, sizeof(cudaResourceDesc));
+	bvhNodesResDesc.resType = cudaResourceTypeLinear;
+	bvhNodesResDesc.res.linear.devPtr = gpuBVHNodes;
+	bvhNodesResDesc.res.linear.desc.f = cudaChannelFormatKindFloat;
+	bvhNodesResDesc.res.linear.desc.x = 32; // bits per channel
+	bvhNodesResDesc.res.linear.desc.y = 32; // bits per channel
+	bvhNodesResDesc.res.linear.desc.z = 32; // bits per channel
+	bvhNodesResDesc.res.linear.desc.w = 32; // bits per channel
+	bvhNodesResDesc.res.linear.sizeInBytes = numBVHNodesBytes;
+
+	cudaTextureDesc bvhNodesTexDesc;
+	memset(&bvhNodesTexDesc, 0, sizeof(cudaTextureDesc));
+	bvhNodesTexDesc.readMode = cudaReadModeElementType;
+
+	CHECK_CUDA_ERROR(cudaCreateTextureObject(&mImpl->tracerParams.staticBvhNodesTex, &bvhNodesResDesc,
+	                                         &bvhNodesTexDesc, NULL));
 
 	// Copy static triangle vertices to GPU
 	TriangleVertices*& gpuTriangleVertices = mImpl->tracerParams.staticTriangleVertices;
