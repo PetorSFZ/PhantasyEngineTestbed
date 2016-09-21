@@ -49,6 +49,20 @@ inline __device__ vec3 calculatePrimaryRayDir(const CameraDef& cam, vec2 loc, ve
 	return normalize(nonNormRayDir);
 }
 
+inline __device__ vec3 calculateRandomizedPrimaryRayDir(const CameraDef& cam, vec2 loc, vec2 surfaceRes, curandState& randState) noexcept
+{
+	vec2 locNormalized = loc / surfaceRes; // [0, 1]
+	vec2 centerOffsCoord = locNormalized * 2.0f - vec2(1.0f); // [-1.0, 1.0]
+
+	float r1 = curand_uniform(&randState);
+	float r2 = curand_uniform(&randState);
+	vec2 noiseOffset = (2.0f * vec2(r1, r2) - vec2(1.0f)) / surfaceRes;
+	vec2 randomizedCoord = noiseOffset + centerOffsCoord;
+
+	vec3 nonNormRayDir = cam.dir + cam.dX * randomizedCoord.x + cam.dY * randomizedCoord.y;
+	return normalize(nonNormRayDir);
+}
+
 __global__ void cudaRayTracerKernel(CudaTracerParams params)
 {
 	// Calculate surface coordinates
@@ -63,7 +77,7 @@ __global__ void cudaRayTracerKernel(CudaTracerParams params)
 	curandState randState = params.curandStates[id];
 
 	// Find initial ray from camera
-	vec3 rayDir = calculatePrimaryRayDir(params.cam, vec2(loc), vec2(params.targetRes));
+	vec3 rayDir = calculateRandomizedPrimaryRayDir(params.cam, vec2(loc), vec2(params.targetRes), randState);
 	Ray ray(params.cam.origin, rayDir);
 
 	// Initialize the final color value
