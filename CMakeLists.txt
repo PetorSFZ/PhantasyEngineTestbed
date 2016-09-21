@@ -135,6 +135,19 @@ set(PHANTASY_ENGINE_LIB_FILES
 	${PH_INCLUDE_DIR}/rendering/ViewFrustum.hpp
 	 ${PH_SOURCE_DIR}/rendering/ViewFrustum.cpp
 
+	${PH_INCLUDE_DIR}/sbvh-stuff/Array.h
+	${PH_INCLUDE_DIR}/sbvh-stuff/BVH.h
+	 ${PH_SOURCE_DIR}/sbvh-stuff/BVH.cpp
+	${PH_INCLUDE_DIR}/sbvh-stuff/BVHNode.h
+	 ${PH_SOURCE_DIR}/sbvh-stuff/BVHNode.cpp
+	${PH_INCLUDE_DIR}/sbvh-stuff/Scene.h
+	${PH_INCLUDE_DIR}/sbvh-stuff/Sort.h
+	 ${PH_SOURCE_DIR}/sbvh-stuff/Sort.cpp
+	${PH_INCLUDE_DIR}/sbvh-stuff/SplitBVHBuilder.h
+	 ${PH_SOURCE_DIR}/sbvh-stuff/SplitBVHBuilder.cpp
+	${PH_INCLUDE_DIR}/sbvh-stuff/Util.h
+	 ${PH_SOURCE_DIR}/sbvh-stuff/Util.cpp
+
 	${PH_INCLUDE_DIR}/Screens.hpp
 	${PH_INCLUDE_DIR}/screens/GameScreen.hpp
 	 ${PH_SOURCE_DIR}/screens/GameScreen.cpp
