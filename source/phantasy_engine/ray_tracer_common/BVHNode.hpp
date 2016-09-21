@@ -78,12 +78,12 @@ struct BVHNode {
 
 	SFZ_CUDA_CALLABLE bool leftChildIsLeaf() const noexcept
 	{
-		return leftChildNumTriangles() == 0;
+		return leftChildNumTriangles() != 0;
 	}
 
 	SFZ_CUDA_CALLABLE bool rightChildIsLeaf() const noexcept
 	{
-		return rightChildNumTriangles() == 0;
+		return rightChildNumTriangles() != 0;
 	}
 
 	// Setters
