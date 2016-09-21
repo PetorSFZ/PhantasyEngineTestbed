@@ -162,6 +162,10 @@ using vec2i = Vector<int32_t,2>;
 using vec3i = Vector<int32_t,3>;
 using vec4i = Vector<int32_t,4>;
 
+using vec2u = Vector<uint32_t,2>;
+using vec3u = Vector<uint32_t,3>;
+using vec4u = Vector<uint32_t,4>;
+
 // Vector constants
 // ------------------------------------------------------------------------------------------------
 
