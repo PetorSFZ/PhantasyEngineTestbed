@@ -23,6 +23,10 @@ struct CudaTracerParams final {
 	// Camera definition (for generating rays)
 	CameraDef cam;
 
+	// RNG states
+	curandState* curandStates = nullptr;
+	uint32_t numCurandStates = ~0u;
+
 	// Materials & textures
 	Material* materials = nullptr;
 	uint32_t numMaterials = ~0u;
@@ -38,10 +42,6 @@ struct CudaTracerParams final {
 	PointLight* staticPointLights = nullptr;
 	uint32_t numStaticPointLights = ~0u;
 
-	curandState* curandStates = nullptr;
-	uint32_t numCurandStates = ~0u;
-
-	uint32_t frameCount = 0;
 	// TODO: Dynamic geometry & dynamic light sources
 };
 

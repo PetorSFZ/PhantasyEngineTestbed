@@ -33,6 +33,10 @@ public:
 	gl::Program transferShader;
 	FullscreenTriangle fullscreenTriangle;
 
+	Setting* cudaDebugRender = nullptr;
+	CameraDef lastCamera;
+	uint32_t frameCount = 0;
+
 	// Holding the OpenGL Cuda surface data, surface object is in CudaTracerParams.
 	GLuint glTex = 0;
 	cudaGraphicsResource_t cudaResource = 0;
@@ -43,10 +47,6 @@ public:
 	DynArray<CudaBindlessTexture> textureWrappers;
 	DynArray<cudaTextureObject_t> textureObjectHandles;
 	CudaTracerParams tracerParams;
-
-	Setting* mCudaDebugRender = nullptr;
-
-	CameraDef lastCamera;
 
 	CudaTracerRendererImpl() noexcept
 	{
@@ -91,7 +91,7 @@ CudaTracerRenderer::CudaTracerRenderer() noexcept
 	gl::setUniform(mImpl->transferShader, "uSrcTexture", 0);
 
 	GlobalConfig& cfg = GlobalConfig::instance();
-	mImpl->mCudaDebugRender = cfg.sanitizeBool("CudaTracer", "cudaDebugRender", false);
+	mImpl->cudaDebugRender = cfg.sanitizeBool("CudaTracer", "cudaDebugRender", false);
 }
 
 CudaTracerRenderer::~CudaTracerRenderer() noexcept
@@ -198,14 +198,14 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB) noexcept
 	if (mImpl->lastCamera.origin != params.cam.origin ||
 	    mImpl->lastCamera.dir != params.cam.dir) {
 		clearSurface(params.targetSurface, params.targetRes, vec4(0.0f));
-		params.frameCount = 0;
+		mImpl->frameCount = 0;
 
 		mImpl->lastCamera = params.cam;
 	}
-	params.frameCount++;
+	mImpl->frameCount++;
 
 	// Run CUDA ray tracer
-	bool cudaDebugRender = mImpl->mCudaDebugRender->boolValue();
+	bool cudaDebugRender = mImpl->cudaDebugRender->boolValue();
 	if (!cudaDebugRender) {
 		runCudaRayTracer(params);
 	} else {
@@ -214,7 +214,7 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB) noexcept
 	
 	// Transfer result from Cuda texture to result framebuffer
 	glUseProgram(mImpl->transferShader.handle());
-	gl::setUniform(mImpl->transferShader, "uAccumulationPasses", !cudaDebugRender ? float(params.frameCount) : 1.0f);
+	gl::setUniform(mImpl->transferShader, "uAccumulationPasses", !cudaDebugRender ? float(mImpl->frameCount) : 1.0f);
 
 	resultFB.bindViewportClearColorDepth(vec4(0.0f, 0.0f, 0.0f, 0.0f), 0.0f);
 
