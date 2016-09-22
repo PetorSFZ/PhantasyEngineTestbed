@@ -101,6 +101,7 @@ __device__ RayCastResult cudaCastRay(cudaTextureObject_t bvhNodesTex, const Tria
 
 	// Traverse through the tree
 	RayCastResult closest;
+	closest.t = tMax;
 	while (stackSize > 0u) {
 		
 		// Retrieve node on top of stack
@@ -109,9 +110,8 @@ __device__ RayCastResult cudaCastRay(cudaTextureObject_t bvhNodesTex, const Tria
 		BVHNode node = loadBvhNode(bvhNodesTex, nodeIndex);
 
 		// Perform AABB intersection tests and figure out which children we want to visit
-		float tCurrMax = std::min(tMax, closest.t);
-		AABBIsect lcHit = cudaIntersects(ray, node.leftChildAABBMin(), node.leftChildAABBMax(), tMin, tCurrMax);
-		AABBIsect rcHit = cudaIntersects(ray, node.rightChildAABBMin(), node.rightChildAABBMax(), tMin, tCurrMax);
+		AABBIsect lcHit = cudaIntersects(ray, node.leftChildAABBMin(), node.leftChildAABBMax(), tMin, closest.t);
+		AABBIsect rcHit = cudaIntersects(ray, node.rightChildAABBMin(), node.rightChildAABBMax(), tMin, closest.t);
 		
 		bool visitLC = lcHit.tIn <= lcHit.tOut;
 		bool visitRC = rcHit.tIn <= rcHit.tOut;
@@ -134,14 +134,11 @@ __device__ RayCastResult cudaCastRay(cudaTextureObject_t bvhNodesTex, const Tria
 					const TriangleVertices& tri = triList[i];
 					TriangleHit hit = intersects(tri, ray.origin, ray.dir);
 
-					if (hit.hit && hit.t < closest.t && tMin <= hit.t && hit.t <= tMax) {
+					if (hit.hit && hit.t < closest.t && tMin <= hit.t) {
 						closest.triangleIndex = (triList - triangles) + i;
 						closest.t = hit.t;
 						closest.u = hit.u;
 						closest.v = hit.v;
-
-						// Possible early exit
-						// if (hit.t == tMin) return closest;
 					}
 				}
 			}
@@ -163,14 +160,11 @@ __device__ RayCastResult cudaCastRay(cudaTextureObject_t bvhNodesTex, const Tria
 					const TriangleVertices& tri = triList[i];
 					TriangleHit hit = intersects(tri, ray.origin, ray.dir);
 
-					if (hit.hit && hit.t < closest.t && tMin <= hit.t && hit.t <= tMax) {
+					if (hit.hit && hit.t < closest.t && tMin <= hit.t) {
 						closest.triangleIndex = (triList - triangles) + i;
 						closest.t = hit.t;
 						closest.u = hit.u;
 						closest.v = hit.v;
-
-						// Possible early exit
-						// if (hit.t == tMin) return closest;
 					}
 				}
 			}
