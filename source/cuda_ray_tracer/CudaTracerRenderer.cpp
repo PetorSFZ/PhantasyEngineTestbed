@@ -149,7 +149,7 @@ void CudaTracerRenderer::bakeStaticScene(const StaticScene& staticScene) noexcep
 		time_point before = std::chrono::high_resolution_clock::now();
 
 		staticBvh = std::move(buildStaticFrom(staticScene));
-		optimizeBVHCacheLocality(staticBvh);
+		sanitizeBVH(staticBvh);
 
 		time_point after = std::chrono::high_resolution_clock::now();
 		using FloatSecond = std::chrono::duration<float>;

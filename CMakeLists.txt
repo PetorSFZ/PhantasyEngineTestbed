@@ -112,11 +112,11 @@ set(PHANTASY_ENGINE_LIB_FILES
 	${PH_INCLUDE_DIR}/RayTracerCommon.hpp
 	${PH_INCLUDE_DIR}/ray_tracer_common/BVH.hpp
 	 ${PH_SOURCE_DIR}/ray_tracer_common/BVH.cpp
-	${PH_INCLUDE_DIR}/ray_tracer_common/BVHCacheOptimizer.hpp
-	 ${PH_SOURCE_DIR}/ray_tracer_common/BVHCacheOptimizer.cpp
 	${PH_INCLUDE_DIR}/ray_tracer_common/BVHMetrics.hpp
 	 ${PH_SOURCE_DIR}/ray_tracer_common/BVHMetrics.cpp
 	${PH_INCLUDE_DIR}/ray_tracer_common/BVHNode.hpp
+	${PH_INCLUDE_DIR}/ray_tracer_common/BVHSanitizer.hpp
+	 ${PH_SOURCE_DIR}/ray_tracer_common/BVHSanitizer.cpp
 	${PH_INCLUDE_DIR}/ray_tracer_common/BVHTraversal.hpp
 	${PH_INCLUDE_DIR}/ray_tracer_common/GenerateRays.hpp
 	 ${PH_SOURCE_DIR}/ray_tracer_common/GenerateRays.cpp

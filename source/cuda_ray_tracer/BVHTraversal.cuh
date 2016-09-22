@@ -179,17 +179,23 @@ __device__ RayCastResult cudaCastRay(cudaTextureObject_t bvhNodesTex, cudaTextur
 		while (leafIndex < 0) {
 
 			// Go through all triangles in leaf
-			uint32_t baseIndex = uint32_t(~leafIndex); // Get actual index
-			for (uint32_t i = baseIndex; i < baseIndex + 2; i++) {
-				TriangleVertices tri = loadTriangle(trianglesTex, i);
+			int32_t triIndex = ~leafIndex; // Get actual index
+			while (true) {
+				TriangleVertices tri = loadTriangle(trianglesTex, triIndex);
 				TriangleHit hit = intersects(tri, ray.origin, ray.dir);
 
 				if (hit.hit && hit.t < closest.t && tMin <= hit.t) {
-					closest.triangleIndex = i;
+					closest.triangleIndex = uint32_t(triIndex);
 					closest.t = hit.t;
 					closest.u = hit.u;
 					closest.v = hit.v;
 				}
+
+				// Check if triangle was marked as last one
+				if (tri.v0.w < 0) {
+					break;
+				}
+				triIndex += 1;
 			}
 
 			// currentIndex could potentially contain another leaf we want to process,

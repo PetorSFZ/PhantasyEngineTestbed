@@ -55,7 +55,7 @@ void CPURayTracerRenderer::bakeStaticScene(const StaticScene& staticScene) noexc
 		time_point before = std::chrono::high_resolution_clock::now();
 
 		mBVH = std::move(buildStaticFrom(staticScene));
-		optimizeBVHCacheLocality(mBVH);
+		sanitizeBVH(mBVH);
 
 		time_point after = std::chrono::high_resolution_clock::now();
 		using FloatSecond = std::chrono::duration<float>;
