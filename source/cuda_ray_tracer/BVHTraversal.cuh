@@ -95,6 +95,12 @@ __device__ TriangleVertices loadTriangle(cudaTextureObject_t trianglesTex, uint3
 	return v;
 }
 
+// Temporary hack, should probably be made into more permanent hack at higher level
+__device__ __forceinline__ int32_t processIndex(uint32_t index, uint32_t numTriangles) noexcept
+{
+	return (numTriangles == 0) ? int32_t(index) : int32_t(~index);
+}
+
 // cudaCastRay
 // ------------------------------------------------------------------------------------------------
 
@@ -102,77 +108,102 @@ template<size_t STACK_SIZE = 128>
 __device__ RayCastResult cudaCastRay(cudaTextureObject_t bvhNodesTex, cudaTextureObject_t trianglesTex,
                                      const Ray& ray, float tMin = 0.0001f, float tMax = FLT_MAX) noexcept
 {
+	const int32_t SENTINEL = int32_t(0x7FFFFFFF);
+
 	// Create local stack
-	uint32_t stack[STACK_SIZE];
+	int32_t stack[STACK_SIZE];
+	stack[0] = SENTINEL;
+	uint32_t stackIndex = 0u; // Currently pointing to the topmost element (the sentinel)
 
-	// Place initial node on stack
-	stack[0] = 0u;
-	uint32_t stackSize = 1u;
+	// The current index to check, start of with first node
+	int32_t currentIndex = 0u;
 
-	// Traverse through the tree
+	// Temporary to store the final result in
 	RayCastResult closest;
 	closest.t = tMax;
-	while (stackSize > 0u) {
+
+	// Traverse through the tree
+	while (currentIndex != SENTINEL) {
 		
-		// Retrieve node on top of stack
-		stackSize--;
-		uint32_t nodeIndex = stack[stackSize];
-		BVHNode node = loadBvhNode(bvhNodesTex, nodeIndex);
+		// Traverse nodes until all threads in warp have found leaf
+		int32_t leafIndex = 1; // Positive, so not a leaf
+		while (currentIndex != SENTINEL && currentIndex >= 0) { // If currentIndex is negative we have a leaf node
+			
+			// Load inner node pointed at by currentIndex
+			BVHNode node = loadBvhNode(bvhNodesTex, currentIndex);
 
-		// Perform AABB intersection tests and figure out which children we want to visit
-		AABBIsect lcHit = cudaIntersects(ray, node.leftChildAABBMin(), node.leftChildAABBMax(), tMin, closest.t);
-		AABBIsect rcHit = cudaIntersects(ray, node.rightChildAABBMin(), node.rightChildAABBMax(), tMin, closest.t);
-		
-		bool visitLC = lcHit.tIn <= lcHit.tOut;
-		bool visitRC = rcHit.tIn <= rcHit.tOut;
+			// Perform AABB intersection tests and figure out which children we want to visit
+			AABBIsect lcHit = cudaIntersects(ray, node.leftChildAABBMin(), node.leftChildAABBMax(), tMin, closest.t);
+			AABBIsect rcHit = cudaIntersects(ray, node.rightChildAABBMin(), node.rightChildAABBMax(), tMin, closest.t);
 
-		// Visit children
-		if (visitLC) {
-			uint32_t lcIndex = node.leftChildIndex();
-			uint32_t numTriangles = node.leftChildNumTriangles();
+			bool visitLC = lcHit.tIn <= lcHit.tOut;
+			bool visitRC = rcHit.tIn <= rcHit.tOut;
 
-			// Node is inner
-			if (numTriangles == 0) {
-				stack[stackSize] = lcIndex;
-				stackSize += 1;
+			// If we don't need to visit any children we simply pop a new index from the stack
+			if (!visitLC && !visitRC) {
+				currentIndex = stack[stackIndex];
+				stackIndex -= 1;
 			}
-			// Node is leaf
-			else {
-				for (uint32_t i = 0; i < numTriangles; i++) {
-					TriangleVertices tri = loadTriangle(trianglesTex, lcIndex + i);
-					TriangleHit hit = intersects(tri, ray.origin, ray.dir);
 
-					if (hit.hit && hit.t < closest.t && tMin <= hit.t) {
-						closest.triangleIndex = lcIndex + i;
-						closest.t = hit.t;
-						closest.u = hit.u;
-						closest.v = hit.v;
+			// If we need to visit at least one child
+			else {
+				int32_t lcIndex = processIndex(node.leftChildIndex(), node.leftChildNumTriangles());
+				int32_t rcIndex = processIndex(node.rightChildIndex(), node.rightChildNumTriangles());
+
+				// Put left child in currentIndex if we need to visit it, otherwise right child
+				currentIndex = visitLC ? lcIndex : rcIndex;
+
+				// If we need to visit both children we push the furthest one away to the stack
+				if (visitLC && visitRC) {
+					stackIndex += 1;
+					if (lcHit.tIn > rcHit.tIn) {
+						stack[stackIndex] = lcIndex;
+						currentIndex = rcIndex;
+					} else {
+						stack[stackIndex] = rcIndex;
 					}
 				}
 			}
+
+			// If currentIndex is a leaf and we have not yet found a leaf index
+			if (currentIndex < 0 && leafIndex >= 0) {
+				leafIndex = currentIndex; // Store leaf index for later processing
+
+				// Pop index from stack
+				// If this is also a leaf index we will process it together with leafIndex later
+				currentIndex = stack[stackIndex];
+				stackIndex -= 1;
+			}
+
+			// Exit loop if all threads in warp have found at least one triangle
+			if (!__any(leafIndex < 0)) break;
 		}
-		if (visitRC) {
-			uint32_t rcIndex = node.rightChildIndex();
-			uint32_t numTriangles = node.rightChildNumTriangles();
 
-			// Node is inner
-			if (numTriangles == 0) {
-				stack[stackSize] = rcIndex;
-				stackSize += 1;
-			}
-			// Node is leaf
-			else {
-				for (uint32_t i = 0; i < numTriangles; i++) {
-					TriangleVertices tri = loadTriangle(trianglesTex, rcIndex + i);
-					TriangleHit hit = intersects(tri, ray.origin, ray.dir);
+		// Process leafs found
+		while (leafIndex < 0) {
 
-					if (hit.hit && hit.t < closest.t && tMin <= hit.t) {
-						closest.triangleIndex = rcIndex + i;
-						closest.t = hit.t;
-						closest.u = hit.u;
-						closest.v = hit.v;
-					}
+			// Go through all triangles in leaf
+			uint32_t baseIndex = uint32_t(~leafIndex); // Get actual index
+			for (uint32_t i = baseIndex; i < baseIndex + 2; i++) {
+				TriangleVertices tri = loadTriangle(trianglesTex, i);
+				TriangleHit hit = intersects(tri, ray.origin, ray.dir);
+
+				if (hit.hit && hit.t < closest.t && tMin <= hit.t) {
+					closest.triangleIndex = i;
+					closest.t = hit.t;
+					closest.u = hit.u;
+					closest.v = hit.v;
 				}
+			}
+
+			// currentIndex could potentially contain another leaf we want to process,
+			// otherwise this will end the loop
+			leafIndex = currentIndex;
+
+			// If currentIndex did contain a leaf we pop a new element from the stack into it
+			if (currentIndex < 0) {
+				currentIndex = stack[stackIndex];
+				stackIndex -= 1;
 			}
 		}
 	}
