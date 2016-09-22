@@ -26,9 +26,9 @@ SFZ_CUDA_CALLABLE TriangleHit intersects(const TriangleVertices& tri, const vec3
 	TriangleHit result;
 
 	const float EPS = 0.00001f;
-	vec3 p0 = tri.v0;
-	vec3 p1 = tri.v1;
-	vec3 p2 = tri.v2;
+	vec3 p0 = tri.v0.xyz;
+	vec3 p1 = tri.v1.xyz;
+	vec3 p2 = tri.v2.xyz;
 
 	vec3 e1 = p1 - p0;
 	vec3 e2 = p2 - p0;

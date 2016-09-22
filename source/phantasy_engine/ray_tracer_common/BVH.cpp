@@ -84,9 +84,9 @@ phe::BVH buildStaticFrom(const StaticScene& scene) noexcept
 			const Vertex& v2 = mesh.vertices[mesh.indices[i + 2]];
 
 			TriangleVertices triTmp;
-			triTmp.v0 = v0.pos;
-			triTmp.v1 = v1.pos;
-			triTmp.v2 = v2.pos;
+			triTmp.v0 = vec4(v0.pos, 0.0f);
+			triTmp.v1 = vec4(v1.pos, 0.0f);
+			triTmp.v2 = vec4(v2.pos, 0.0f);
 			inTriangles.add(triTmp);
 
 			TriangleData dataTmp;
@@ -116,9 +116,9 @@ phe::BVH buildStaticFrom(const DynArray<TriangleVertices>& inTriangles,
 	nv::S32 numVertices = 3 * numTriangles;
 
 	for (TriangleVertices triangle : inTriangles) {
-		vertices.add(triangle.v0);
-		vertices.add(triangle.v1);
-		vertices.add(triangle.v2);
+		vertices.add(triangle.v0.xyz);
+		vertices.add(triangle.v1.xyz);
+		vertices.add(triangle.v2.xyz);
 	}
 	for (uint32_t i = 0; i < numVertices; i += 3) {
 		nv::Scene::Triangle triangle;

@@ -14,12 +14,12 @@ using sfz::vec2;
 // ------------------------------------------------------------------------------------------------
 
 struct TriangleVertices final {
-	vec3 v0;
-	vec3 v1;
-	vec3 v2;
+	vec4 v0;
+	vec4 v1;
+	vec4 v2;
 };
 
-static_assert(sizeof(TriangleVertices) == 36, "TrianglePosition is padded");
+static_assert(sizeof(TriangleVertices) == 48, "TrianglePosition is padded");
 
 struct TriangleData final {
 	vec3 n0;
