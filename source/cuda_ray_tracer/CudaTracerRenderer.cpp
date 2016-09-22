@@ -33,8 +33,9 @@ public:
 	gl::Program transferShader;
 	FullscreenTriangle fullscreenTriangle;
 
-	Setting* cudaDebugRender = nullptr;
+	Setting* cudaRenderMode = nullptr;
 	CameraDef lastCamera;
+	int32_t lastRenderMode;
 	uint32_t accumulationPasses = 0;
 
 	// Holding the OpenGL Cuda surface data, surface object is in CudaTracerParams.
@@ -93,7 +94,7 @@ CudaTracerRenderer::CudaTracerRenderer() noexcept
 	gl::setUniform(mImpl->transferShader, "uSrcTexture", 0);
 
 	GlobalConfig& cfg = GlobalConfig::instance();
-	mImpl->cudaDebugRender = cfg.sanitizeBool("CudaTracer", "cudaDebugRender", false);
+	mImpl->cudaRenderMode = cfg.sanitizeInt("CudaTracer", "cudaRenderMode", 0, 0, 2);
 }
 
 CudaTracerRenderer::~CudaTracerRenderer() noexcept
@@ -237,10 +238,12 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB) noexcept
 	                                            mMatrices.vertFovRad, resultRes);
 
 	CudaTracerParams& params = mImpl->tracerParams;
+	int32_t renderMode = mImpl->cudaRenderMode->intValue();
 
-	// Check if camera has moved. If so, forget accumulated color.
+	// Check if accumulated color should be reset
 	if (!approxEqual(mImpl->lastCamera.origin, params.cam.origin) ||
-	    !approxEqual(mImpl->lastCamera.dir, params.cam.dir)) {
+	    !approxEqual(mImpl->lastCamera.dir, params.cam.dir) ||
+	    renderMode == 0 && mImpl->lastRenderMode != 0) {
 		// Reset color buffer through GL command
 		static const float BLACK[]{0.0f, 0.0f, 0.0f, 0.0f};
 		glClearTexImage(mImpl->glTex, 0, GL_RGBA, GL_FLOAT, BLACK);
@@ -252,14 +255,27 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB) noexcept
 	}
 
 	// Run CUDA ray tracer
-	bool cudaDebugRender = mImpl->cudaDebugRender->boolValue();
-	if (!cudaDebugRender) {
-		runCudaRayTracer(params);
+	switch (renderMode) {
+	case 0:
+		cudaRayTrace(params);
 		mImpl->accumulationPasses++;
-	} else {
-		runCudaDebugRayTracer(params);
+		break;
+	case 1:
+		cudaHeatmapTrace(params);
+		break;
+	case 2:
+		cudaCastRayTest(params);
+		break;
+	default:
+		sfz_assert_debug(false);
+		break;
+	}
+
+	if (renderMode != 0) {
 		mImpl->accumulationPasses = 1;
 	}
+
+	mImpl->lastRenderMode = renderMode;
 
 	// Transfer result from Cuda texture to result framebuffer
 	glUseProgram(mImpl->transferShader.handle());
@@ -306,6 +322,12 @@ void CudaTracerRenderer::targetResolutionUpdated() noexcept
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+
+	// Clear texture
+	static const float BLACK[]{ 0.0f, 0.0f, 0.0f, 0.0f };
+	glClearTexImage(mImpl->glTex, 0, GL_RGBA, GL_FLOAT, BLACK);
+	glFinish();
+	mImpl->accumulationPasses = 0;
 
 	// https://github.com/nvpro-samples/gl_cuda_interop_pingpong_st
 	cudaGraphicsResource_t& resource = mImpl->cudaResource;
