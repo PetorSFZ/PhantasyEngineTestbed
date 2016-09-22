@@ -10,8 +10,65 @@
 
 namespace phe {
 
-// cudaCastRay
+// cudaCastRay helpers
 // ------------------------------------------------------------------------------------------------
+
+// Kepler video instructions, copied from the following papers implemntation
+// https://research.nvidia.com/sites/default/files/publications/nvr-2012-02.pdf
+/*
+ *  Copyright (c) 2009-2011, NVIDIA Corporation
+ *  All rights reserved.
+ *
+ *  Redistribution and use in source and binary forms, with or without
+ *  modification, are permitted provided that the following conditions are met:
+ *      * Redistributions of source code must retain the above copyright
+ *        notice, this list of conditions and the following disclaimer.
+ *      * Redistributions in binary form must reproduce the above copyright
+ *        notice, this list of conditions and the following disclaimer in the
+ *        documentation and/or other materials provided with the distribution.
+ *      * Neither the name of NVIDIA Corporation nor the
+ *        names of its contributors may be used to endorse or promote products
+ *        derived from this software without specific prior written permission.
+ *
+ *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ *  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ *  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ *  DISCLAIMED. IN NO EVENT SHALL <COPYRIGHT HOLDER> BE LIABLE FOR ANY
+ *  DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ *  (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ *  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ *  ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ *  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+__device__ __inline__ int min_min(int a, int b, int c) { int v; asm("vmin.s32.s32.s32.min %0, %1, %2, %3;" : "=r"(v) : "r"(a), "r"(b), "r"(c)); return v; }
+__device__ __inline__ int min_max(int a, int b, int c) { int v; asm("vmin.s32.s32.s32.max %0, %1, %2, %3;" : "=r"(v) : "r"(a), "r"(b), "r"(c)); return v; }
+__device__ __inline__ int max_min(int a, int b, int c) { int v; asm("vmax.s32.s32.s32.min %0, %1, %2, %3;" : "=r"(v) : "r"(a), "r"(b), "r"(c)); return v; }
+__device__ __inline__ int max_max(int a, int b, int c) { int v; asm("vmax.s32.s32.s32.max %0, %1, %2, %3;" : "=r"(v) : "r"(a), "r"(b), "r"(c)); return v; }
+__device__ __inline__ float fmin_fmin(float a, float b, float c) { return __int_as_float(min_min(__float_as_int(a), __float_as_int(b), __float_as_int(c))); }
+__device__ __inline__ float fmin_fmax(float a, float b, float c) { return __int_as_float(min_max(__float_as_int(a), __float_as_int(b), __float_as_int(c))); }
+__device__ __inline__ float fmax_fmin(float a, float b, float c) { return __int_as_float(max_min(__float_as_int(a), __float_as_int(b), __float_as_int(c))); }
+__device__ __inline__ float fmax_fmax(float a, float b, float c) { return __int_as_float(max_max(__float_as_int(a), __float_as_int(b), __float_as_int(c))); }
+
+// Experimentally determined best mix of float/int/video minmax instructions for Kepler.
+__device__ __inline__ float spanBeginKepler(float a0, float a1, float b0, float b1, float c0, float c1, float d) { return fmax_fmax(fminf(a0, a1), fminf(b0, b1), fmin_fmax(c0, c1, d)); }
+__device__ __inline__ float spanEndKepler(float a0, float a1, float b0, float b1, float c0, float c1, float d) { return fmin_fmin(fmaxf(a0, a1), fmaxf(b0, b1), fmax_fmin(c0, c1, d)); }
+
+struct AABBIsect final {
+	float tIn;
+	float tOut;
+};
+
+__inline__ __device__ AABBIsect cudaIntersects(const Ray& ray, const vec3& min, const vec3& max, float tCurrMin, float tCurrMax) noexcept
+{
+	vec3 lo = (min - ray.origin) * ray.invDir;
+	vec3 hi = (max - ray.origin) * ray.invDir;
+
+	AABBIsect tmp;
+	tmp.tIn = spanBeginKepler(lo.x, hi.x, lo.y, hi.y, lo.z, hi.z, tCurrMin);
+	tmp.tOut = spanEndKepler(lo.x, hi.x, lo.y, hi.y, lo.z, hi.z, tCurrMax);
+	return tmp;
+}
 
 __device__ BVHNode loadBvhNode(cudaTextureObject_t bvhNodesTex, uint32_t nodeIndex) noexcept
 {
@@ -27,6 +84,9 @@ __device__ BVHNode loadBvhNode(cudaTextureObject_t bvhNodesTex, uint32_t nodeInd
 	node.iData.w = dataTmp.w;
 	return node;
 }
+
+// cudaCastRay
+// ------------------------------------------------------------------------------------------------
 
 template<size_t STACK_SIZE = 128>
 __device__ RayCastResult cudaCastRay(cudaTextureObject_t bvhNodesTex, const TriangleVertices* triangles,
@@ -49,11 +109,12 @@ __device__ RayCastResult cudaCastRay(cudaTextureObject_t bvhNodesTex, const Tria
 		BVHNode node = loadBvhNode(bvhNodesTex, nodeIndex);
 
 		// Perform AABB intersection tests and figure out which children we want to visit
-		AABBHit lcHit = intersects(ray, node.leftChildAABBMin(), node.leftChildAABBMax());
-		AABBHit rcHit = intersects(ray, node.rightChildAABBMin(), node.rightChildAABBMax());
 		float tCurrMax = std::min(tMax, closest.t);
-		bool visitLC = lcHit.hit && lcHit.tOut > tMin && lcHit.tIn < tCurrMax;
-		bool visitRC = rcHit.hit && rcHit.tOut > tMin && rcHit.tIn < tCurrMax;
+		AABBIsect lcHit = cudaIntersects(ray, node.leftChildAABBMin(), node.leftChildAABBMax(), tMin, tCurrMax);
+		AABBIsect rcHit = cudaIntersects(ray, node.rightChildAABBMin(), node.rightChildAABBMax(), tMin, tCurrMax);
+		
+		bool visitLC = lcHit.tIn <= lcHit.tOut;
+		bool visitRC = rcHit.tIn <= rcHit.tOut;
 
 		// Visit children
 		if (visitLC) {
