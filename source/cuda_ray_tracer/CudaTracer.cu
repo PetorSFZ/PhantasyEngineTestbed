@@ -88,7 +88,7 @@ __global__ void cudaRayTracerKernel(CudaTracerParams params)
 
 	const uint32_t PATH_LENGTH = 2;
 	for (int pathDepth = 0; pathDepth < PATH_LENGTH; pathDepth++) {
-		RayCastResult hit = cudaCastRay(params.staticBvhNodesTex, params.staticTriangleVertices, ray);
+		RayCastResult hit = cudaCastRay(params.staticBvhNodesTex, params.staticTriangleVerticesTex, ray);
 		if (hit.triangleIndex == ~0u) {
 			break;
 		}

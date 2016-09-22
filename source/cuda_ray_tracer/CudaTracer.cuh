@@ -37,6 +37,7 @@ struct CudaTracerParams final {
 	BVHNode* staticBvhNodes = nullptr;
 	cudaTextureObject_t staticBvhNodesTex = 0;
 	TriangleVertices* staticTriangleVertices = nullptr;
+	cudaTextureObject_t staticTriangleVerticesTex = 0;
 	TriangleData* staticTriangleDatas = nullptr;
 
 	// Static light sources

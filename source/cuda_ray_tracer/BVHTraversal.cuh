@@ -85,11 +85,21 @@ __device__ BVHNode loadBvhNode(cudaTextureObject_t bvhNodesTex, uint32_t nodeInd
 	return node;
 }
 
+__device__ TriangleVertices loadTriangle(cudaTextureObject_t trianglesTex, uint32_t triIndex) noexcept
+{
+	triIndex *= 3; // 3 texture reads per index
+	TriangleVertices v;
+	v.v0 = toSFZ(tex1Dfetch<float4>(trianglesTex, triIndex));
+	v.v1 = toSFZ(tex1Dfetch<float4>(trianglesTex, triIndex + 1));
+	v.v2 = toSFZ(tex1Dfetch<float4>(trianglesTex, triIndex + 2));
+	return v;
+}
+
 // cudaCastRay
 // ------------------------------------------------------------------------------------------------
 
 template<size_t STACK_SIZE = 128>
-__device__ RayCastResult cudaCastRay(cudaTextureObject_t bvhNodesTex, const TriangleVertices* triangles,
+__device__ RayCastResult cudaCastRay(cudaTextureObject_t bvhNodesTex, cudaTextureObject_t trianglesTex,
                                      const Ray& ray, float tMin = 0.0001f, float tMax = FLT_MAX) noexcept
 {
 	// Create local stack
@@ -128,14 +138,12 @@ __device__ RayCastResult cudaCastRay(cudaTextureObject_t bvhNodesTex, const Tria
 			}
 			// Node is leaf
 			else {
-				const TriangleVertices* triList = triangles + lcIndex;
-
 				for (uint32_t i = 0; i < numTriangles; i++) {
-					const TriangleVertices& tri = triList[i];
+					TriangleVertices tri = loadTriangle(trianglesTex, lcIndex + i);
 					TriangleHit hit = intersects(tri, ray.origin, ray.dir);
 
 					if (hit.hit && hit.t < closest.t && tMin <= hit.t) {
-						closest.triangleIndex = (triList - triangles) + i;
+						closest.triangleIndex = lcIndex + i;
 						closest.t = hit.t;
 						closest.u = hit.u;
 						closest.v = hit.v;
@@ -154,14 +162,12 @@ __device__ RayCastResult cudaCastRay(cudaTextureObject_t bvhNodesTex, const Tria
 			}
 			// Node is leaf
 			else {
-				const TriangleVertices* triList = triangles + rcIndex;
-
 				for (uint32_t i = 0; i < numTriangles; i++) {
-					const TriangleVertices& tri = triList[i];
+					TriangleVertices tri = loadTriangle(trianglesTex, rcIndex + i);
 					TriangleHit hit = intersects(tri, ray.origin, ray.dir);
 
 					if (hit.hit && hit.t < closest.t && tMin <= hit.t) {
-						closest.triangleIndex = (triList - triangles) + i;
+						closest.triangleIndex = rcIndex + i;
 						closest.t = hit.t;
 						closest.u = hit.u;
 						closest.v = hit.v;
