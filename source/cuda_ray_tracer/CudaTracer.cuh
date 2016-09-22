@@ -41,8 +41,8 @@ struct CudaTracerParams final {
 	TriangleData* staticTriangleDatas = nullptr;
 
 	// Static light sources
-	PointLight* staticPointLights = nullptr;
-	uint32_t numStaticPointLights = ~0u;
+	SphereLight* staticSphereLights = nullptr;
+	uint32_t numStaticSphereLights = ~0u;
 
 	// TODO: Dynamic geometry & dynamic light sources
 };

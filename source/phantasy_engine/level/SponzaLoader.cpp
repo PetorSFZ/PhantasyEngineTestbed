@@ -175,7 +175,7 @@ void loadStaticSceneSponza(const char* basePath, const char* fileName, Level& le
 
 	// Clear existing static scene
 	level.staticScene.meshes.clear();
-	level.staticScene.pointLights.clear();
+	level.staticScene.sphereLights.clear();
 
 	// Process tree, filling up the list of renderable components along the way
 	sfz::HashMap<std::string, uint32_t> texMapping(uint32_t(scene->mNumTextures));

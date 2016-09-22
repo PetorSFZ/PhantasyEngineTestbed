@@ -124,7 +124,7 @@ __global__ void cudaRayTracerKernel(CudaTracerParams params)
 		vec3 offsetHitPos = info.pos + info.normal * 0.01f;
 
 		// Check if directly illuminated by light source by casting light ray
-		PointLight& light = params.staticPointLights[0];
+		SphereLight& light = params.staticSphereLights[0];
 		vec3 lightPos = light.pos;
 		vec3 lightDir = lightPos - offsetHitPos; // Intentionally not normalized!
 		RayCastResult lightHit = castRay(params.staticBvhNodes, params.staticTriangleVertices, Ray(offsetHitPos, lightDir), 0.0001f, 1.0f);

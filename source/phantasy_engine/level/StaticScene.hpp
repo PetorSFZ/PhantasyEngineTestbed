@@ -4,7 +4,7 @@
 
 #include <sfz/containers/DynArray.hpp>
 
-#include "phantasy_engine/level/PointLight.hpp"
+#include "phantasy_engine/level/SphereLight.hpp"
 #include "phantasy_engine/rendering/RawMesh.hpp"
 
 namespace phe {
@@ -20,7 +20,7 @@ using sfz::DynArray;
 /// objects may be completely skipped or rendered incorrectly.
 struct StaticScene {
 	DynArray<RawMesh> meshes;
-	DynArray<PointLight> pointLights;
+	DynArray<SphereLight> sphereLights;
 };
 
 } // namespace phe

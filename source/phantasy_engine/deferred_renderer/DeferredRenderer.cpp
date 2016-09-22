@@ -9,7 +9,7 @@
 #include <sfz/util/IO.hpp>
 
 #include "phantasy_engine/deferred_renderer/GLModel.hpp"
-#include "phantasy_engine/level/PointLight.hpp"
+#include "phantasy_engine/level/SphereLight.hpp"
 #include "phantasy_engine/rendering/FullscreenTriangle.hpp"
 
 namespace phe {
@@ -61,7 +61,7 @@ public:
 
 	// Static scene
 	DynArray<GLModel> staticGLModels;
-	DynArray<PointLight> statigPointLights;
+	DynArray<SphereLight> staticSphereLights;
 
 	DeferredRendererImpl() noexcept
 	{
@@ -134,7 +134,7 @@ void DeferredRenderer::bakeStaticScene(const StaticScene& staticScene) noexcept
 		glModels.add(GLModel(mesh));
 	}
 
-	mImpl->statigPointLights = staticScene.pointLights;
+	mImpl->staticSphereLights = staticScene.sphereLights;
 }
 
 RenderResult DeferredRenderer::render(Framebuffer& resultFB) noexcept
@@ -270,11 +270,11 @@ RenderResult DeferredRenderer::render(Framebuffer& resultFB) noexcept
 	const int lightStrengthLoc = glGetUniformLocation(shadingShader.handle(), "uLightStrength");
 	const int lightRangeLoc = glGetUniformLocation(shadingShader.handle(), "uLightRange");
 
-	for (const PointLight& pointLight : mImpl->statigPointLights) {
-		const vec3 lightPosVS = transformPoint(viewMatrix, pointLight.pos);
+	for (const SphereLight& sphereLight : mImpl->staticSphereLights) {
+		const vec3 lightPosVS = transformPoint(viewMatrix, sphereLight.pos);
 		gl::setUniform(lightPosLoc, lightPosVS);
-		gl::setUniform(lightStrengthLoc, pointLight.strength);
-		gl::setUniform(lightRangeLoc, pointLight.range);
+		gl::setUniform(lightStrengthLoc, sphereLight.strength);
+		gl::setUniform(lightRangeLoc, sphereLight.range);
 
 		mImpl->fullscreenTriangle.render();
 	}

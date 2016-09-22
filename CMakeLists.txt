@@ -104,7 +104,7 @@ set(PHANTASY_ENGINE_LIB_FILES
 	 ${PH_SOURCE_DIR}/deferred_renderer/GLTexture.cpp
 
 	${PH_INCLUDE_DIR}/level/Level.hpp
-	${PH_INCLUDE_DIR}/level/PointLight.hpp
+	${PH_INCLUDE_DIR}/level/SphereLight.hpp
 	${PH_INCLUDE_DIR}/level/SponzaLoader.hpp
 	 ${PH_SOURCE_DIR}/level/SponzaLoader.cpp
 	${PH_INCLUDE_DIR}/level/StaticScene.hpp

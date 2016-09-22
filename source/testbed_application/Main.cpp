@@ -99,11 +99,11 @@ int main(int, char**)
 		vec3{ 0.0f, 1.0f, 0.0f }
 	};
 	for (int i = 0; i < 5; i++) {
-		PointLight pointLight;
-		pointLight.pos = vec3{ -50.0f + 25.0f * i , 5.0f, 0.0f };
-		pointLight.range = 50.0f;
-		pointLight.strength = 100.0f * colours[i];
-		level->staticScene.pointLights.add(pointLight);
+		SphereLight sphereLight;
+		sphereLight.pos = vec3{ -50.0f + 25.0f * i , 5.0f, 0.0f };
+		sphereLight.range = 50.0f;
+		sphereLight.strength = 100.0f * colours[i];
+		level->staticScene.sphereLights.add(sphereLight);
 	}
 
 	// Run gameloop

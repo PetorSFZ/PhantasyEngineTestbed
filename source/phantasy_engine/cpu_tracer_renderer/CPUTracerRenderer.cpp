@@ -219,7 +219,7 @@ vec4 CPURayTracerRenderer::shadeHit(const Ray& ray, const RayCastResult& hit, co
 
 	vec3 color = vec3(0.0f);
 
-	for (const PointLight& light : mStaticScene->pointLights) {
+	for (const SphereLight& light : mStaticScene->sphereLights) {
 		vec3 toLight = light.pos - pos;
 		float toLightDist = length(toLight);
 		vec3 l = toLight / toLightDist;

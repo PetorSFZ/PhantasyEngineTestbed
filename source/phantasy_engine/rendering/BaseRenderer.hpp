@@ -8,7 +8,7 @@
 #include <sfz/memory/SmartPointers.hpp>
 
 #include "phantasy_engine/level/StaticScene.hpp"
-#include "phantasy_engine/level/PointLight.hpp"
+#include "phantasy_engine/level/SphereLight.hpp"
 #include "phantasy_engine/rendering/Material.hpp"
 #include "phantasy_engine/rendering/RawImage.hpp"
 

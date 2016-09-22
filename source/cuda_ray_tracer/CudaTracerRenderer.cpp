@@ -75,7 +75,7 @@ public:
 		CHECK_CUDA_ERROR(cudaFree(tracerParams.staticTriangleDatas));
 
 		// Static light sources
-		CHECK_CUDA_ERROR(cudaFree(tracerParams.staticPointLights));
+		CHECK_CUDA_ERROR(cudaFree(tracerParams.staticSphereLights));
 	}
 };
 
@@ -220,13 +220,13 @@ void CudaTracerRenderer::bakeStaticScene(const StaticScene& staticScene) noexcep
 	CHECK_CUDA_ERROR(cudaMalloc(&gpuTriangleDatas, numTriangleDatasBytes));
 	CHECK_CUDA_ERROR(cudaMemcpy(gpuTriangleDatas, staticBvh.triangleDatas.data(), numTriangleDatasBytes, cudaMemcpyHostToDevice));
 
-	// Copy static point lights to GPU
-	PointLight*& gpuPointLights = mImpl->tracerParams.staticPointLights;
-	CHECK_CUDA_ERROR(cudaFree(gpuPointLights));
-	size_t numPointLightBytes = staticScene.pointLights.size() * sizeof(PointLight);
-	CHECK_CUDA_ERROR(cudaMalloc(&gpuPointLights, numPointLightBytes));
-	CHECK_CUDA_ERROR(cudaMemcpy(gpuPointLights, staticScene.pointLights.data(), numPointLightBytes, cudaMemcpyHostToDevice));
-	mImpl->tracerParams.numStaticPointLights = staticScene.pointLights.size();
+	// Copy static sphere lights to GPU
+	SphereLight*& gpuSphereLights = mImpl->tracerParams.staticSphereLights;
+	CHECK_CUDA_ERROR(cudaFree(gpuSphereLights));
+	size_t numSphereLightBytes = staticScene.sphereLights.size() * sizeof(SphereLight);
+	CHECK_CUDA_ERROR(cudaMalloc(&gpuSphereLights, numSphereLightBytes));
+	CHECK_CUDA_ERROR(cudaMemcpy(gpuSphereLights, staticScene.sphereLights.data(), numSphereLightBytes, cudaMemcpyHostToDevice));
+	mImpl->tracerParams.numStaticSphereLights = staticScene.sphereLights.size();
 }
 
 RenderResult CudaTracerRenderer::render(Framebuffer& resultFB) noexcept
