@@ -125,9 +125,21 @@ __global__ void cudaRayTracerKernel(CudaTracerParams params)
 
 		// Check if directly illuminated by light source by casting light ray
 		SphereLight& light = params.staticSphereLights[0];
-		vec3 lightPos = light.pos;
+		vec3 lightPos = light.pos + vec3(rx, ry, rz);
 		vec3 lightDir = lightPos - offsetHitPos; // Intentionally not normalized!
-		RayCastResult lightHit = castRay(params.staticBvhNodes, params.staticTriangleVertices, Ray(offsetHitPos, lightDir), 0.0001f, 1.0f);
+
+		vec3 tmpVec = lightDir.x > 0.01f ? vec3(0.0f, 1.0f, 0.0f) : vec3(1.0f, 0.0f, 0.0f);
+		vec3 u = normalize(cross(tmpVec, lightDir));
+		vec3 v = normalize(cross(u, lightDir));
+
+		float r1 = curand_uniform(&randState);
+		float r2 = (2.0f * light.radius * curand_uniform(&randState)) - light.radius;
+		float azimuthAngle = 2.0f * PI() * r1;
+
+		vec3 lightPosOffset = u * cos(azimuthAngle) * r2 +
+			v * sin(azimuthAngle) * r2;
+
+		RayCastResult lightHit = castRay(params.staticBvhNodes, params.staticTriangleVertices, Ray(offsetHitPos, lightDir + lightPosOffset), 0.0001f, 1.0f);
 
 		// If there was no intersection, the point is directly illuminated
 		if (lightHit.triangleIndex == UINT32_MAX) {

@@ -103,6 +103,7 @@ int main(int, char**)
 		sphereLight.pos = vec3{ -50.0f + 25.0f * i , 5.0f, 0.0f };
 		sphereLight.range = 50.0f;
 		sphereLight.strength = 100.0f * colours[i];
+		sphereLight.radius = 2.0f;
 		level->staticScene.sphereLights.add(sphereLight);
 	}
 
