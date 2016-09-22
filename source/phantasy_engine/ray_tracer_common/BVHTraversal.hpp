@@ -140,61 +140,96 @@ SFZ_CUDA_CALLABLE RayCastResult castDebugRay(const BVHNode* nodes, const Triangl
 #ifndef SFZ_NO_DEBUG
 	for (uint32_t& s : stack) s = ~0u;
 #endif
-	RayCastResult closest;
 
 	// Place initial node on stack
-/*	stack[0] = 0u;
+	stack[0] = 0u;
 	uint32_t stackSize = 1u;
 
 	// Traverse through the tree
+	RayCastResult closest;
 	while (stackSize > 0u) {
 
 		// Retrieve node on top of stack
 		stackSize--;
 		const BVHNode& node = nodes[stack[stackSize]];
-
 		debugData->nodesVisited++;
 
-		// Node is a not leaf
-		if (!node.isLeaf()) {
+		// Perform AABB intersection tests and figure out which children we want to visit
+		AABBHit lcHit = intersects(ray, node.leftChildAABBMin(), node.leftChildAABBMax());
+		AABBHit rcHit = intersects(ray, node.rightChildAABBMin(), node.rightChildAABBMax());
+		debugData->aabbIntersectionTests += 2;
+		float tCurrMax = std::min(tMax, closest.t);
+		bool visitLC = lcHit.hit && lcHit.tOut > tMin && lcHit.tIn < tCurrMax;
+		bool visitRC = rcHit.hit && rcHit.tOut > tMin && rcHit.tIn < tCurrMax;
 
-			float tCurrMax = std::min(tMax, closest.t);
-			AABBHit hit = intersects(ray, node.min, node.max);
-			debugData->aabbIntersectionTests++;
-			if (hit.hit &&
-				hit.tOut > tMin &&
-				hit.tIn < tCurrMax) {
-				debugData->aabbIntersections++;
+		// Visit children
+		if (visitLC) {
+			debugData->aabbIntersections++;
 
-				stack[stackSize] = node.rightChildIndex();
-				stack[stackSize + 1] = node.leftChildIndex();
-				stackSize += 2;
+			uint32_t lcIndex = node.leftChildIndex();
+			uint32_t numTriangles = node.leftChildNumTriangles();
+
+			// Node is inner
+			if (numTriangles == 0) {
+				stack[stackSize] = lcIndex;
+				stackSize += 1;
 			}
-		}
-		// Node is a leaf
-		else {
-			uint32_t triCount = node.numTriangles();
-			const TriangleVertices* triList = triangles + node.triangleListIndex();
+			// Node is leaf
+			else {
+				const TriangleVertices* triList = triangles + lcIndex;
 
-			for (uint32_t i = 0; i < triCount; i++) {
-				const TriangleVertices& tri = triList[i];
-				TriangleHit hit = intersects(tri, ray.origin, ray.dir);
-				debugData->triangleIntersectionTests++;
+				for (uint32_t i = 0; i < numTriangles; i++) {
+					const TriangleVertices& tri = triList[i];
+					TriangleHit hit = intersects(tri, ray.origin, ray.dir);
+					debugData->triangleIntersectionTests++;
 
-				if (hit.hit && hit.t < closest.t && tMin <= hit.t && hit.t <= tMax) {
-					debugData->trianglesIntersected++;
+					if (hit.hit && hit.t < closest.t && tMin <= hit.t && hit.t <= tMax) {
+						debugData->trianglesIntersected++;
+						closest.triangleIndex = (triList - triangles) + i;
+						closest.t = hit.t;
+						closest.u = hit.u;
+						closest.v = hit.v;
 
-					closest.triangleIndex = (triList - triangles) + i;
-					closest.t = hit.t;
-					closest.u = hit.u;
-					closest.v = hit.v;
-
-					// Possible early exit
-					// if (hit.t == tMin) return closest;
+						// Possible early exit
+						// if (hit.t == tMin) return closest;
+					}
 				}
 			}
 		}
-	}*/
+		if (visitRC) {
+			debugData->aabbIntersections++;
+
+			uint32_t rcIndex = node.rightChildIndex();
+			uint32_t numTriangles = node.rightChildNumTriangles();
+
+			// Node is inner
+			if (numTriangles == 0) {
+				stack[stackSize] = rcIndex;
+				stackSize += 1;
+			}
+			// Node is leaf
+			else {
+				const TriangleVertices* triList = triangles + rcIndex;
+
+				for (uint32_t i = 0; i < numTriangles; i++) {
+					const TriangleVertices& tri = triList[i];
+					TriangleHit hit = intersects(tri, ray.origin, ray.dir);
+					debugData->triangleIntersectionTests++;
+
+					if (hit.hit && hit.t < closest.t && tMin <= hit.t && hit.t <= tMax) {
+						debugData->trianglesIntersected++;
+						closest.triangleIndex = (triList - triangles) + i;
+						closest.t = hit.t;
+						closest.u = hit.u;
+						closest.v = hit.v;
+
+						// Possible early exit
+						// if (hit.t == tMin) return closest;
+					}
+				}
+			}
+		}
+	}
 
 	return closest;
 }
