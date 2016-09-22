@@ -154,7 +154,7 @@ Traversal metrics:
 static void processNode(const BVH& bvh, uint32_t nodeIndex, uint32_t depth, BVHMetrics& metrics,
                         InternalBVHMetrics& internalMetrics) noexcept
 {
-	const BVHNode& node = bvh.nodes[nodeIndex];
+	/*const BVHNode& node = bvh.nodes[nodeIndex];
 	if (node.isLeaf()) {
 		internalMetrics.totalLeafDepth += depth;
 		internalMetrics.totalTrianglesPerLeaf += node.numTriangles();
@@ -184,7 +184,7 @@ static void processNode(const BVH& bvh, uint32_t nodeIndex, uint32_t depth, BVHM
 
 		processNode(bvh, node.leftChildIndex(), depth + 1, metrics, internalMetrics);
 		processNode(bvh, node.rightChildIndex(), depth + 1, metrics, internalMetrics);
-	}
+	}*/
 }
 
 /// Compute traversal metrics by sampling the scene with a number of sample rays

@@ -2,10 +2,13 @@
 
 #include "CudaTracer.cuh"
 
-#include <math.h>
+#include "cuda.h"
+#include "cuda_runtime.h"
+#include "device_launch_parameters.h"
 
 #include <sfz/math/Vector.hpp>
 
+#include "BVHTraversal.cuh"
 #include "CudaHelpers.hpp"
 #include "CudaSfzVectorCompatibility.cuh"
 
@@ -83,9 +86,9 @@ __global__ void cudaRayTracerKernel(CudaTracerParams params)
 	// having been passed along the path
 	vec3 mask = vec3(1.0f);
 
-	uint32_t bounces = 2;
-	for (int bounce = 0; bounce < bounces; bounce++) {
-		RayCastResult hit = castRay(params.staticBvhNodes, params.staticTriangleVertices, ray);
+	const uint32_t PATH_LENGTH = 2;
+	for (int pathDepth = 0; pathDepth < PATH_LENGTH; pathDepth++) {
+		RayCastResult hit = cudaCastRay(params.staticBvhNodesTex, params.staticTriangleVertices, ray);
 		if (hit.triangleIndex == ~0u) {
 			break;
 		}
@@ -136,7 +139,7 @@ __global__ void cudaRayTracerKernel(CudaTracerParams params)
 
 		// No need to find next ray at last bounce
 		// TODO: Restructure loop to make more elegant
-		if (bounce == bounces - 1) {
+		if (pathDepth == PATH_LENGTH - 1) {
 			break;
 		}
 
@@ -212,7 +215,7 @@ void initCurand(const CudaTracerParams& params) {
 __global__ void clearSurfaceKernel(cudaSurfaceObject_t targetSurface, vec2i targetRes, vec4 color)
 {
 	vec2i loc = vec2i(blockIdx.x * blockDim.x + threadIdx.x,
-		blockIdx.y * blockDim.y + threadIdx.y);
+	                  blockIdx.y * blockDim.y + threadIdx.y);
 	if (loc.x >= targetRes.x || loc.y >= targetRes.y) return;
 
 	writeToSurface(targetSurface, loc, color);

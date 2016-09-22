@@ -30,7 +30,7 @@ static void setWindowCfg(GlobalConfig& g, WindowConfig& cfg) noexcept
 static void setGraphicsCfg(GlobalConfig& g, GraphicsConfig& cfg) noexcept
 {
 	cfg.useNativeTargetResolution = g.sanitizeBool("Graphics", "useNativeTargetResolution", true);
-	cfg.targetResolutionHeight = g.sanitizeInt("Graphics", "targetResolutionHeight", 720, 120, 4320);
+	cfg.targetResolutionHeight = g.sanitizeInt("Graphics", "targetResolutionHeight", 720, 16, 4320);
 }
 
 static void setDebugCfg(GlobalConfig& g, DebugConfig& cfg) noexcept

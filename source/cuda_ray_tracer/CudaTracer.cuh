@@ -35,6 +35,7 @@ struct CudaTracerParams final {
 
 	// Static Geometry
 	BVHNode* staticBvhNodes = nullptr;
+	cudaTextureObject_t staticBvhNodesTex = 0;
 	TriangleVertices* staticTriangleVertices = nullptr;
 	TriangleData* staticTriangleDatas = nullptr;
 

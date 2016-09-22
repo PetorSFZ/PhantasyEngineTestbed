@@ -35,7 +35,7 @@ public:
 
 	Setting* cudaDebugRender = nullptr;
 	CameraDef lastCamera;
-	uint32_t frameCount = 0;
+	uint32_t accumulationPasses = 0;
 
 	// Holding the OpenGL Cuda surface data, surface object is in CudaTracerParams.
 	GLuint glTex = 0;
@@ -68,6 +68,7 @@ public:
 		CHECK_CUDA_ERROR(cudaFree(tracerParams.textures));
 
 		// Static Geometry
+		CHECK_CUDA_ERROR(cudaDestroyTextureObject(tracerParams.staticBvhNodesTex));
 		CHECK_CUDA_ERROR(cudaFree(tracerParams.staticBvhNodes));
 		CHECK_CUDA_ERROR(cudaFree(tracerParams.staticTriangleVertices));
 		CHECK_CUDA_ERROR(cudaFree(tracerParams.staticTriangleDatas));
@@ -162,6 +163,27 @@ void CudaTracerRenderer::bakeStaticScene(const StaticScene& staticScene) noexcep
 	CHECK_CUDA_ERROR(cudaMalloc(&gpuBVHNodes, numBVHNodesBytes));
 	CHECK_CUDA_ERROR(cudaMemcpy(gpuBVHNodes, staticBvh.nodes.data(), numBVHNodesBytes, cudaMemcpyHostToDevice));
 
+	// Create texture object for BVH
+	CHECK_CUDA_ERROR(cudaDestroyTextureObject(mImpl->tracerParams.staticBvhNodesTex));
+
+	cudaResourceDesc bvhNodesResDesc;
+	memset(&bvhNodesResDesc, 0, sizeof(cudaResourceDesc));
+	bvhNodesResDesc.resType = cudaResourceTypeLinear;
+	bvhNodesResDesc.res.linear.devPtr = gpuBVHNodes;
+	bvhNodesResDesc.res.linear.desc.f = cudaChannelFormatKindFloat;
+	bvhNodesResDesc.res.linear.desc.x = 32; // bits per channel
+	bvhNodesResDesc.res.linear.desc.y = 32; // bits per channel
+	bvhNodesResDesc.res.linear.desc.z = 32; // bits per channel
+	bvhNodesResDesc.res.linear.desc.w = 32; // bits per channel
+	bvhNodesResDesc.res.linear.sizeInBytes = numBVHNodesBytes;
+
+	cudaTextureDesc bvhNodesTexDesc;
+	memset(&bvhNodesTexDesc, 0, sizeof(cudaTextureDesc));
+	bvhNodesTexDesc.readMode = cudaReadModeElementType;
+
+	CHECK_CUDA_ERROR(cudaCreateTextureObject(&mImpl->tracerParams.staticBvhNodesTex, &bvhNodesResDesc,
+	                                         &bvhNodesTexDesc, NULL));
+
 	// Copy static triangle vertices to GPU
 	TriangleVertices*& gpuTriangleVertices = mImpl->tracerParams.staticTriangleVertices;
 	CHECK_CUDA_ERROR(cudaFree(gpuTriangleVertices));
@@ -195,26 +217,31 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB) noexcept
 	CudaTracerParams& params = mImpl->tracerParams;
 
 	// Check if camera has moved. If so, forget accumulated color.
-	if (mImpl->lastCamera.origin != params.cam.origin ||
-	    mImpl->lastCamera.dir != params.cam.dir) {
-		clearSurface(params.targetSurface, params.targetRes, vec4(0.0f));
-		mImpl->frameCount = 0;
+	if (!approxEqual(mImpl->lastCamera.origin, params.cam.origin) ||
+	    !approxEqual(mImpl->lastCamera.dir, params.cam.dir)) {
+		// Reset color buffer through GL command
+		static const float BLACK[]{0.0f, 0.0f, 0.0f, 0.0f};
+		glClearTexImage(mImpl->glTex, 0, GL_RGBA, GL_FLOAT, BLACK);
 
+		glFinish(); // Potentially stalls GPU more than necessary
+
+		mImpl->accumulationPasses = 0;
 		mImpl->lastCamera = params.cam;
 	}
-	mImpl->frameCount++;
 
 	// Run CUDA ray tracer
 	bool cudaDebugRender = mImpl->cudaDebugRender->boolValue();
 	if (!cudaDebugRender) {
 		runCudaRayTracer(params);
+		mImpl->accumulationPasses++;
 	} else {
 		runCudaDebugRayTracer(params);
+		mImpl->accumulationPasses = 1;
 	}
-	
+
 	// Transfer result from Cuda texture to result framebuffer
 	glUseProgram(mImpl->transferShader.handle());
-	gl::setUniform(mImpl->transferShader, "uAccumulationPasses", !cudaDebugRender ? float(mImpl->frameCount) : 1.0f);
+	gl::setUniform(mImpl->transferShader, "uAccumulationPasses", float(mImpl->accumulationPasses));
 
 	resultFB.bindViewportClearColorDepth(vec4(0.0f, 0.0f, 0.0f, 0.0f), 0.0f);
 
@@ -273,10 +300,12 @@ void CudaTracerRenderer::targetResolutionUpdated() noexcept
 	resDesc.res.array.array = mImpl->cudaArray;
 	CHECK_CUDA_ERROR(cudaCreateSurfaceObject(&mImpl->tracerParams.targetSurface, &resDesc));
 
+	// Clear allocated curandStates
 	if (mImpl->tracerParams.curandStates != nullptr) {
 		cudaFree(mImpl->tracerParams.curandStates);
 	}
 
+	// Allocate curandState for each pixel
 	mImpl->tracerParams.numCurandStates = mTargetResolution.x * mTargetResolution.y;
 	size_t curandStateBytes = mImpl->tracerParams.numCurandStates * sizeof(curandState);
 	CHECK_CUDA_ERROR(cudaMalloc(&mImpl->tracerParams.curandStates, curandStateBytes));
