@@ -254,7 +254,7 @@ __global__ void cudaDebugRayTracerKernel(CudaTracerParams params)
 	DebugRayCastData debugData;
 	RayCastResult hit = castDebugRay(params.staticBvhNodes, params.staticTriangleVertices, ray, &debugData);
 
-	const float NODES_VISITED_CUTOFF = 600.0f;
+	const float NODES_VISITED_CUTOFF = 150.0f;
 	const vec3 WHITE(1.0f);
 	const vec3 RED(1.0f, 0.0f, 0.0f);
 
