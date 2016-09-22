@@ -13,7 +13,7 @@ void convertRecursively(phe::BVH& bvh, uint32_t& currentTriangleIndex, const nv:
 	uint32_t nodeIndex = bvh.nodes.size();
 
 	bvh.nodes.add(BVHNode());
-	
+	/*
 	nv::BVHNode* leftChild = node->getChildNode(0);
 	nv::BVHNode* rightChild = node->getChildNode(1);
 	
@@ -37,18 +37,19 @@ void convertRecursively(phe::BVH& bvh, uint32_t& currentTriangleIndex, const nv:
 		bvh.nodes[nodeIndex].setLeftChildInner(bvh.nodes.size());
 		convertRecursively(bvh, currentTriangleIndex, leftChild);
 	}
+	*/
 	
-	/*
 	void (BVHNode::*setChildAABBFunctions[])(const sfz::vec3& min, const sfz::vec3& max) = { &BVHNode::setLeftChildAABB, &BVHNode::setRightChildAABB };
 	void (BVHNode::*setChildLeafFunctions[])(uint32_t triangleIndex, uint32_t numTriangles) = { &BVHNode::setLeftChildLeaf, &BVHNode::setRightChildLeaf };
 	void (BVHNode::*setChildInnerFunctions[])(uint32_t nodeIndex) = { &BVHNode::setLeftChildInner, &BVHNode::setRightChildInner };
 
+	// Backwards loop -> Depth-first search in the right child
 	for (int64_t i = 1; i >= 0; --i) {
 		nv::BVHNode* child = node->getChildNode(i);
 		(bvh.nodes[nodeIndex].*setChildAABBFunctions[i])(child->m_bounds.min(), child->m_bounds.max());
 
 		if (child->isLeaf()) {
-			(bvh.nodes[nodeIndex].*setChildLeafFunctions[i])(child->getNumTriangles(), currentTriangleIndex);
+			(bvh.nodes[nodeIndex].*setChildLeafFunctions[i])(currentTriangleIndex, child->getNumTriangles());
 			currentTriangleIndex += child->getNumTriangles();
 		}
 		else {
@@ -56,7 +57,7 @@ void convertRecursively(phe::BVH& bvh, uint32_t& currentTriangleIndex, const nv:
 			convertRecursively(bvh, currentTriangleIndex, child);
 		}
 	}
-	*/
+	
 }
 
 // Members
