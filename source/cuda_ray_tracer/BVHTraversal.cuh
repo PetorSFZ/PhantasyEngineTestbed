@@ -77,11 +77,7 @@ __device__ BVHNode loadBvhNode(cudaTextureObject_t bvhNodesTex, uint32_t nodeInd
 	node.fData[0] = toSFZ(tex1Dfetch<float4>(bvhNodesTex, nodeIndex));
 	node.fData[1] = toSFZ(tex1Dfetch<float4>(bvhNodesTex, nodeIndex + 1));
 	node.fData[2] = toSFZ(tex1Dfetch<float4>(bvhNodesTex, nodeIndex + 2));
-	uint4 dataTmp = tex1Dfetch<uint4>(bvhNodesTex, nodeIndex + 3);
-	node.iData.x = dataTmp.x;
-	node.iData.y = dataTmp.y;
-	node.iData.z = dataTmp.z;
-	node.iData.w = dataTmp.w;
+	node.iData = toSFZ(tex1Dfetch<int4>(bvhNodesTex, nodeIndex + 3));
 	return node;
 }
 
@@ -96,9 +92,9 @@ __device__ TriangleVertices loadTriangle(cudaTextureObject_t trianglesTex, uint3
 }
 
 // Temporary hack, should probably be made into more permanent hack at higher level
-__device__ __forceinline__ int32_t processIndex(uint32_t index, uint32_t numTriangles) noexcept
+__device__ __forceinline__ int32_t processIndex(int32_t index, int32_t numTriangles) noexcept
 {
-	return (numTriangles == 0) ? int32_t(index) : int32_t(~index);
+	return (numTriangles == 0) ? index : ~index;
 }
 
 // cudaCastRay

@@ -40,8 +40,8 @@ void convertRecursively(phe::BVH& bvh, uint32_t& currentTriangleIndex, const nv:
 	*/
 	
 	void (BVHNode::*setChildAABBFunctions[])(const sfz::vec3& min, const sfz::vec3& max) = { &BVHNode::setLeftChildAABB, &BVHNode::setRightChildAABB };
-	void (BVHNode::*setChildLeafFunctions[])(uint32_t triangleIndex, uint32_t numTriangles) = { &BVHNode::setLeftChildLeaf, &BVHNode::setRightChildLeaf };
-	void (BVHNode::*setChildInnerFunctions[])(uint32_t nodeIndex) = { &BVHNode::setLeftChildInner, &BVHNode::setRightChildInner };
+	void (BVHNode::*setChildLeafFunctions[])(int32_t triangleIndex, int32_t numTriangles) = { &BVHNode::setLeftChildLeaf, &BVHNode::setRightChildLeaf };
+	void (BVHNode::*setChildInnerFunctions[])(int32_t nodeIndex) = { &BVHNode::setLeftChildInner, &BVHNode::setRightChildInner };
 
 	// Backwards loop -> Depth-first search in the right child
 	for (int64_t i = 1; i >= 0; --i) {

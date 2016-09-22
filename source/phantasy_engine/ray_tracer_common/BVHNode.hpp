@@ -9,7 +9,7 @@ namespace phe {
 
 using sfz::vec3;
 using sfz::vec4;
-using sfz::vec4u;
+using sfz::vec4i;
 
 // BVHNode
 // ------------------------------------------------------------------------------------------------
@@ -31,7 +31,7 @@ struct BVHNode {
 	// leaf node they are indices to the first triangles.
 	// lcNumTriangles and rcNumTriangles are 0 in inner nodes, in leaf nodes they tell the number
 	// of triangles pointed to by the leaf node 
-	vec4u iData;
+	vec4i iData;
 
 	// Getters
 	// --------------------------------------------------------------------------------------------
@@ -56,22 +56,22 @@ struct BVHNode {
 		return fData[2].yzw;
 	}
 
-	SFZ_CUDA_CALLABLE uint32_t leftChildIndex() const noexcept
+	SFZ_CUDA_CALLABLE int32_t leftChildIndex() const noexcept
 	{
 		return iData.x;
 	}
 
-	SFZ_CUDA_CALLABLE uint32_t rightChildIndex() const noexcept
+	SFZ_CUDA_CALLABLE int32_t rightChildIndex() const noexcept
 	{
 		return iData.y;
 	}
 
-	SFZ_CUDA_CALLABLE uint32_t leftChildNumTriangles() const noexcept
+	SFZ_CUDA_CALLABLE int32_t leftChildNumTriangles() const noexcept
 	{
 		 return iData.z;
 	}
 
-	SFZ_CUDA_CALLABLE uint32_t rightChildNumTriangles() const noexcept
+	SFZ_CUDA_CALLABLE int32_t rightChildNumTriangles() const noexcept
 	{
 		return iData.w;
 	}
@@ -103,25 +103,25 @@ struct BVHNode {
 		fData[2].yzw = max;
 	}
 
-	SFZ_CUDA_CALLABLE void setLeftChildInner(uint32_t nodeIndex) noexcept
+	SFZ_CUDA_CALLABLE void setLeftChildInner(int32_t nodeIndex) noexcept
 	{
 		iData.x = nodeIndex;
-		iData.z = 0u;
+		iData.z = 0;
 	}
 
-	SFZ_CUDA_CALLABLE void setLeftChildLeaf(uint32_t triangleIndex, uint32_t numTriangles) noexcept
+	SFZ_CUDA_CALLABLE void setLeftChildLeaf(int32_t triangleIndex, int32_t numTriangles) noexcept
 	{
 		iData.x = triangleIndex;
 		iData.z = numTriangles;
 	}
 
-	SFZ_CUDA_CALLABLE void setRightChildInner(uint32_t nodeIndex) noexcept
+	SFZ_CUDA_CALLABLE void setRightChildInner(int32_t nodeIndex) noexcept
 	{
 		iData.y = nodeIndex;
 		iData.w = 0u;
 	}
 
-	SFZ_CUDA_CALLABLE void setRightChildLeaf(uint32_t triangleIndex, uint32_t numTriangles) noexcept
+	SFZ_CUDA_CALLABLE void setRightChildLeaf(int32_t triangleIndex, int32_t numTriangles) noexcept
 	{
 		iData.y = triangleIndex;
 		iData.w = numTriangles;
