@@ -24,8 +24,11 @@ struct InternalBVHMetrics
 // Forward declarations
 // ------------------------------------------------------------------------------------------------
 
-static void processNode(const BVH& bvh, uint32_t nodeIndex, uint32_t depth, BVHMetrics& metrics,
-                        InternalBVHMetrics& internalMetrics) noexcept;
+static void processNode(const BVH& bvh, BVHMetrics& metrics, InternalBVHMetrics& internalMetrics,
+                        uint32_t nodeIndex, uint32_t depth, const sfz::AABB& thisAABB) noexcept;
+
+static void processLeaf(const BVH& bvh, BVHMetrics& metrics, InternalBVHMetrics& internalMetrics,
+                        uint32_t numTriangles, uint32_t depth) noexcept;
 
 static void computeTraversalMetrics(BVHMetrics& metrics, const BVH& bvh) noexcept;
 
@@ -79,16 +82,17 @@ BVHMetrics computeBVHMetrics(const BVH& bvh)
 	internalMetrics.totalRightSAProportion = 0.0;
 
 	// Traverse tree starting at root
-	processNode(bvh, 0, 1, metrics, internalMetrics);
-
-	uint32_t innerCount = metrics.nodeCount - metrics.leafCount;
+	const BVHNode& root = bvh.nodes[0];
+	sfz::AABB rootAABB = sfz::AABB(sfz::min(root.leftChildAABBMin(), root.rightChildAABBMin()),
+	                               sfz::max(root.leftChildAABBMax(), root.rightChildAABBMax()));
+	processNode(bvh, metrics, internalMetrics, 0, 1, rootAABB);
 
 	// Compute averages
 	metrics.averageLeafDepth = float(internalMetrics.totalLeafDepth) / float(metrics.leafCount);
 	metrics.averageTrianglesPerLeaf = float(internalMetrics.totalTrianglesPerLeaf) / float(metrics.leafCount);
-	metrics.averageChildOverlapVolumeProportion = float(internalMetrics.totalOverlapVolumeProportion / double(innerCount));
-	metrics.averageLeftSAProportion = float(internalMetrics.totalLeftSAProportion / double(innerCount));
-	metrics.averageRightSAProportion = float(internalMetrics.totalRightSAProportion / double(innerCount));
+	metrics.averageChildOverlapVolumeProportion = float(internalMetrics.totalOverlapVolumeProportion / double(metrics.nodeCount));
+	metrics.averageLeftSAProportion = float(internalMetrics.totalLeftSAProportion / double(metrics.nodeCount));
+	metrics.averageRightSAProportion = float(internalMetrics.totalRightSAProportion / double(metrics.nodeCount));
 
 	computeTraversalMetrics(metrics, bvh);
 
@@ -151,40 +155,48 @@ Traversal metrics:
 // Static functions
 // ------------------------------------------------------------------------------------------------
 
-static void processNode(const BVH& bvh, uint32_t nodeIndex, uint32_t depth, BVHMetrics& metrics,
-                        InternalBVHMetrics& internalMetrics) noexcept
+static void processNode(const BVH& bvh, BVHMetrics& metrics, InternalBVHMetrics& internalMetrics,
+                        uint32_t nodeIndex, uint32_t depth, const sfz::AABB& thisAABB) noexcept
 {
-	/*const BVHNode& node = bvh.nodes[nodeIndex];
-	if (node.isLeaf()) {
-		internalMetrics.totalLeafDepth += depth;
-		internalMetrics.totalTrianglesPerLeaf += node.numTriangles();
-		metrics.leafCount++;
-		updateMin(metrics.minLeafDepth, depth);
-		updateMax(metrics.maxLeafDepth, depth);
+	const BVHNode& node = bvh.nodes[nodeIndex];
+
+	const sfz::AABB leftAABB = sfz::AABB(node.leftChildAABBMin(), node.leftChildAABBMax());
+	const sfz::AABB rightAABB = sfz::AABB(node.rightChildAABBMin(), node.rightChildAABBMax());
+
+	float parentSurfaceArea = surfaceArea(thisAABB);
+	float parentVolume = volume(thisAABB);
+	float leftSurfaceArea = surfaceArea(leftAABB);
+	float rightSurfaceArea = surfaceArea(rightAABB);
+	float childOverlapVolume = overlapVolume(leftAABB, rightAABB);
+
+	internalMetrics.totalLeftSAProportion += leftSurfaceArea / parentSurfaceArea;
+	internalMetrics.totalRightSAProportion += rightSurfaceArea / parentSurfaceArea;
+	if (!sfz::approxEqual(0.0f, parentVolume)) {
+		internalMetrics.totalOverlapVolumeProportion += childOverlapVolume / parentVolume;
+	}
+
+	if (node.leftChildIsLeaf()) {
+		processLeaf(bvh, metrics, internalMetrics, node.leftChildNumTriangles(), depth + 1);
 	}
 	else {
-		const BVHNode& leftNode = bvh.nodes[node.leftChildIndex()];
-		const BVHNode& rightNode = bvh.nodes[node.rightChildIndex()];
+		processNode(bvh, metrics, internalMetrics, node.leftChildIndex(), depth + 1, leftAABB);
+	}
+	if (node.rightChildIsLeaf()) {
+		processLeaf(bvh, metrics, internalMetrics, node.rightChildNumTriangles(), depth + 1);
+	}
+	else {
+		processNode(bvh, metrics, internalMetrics, node.rightChildIndex(), depth + 1, rightAABB);
+	}
+}
 
-		const sfz::AABB parentAABB = sfz::AABB(node.min, node.max);
-		const sfz::AABB leftAABB = sfz::AABB(leftNode.min, leftNode.max);
-		const sfz::AABB rightAABB = sfz::AABB(rightNode.min, rightNode.max);
-
-		float parentSurfaceArea = surfaceArea(parentAABB);
-		float parentVolume = volume(parentAABB);
-		float leftSurfaceArea = surfaceArea(leftAABB);
-		float rightSurfaceArea = surfaceArea(rightAABB);
-		float childOverlapVolume = overlapVolume(leftAABB, rightAABB);
-
-		internalMetrics.totalLeftSAProportion += leftSurfaceArea / parentSurfaceArea;
-		internalMetrics.totalRightSAProportion += rightSurfaceArea / parentSurfaceArea;
-		if (!sfz::approxEqual(0.0f, parentVolume)) {
-			internalMetrics.totalOverlapVolumeProportion += childOverlapVolume / parentVolume;
-		}
-
-		processNode(bvh, node.leftChildIndex(), depth + 1, metrics, internalMetrics);
-		processNode(bvh, node.rightChildIndex(), depth + 1, metrics, internalMetrics);
-	}*/
+static void processLeaf(const BVH& bvh, BVHMetrics& metrics, InternalBVHMetrics& internalMetrics,
+                        uint32_t numTriangles, uint32_t depth) noexcept
+{
+	internalMetrics.totalLeafDepth += depth;
+	internalMetrics.totalTrianglesPerLeaf += numTriangles;
+	metrics.leafCount++;
+	updateMin(metrics.minLeafDepth, depth);
+	updateMax(metrics.maxLeafDepth, depth);
 }
 
 /// Compute traversal metrics by sampling the scene with a number of sample rays
