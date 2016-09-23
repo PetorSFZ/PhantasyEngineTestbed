@@ -166,7 +166,17 @@ __device__ RayCastResult cudaCastRay(cudaTextureObject_t bvhNodesTex, cudaTextur
 			}
 
 			// Exit loop if all threads in warp have found at least one triangle
-			if (!__any(leafIndex < 0)) break;
+			//	if (!__any(leafIndex < 0)) break;
+			// Equivalent inline ptx:
+			unsigned int mask;
+			asm(R"({
+			.reg .pred p;
+			setp.ge.s32 p, %1, 0;
+			vote.ballot.b32 %0, p;
+			})"
+			: "=r"(mask)
+			: "r"(leafIndex));
+			if (!mask) break;
 		}
 
 		// Process leafs found
