@@ -356,7 +356,7 @@ void CudaTracerRenderer::targetResolutionUpdated() noexcept
 	CHECK_CUDA_ERROR(cudaMalloc(&mImpl->tracerParams.curandStates, curandStateBytes));
 
 	auto timeSeed = static_cast<unsigned long long>(time(nullptr));
-	//initCurand(mImpl->tracerParams, timeSeed);
+	initCurand(mImpl->tracerParams, timeSeed);
 }
 
 } // namespace phe
