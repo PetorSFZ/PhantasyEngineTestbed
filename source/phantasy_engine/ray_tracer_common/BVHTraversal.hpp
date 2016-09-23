@@ -35,7 +35,7 @@ struct DebugRayCastData final {
 };
 
 template<size_t STACK_MAX_SIZE = 144>
-SFZ_CUDA_CALLABLE RayCastResult castRay(const BVHNode* nodes, const TriangleVertices* triangles,
+inline RayCastResult castRay(const BVHNode* nodes, const TriangleVertices* triangles,
                                         const Ray& ray, float tMin = 0.0001f, float tMax = FLT_MAX) noexcept
 {
 	// Create local stack

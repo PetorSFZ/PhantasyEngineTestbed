@@ -91,12 +91,6 @@ __device__ TriangleVertices loadTriangle(cudaTextureObject_t trianglesTex, uint3
 	return v;
 }
 
-// Temporary hack, should probably be made into more permanent hack at higher level
-__device__ __forceinline__ int32_t processIndex(int32_t index, int32_t numTriangles) noexcept
-{
-	return (numTriangles == 0) ? index : ~index;
-}
-
 // cudaCastRay
 // ------------------------------------------------------------------------------------------------
 
@@ -143,8 +137,8 @@ __device__ RayCastResult cudaCastRay(cudaTextureObject_t bvhNodesTex, cudaTextur
 
 			// If we need to visit at least one child
 			else {
-				int32_t lcIndex = processIndex(node.leftChildIndex(), node.leftChildNumTriangles());
-				int32_t rcIndex = processIndex(node.rightChildIndex(), node.rightChildNumTriangles());
+				int32_t lcIndex = node.leftChildIndex();
+				int32_t rcIndex = node.rightChildIndex();
 
 				// Put left child in currentIndex if we need to visit it, otherwise right child
 				currentIndex = visitLC ? lcIndex : rcIndex;
