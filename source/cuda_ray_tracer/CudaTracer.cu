@@ -138,10 +138,11 @@ __global__ void cudaRayTracerKernel(CudaTracerParams params)
 		// Check if directly illuminated by light source by casting light ray
 		SphereLight& light = params.staticSphereLights[0];
 		vec3 lightPos = light.pos;
-		vec3 lightDir = lightPos - offsetHitPos; // Intentionally not normalized!
+		vec3 lightDir = normalize(lightPos - offsetHitPos);
 
+		// Slightly offset target to get stochastic soft shadows
 		vec3 u = normalize(vec3(0, -lightDir.z, lightDir.y));
-		vec3 v = normalize(cross(u, lightDir));
+		vec3 v = cross(u, lightDir);
 
 		float r1 = curand_uniform(&randState);
 		float r2 = (2.0f * light.radius * curand_uniform(&randState)) - light.radius;
@@ -150,10 +151,11 @@ __global__ void cudaRayTracerKernel(CudaTracerParams params)
 		vec3 lightPosOffset = u * cos(azimuthAngle) * r2 +
 		                      v * sin(azimuthAngle) * r2;
 
+		vec3 offsetLightDiff = lightPos + lightPosOffset - offsetHitPos;
+		vec3 offsetLightDir = normalize(offsetLightDiff);
 
-		// TODO: THIS IS NOT OKAY. CUDACASTRAY ASSUMES NORMALIZED RAY. PLZ FIX.
-		Ray lightRay(offsetHitPos, lightDir + lightPosOffset);
-		RayCastResult lightHit = cudaCastRay(params.staticBvhNodesTex, params.staticTriangleVerticesTex, lightRay, 0.0001f, 1.0f, true);
+		Ray lightRay(offsetHitPos, offsetLightDir);
+		RayCastResult lightHit = cudaCastRay(params.staticBvhNodesTex, params.staticTriangleVerticesTex, lightRay, 0.0001f, length(offsetLightDiff), true);
 
 		// If there was no intersection, the point is directly illuminated
 		if (lightHit.triangleIndex == UINT32_MAX) {
