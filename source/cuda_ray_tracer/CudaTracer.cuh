@@ -53,7 +53,7 @@ void cudaCastRayTest(const CudaTracerParams& params) noexcept;
 
 void cudaHeatmapTrace(const CudaTracerParams& params) noexcept;
 
-void initCurand(const CudaTracerParams& params) noexcept;
+void initCurand(const CudaTracerParams& params, unsigned long long seed) noexcept;
 
 void cudaClearSurface(const cudaSurfaceObject_t& surface, const vec2i& targetRes, const vec4& color) noexcept;
 

@@ -117,6 +117,7 @@ __global__ void cudaRayTracerKernel(CudaTracerParams params)
 			cudaTextureObject_t albedoTexture = params.textures[material.albedoIndex];
 			albedoColor = readMaterialTextureRGBA(albedoTexture, info.uv);
 		}
+		albedoColor.xyz = vec3(1, 1, 1);
 
 		float metallic = material.metallicValue;
 		if (params.materials[info.materialIndex].metallicIndex != UINT32_MAX) {
@@ -294,7 +295,7 @@ void cudaHeatmapTrace(const CudaTracerParams& params) noexcept
 // Curand initialization kernel
 // ------------------------------------------------------------------------------------------------
 
-__global__ void initCurandKernel(CudaTracerParams params)
+__global__ void initCurandKernel(CudaTracerParams params, unsigned long long seed)
 {
 	// Calculate surface coordinates
 	vec2i loc = vec2i(blockIdx.x * blockDim.x + threadIdx.x,
@@ -302,18 +303,18 @@ __global__ void initCurandKernel(CudaTracerParams params)
 	if (loc.x >= params.targetRes.x || loc.y >= params.targetRes.y) return;
 
 	uint32_t id = loc.x + loc.y * params.targetRes.x;
-	curand_init(id, 0, 0, &params.curandStates[id]);
+	curand_init(seed, id, 0, &params.curandStates[id]);
 }
 
-void initCurand(const CudaTracerParams& params) noexcept
+void initCurand(const CudaTracerParams& params, unsigned long long seed) noexcept
 {
 	// Calculate number of threads and blocks to run
 	dim3 threadsPerBlock(8, 8);
 	dim3 numBlocks((params.targetRes.x + threadsPerBlock.x - 1) / threadsPerBlock.x,
 	               (params.targetRes.y + threadsPerBlock.y - 1) / threadsPerBlock.y);
 
-	// Initialize all cuRand states
-	initCurandKernel<<<numBlocks, threadsPerBlock>>>(params);
+	// Initialize all curand states
+	initCurandKernel<<<numBlocks, threadsPerBlock>>>(params, seed);
 	CHECK_CUDA_ERROR(cudaGetLastError());
 	CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 }
