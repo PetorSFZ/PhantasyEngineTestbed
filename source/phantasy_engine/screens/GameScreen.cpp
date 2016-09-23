@@ -243,7 +243,7 @@ void GameScreen::renderDebugUI() const noexcept
 	ShowMetricsWindow();
 
 	SetNextWindowPos(ImVec2(0, 200), ImGuiSetCond_FirstUseEver);
-	SetNextWindowSize(ImVec2(400, 350), ImGuiSetCond_FirstUseEver);
+	SetNextWindowSize(ImVec2(400, 460), ImGuiSetCond_FirstUseEver);
 	SetNextWindowCollapsed(true, ImGuiSetCond_FirstUseEver);
 
 	if (Begin("Config", nullptr, ImGuiWindowFlags_ShowBorders)) {

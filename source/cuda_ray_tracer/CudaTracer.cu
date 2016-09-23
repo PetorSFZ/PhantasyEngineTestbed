@@ -16,6 +16,9 @@ namespace phe {
 
 using namespace sfz;
 
+// Material access helpers
+// ------------------------------------------------------------------------------------------------
+
 __device__ float readMaterialTextureGray(cudaTextureObject_t texture, vec2 coord) noexcept {
 	uchar1 res = tex2D<uchar1>(texture, coord.x, coord.y);
 	return float(res.x) / 255.0f;
@@ -26,6 +29,9 @@ __device__ vec4 readMaterialTextureRGBA(cudaTextureObject_t texture, vec2 coord)
 	uchar4 res = tex2D<uchar4>(texture, coord.x, coord.y);
 	return vec4(float(res.x), float(res.y), float(res.z), float(res.w)) / 255.0f;
 }
+
+// Surface manipulation helpers
+// ------------------------------------------------------------------------------------------------
 
 inline __device__ void writeToSurface(const cudaSurfaceObject_t& surface, vec2i loc, const vec4& data) noexcept
 {
@@ -39,6 +45,9 @@ inline __device__ void addToSurface(const cudaSurfaceObject_t& surface, vec2i lo
 	float4 newData = toFloat4(toSFZ(existing) + data);
 	surf2Dwrite(newData, surface, loc.x * sizeof(float4), loc.y);
 }
+
+// Primary ray helpers
+// ------------------------------------------------------------------------------------------------
 
 inline __device__ vec3 calculatePrimaryRayDir(const CameraDef& cam, vec2 loc, vec2 surfaceRes) noexcept
 {
@@ -61,6 +70,9 @@ inline __device__ vec3 calculateRandomizedPrimaryRayDir(const CameraDef& cam, ve
 	vec3 nonNormRayDir = cam.dir + cam.dX * randomizedCoord.x + cam.dY * randomizedCoord.y;
 	return normalize(nonNormRayDir);
 }
+
+// Main ray tracing kernel
+// ------------------------------------------------------------------------------------------------
 
 __global__ void cudaRayTracerKernel(CudaTracerParams params)
 {
@@ -128,8 +140,7 @@ __global__ void cudaRayTracerKernel(CudaTracerParams params)
 		vec3 lightPos = light.pos;
 		vec3 lightDir = lightPos - offsetHitPos; // Intentionally not normalized!
 
-		vec3 tmpVec = lightDir.x > 0.01f ? vec3(0.0f, 1.0f, 0.0f) : vec3(1.0f, 0.0f, 0.0f);
-		vec3 u = normalize(cross(tmpVec, lightDir));
+		vec3 u = normalize(vec3(0, -lightDir.z, lightDir.y));
 		vec3 v = normalize(cross(u, lightDir));
 
 		float r1 = curand_uniform(&randState);
@@ -137,7 +148,7 @@ __global__ void cudaRayTracerKernel(CudaTracerParams params)
 		float azimuthAngle = 2.0f * PI() * r1;
 
 		vec3 lightPosOffset = u * cos(azimuthAngle) * r2 +
-			v * sin(azimuthAngle) * r2;
+		                      v * sin(azimuthAngle) * r2;
 
 		RayCastResult lightHit = cudaCastRay(params.staticBvhNodesTex, params.staticTriangleVerticesTex, Ray(offsetHitPos, lightDir + lightPosOffset), 0.0001f, 1.0f);
 
@@ -159,7 +170,8 @@ __global__ void cudaRayTracerKernel(CudaTracerParams params)
 		if (roughness < 0.2f) {
 			// Let next ray be perfect mirror reflection
 			rayDir = rayDir - 2 * (dot(rayDir, info.normal)) * info.normal;
-		} else {
+		}
+		else {
 			// Treat material as fully diffuse. Take cosine-weighted sample over the hemisphere
 			// and trace in that direction.
 
@@ -170,8 +182,7 @@ __global__ void cudaRayTracerKernel(CudaTracerParams params)
 
 			// Find surface vectors u and v orthogonal to normal, using a tempVector not parallel
 			// to normal
-			vec3 tempVector = abs(info.normal.x) > 0.01f ? vec3(0.0f, 1.0f, 0.0f) : vec3(1.0f, 0.0f, 0.0f);
-			vec3 u = cross(tempVector, info.normal);
+			vec3 u = normalize(vec3(0, -info.normal.z, info.normal.y));
 			vec3 v = cross(info.normal, u);
 
 			rayDir = u * cos(azimuthAngle) * altitudeFactor +
@@ -187,7 +198,7 @@ __global__ void cudaRayTracerKernel(CudaTracerParams params)
 	params.curandStates[id] = randState;
 }
 
-void runCudaRayTracer(const CudaTracerParams& params) noexcept
+void cudaRayTrace(const CudaTracerParams& params) noexcept
 {
 	vec2i surfaceRes = params.targetRes;
 
@@ -202,56 +213,49 @@ void runCudaRayTracer(const CudaTracerParams& params) noexcept
 	CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 }
 
-__global__ void initCurandKernel(CudaTracerParams params) {
+// Simple castRay kernel
+// ------------------------------------------------------------------------------------------------
+
+__global__ void castRayTestKernel(CudaTracerParams params)
+{
 	// Calculate surface coordinates
 	vec2i loc = vec2i(blockIdx.x * blockDim.x + threadIdx.x,
 	                  blockIdx.y * blockDim.y + threadIdx.y);
 	if (loc.x >= params.targetRes.x || loc.y >= params.targetRes.y) return;
 
-	uint32_t id = loc.x + loc.y * params.targetRes.x;
-	curand_init(id, 0, 0, &params.curandStates[id]);
+	// Find initial ray from camera
+	vec3 rayDir = calculatePrimaryRayDir(params.cam, vec2(loc), vec2(params.targetRes));
+	Ray ray(params.cam.origin, rayDir);
+
+	RayCastResult hit = cudaCastRay(params.staticBvhNodesTex, params.staticTriangleVerticesTex, ray);
+
+	vec3 color;
+	if (hit.triangleIndex != UINT32_MAX) {
+		color = vec3(hit.u, hit.v, hit.t);
+	} else {
+		color = vec3(0.0f);
+	}
+
+	writeToSurface(params.targetSurface, loc, vec4(color, 1.0));
 }
 
-void initCurand(const CudaTracerParams& params) {
+void cudaCastRayTest(const CudaTracerParams& params) noexcept
+{
 	// Calculate number of threads and blocks to run
 	dim3 threadsPerBlock(8, 8);
 	dim3 numBlocks((params.targetRes.x + threadsPerBlock.x - 1) / threadsPerBlock.x,
 	               (params.targetRes.y + threadsPerBlock.y - 1) / threadsPerBlock.y);
 
-	// Initialize all cuRand states
-	initCurandKernel<<<numBlocks, threadsPerBlock>>>(params);
-	CHECK_CUDA_ERROR(cudaGetLastError());
-	CHECK_CUDA_ERROR(cudaDeviceSynchronize());
-}
-
-__global__ void clearSurfaceKernel(cudaSurfaceObject_t targetSurface, vec2i targetRes, vec4 color)
-{
-	vec2i loc = vec2i(blockIdx.x * blockDim.x + threadIdx.x,
-	                  blockIdx.y * blockDim.y + threadIdx.y);
-	if (loc.x >= targetRes.x || loc.y >= targetRes.y) return;
-
-	writeToSurface(targetSurface, loc, color);
-}
-
-void clearSurface(const cudaSurfaceObject_t& targetSurface, const vec2i& targetRes, const vec4& color)
-{
-	vec2i surfaceRes = targetRes;
-
-	// Calculate number of threads and blocks to run
-	dim3 threadsPerBlock(8, 8);
-	dim3 numBlocks((surfaceRes.x + threadsPerBlock.x - 1) / threadsPerBlock.x,
-	               (surfaceRes.y + threadsPerBlock.y - 1) / threadsPerBlock.y);
-
 	// Run cuda ray tracer kernel
-	clearSurfaceKernel<<<numBlocks, threadsPerBlock>>>(targetSurface, surfaceRes, color);
+	castRayTestKernel<<<numBlocks, threadsPerBlock>>>(params);
 	CHECK_CUDA_ERROR(cudaGetLastError());
 	CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 }
 
-// Debug versions of tracing functions
+// Heatmap kernel
 // ------------------------------------------------------------------------------------------------
 
-__global__ void cudaDebugRayTracerKernel(CudaTracerParams params)
+__global__ void heatmapKernel(CudaTracerParams params)
 {
 	// Calculate surface coordinates
 	vec2i loc = vec2i(blockIdx.x * blockDim.x + threadIdx.x,
@@ -277,9 +281,61 @@ __global__ void cudaDebugRayTracerKernel(CudaTracerParams params)
 	writeToSurface(params.targetSurface, loc, vec4(color, 1.0));
 }
 
-void runCudaDebugRayTracer(const CudaTracerParams& params) noexcept
+void cudaHeatmapTrace(const CudaTracerParams& params) noexcept
 {
-	vec2i surfaceRes = params.targetRes;
+	// Calculate number of threads and blocks to run
+	dim3 threadsPerBlock(8, 8);
+	dim3 numBlocks((params.targetRes.x + threadsPerBlock.x - 1) / threadsPerBlock.x,
+	               (params.targetRes.y + threadsPerBlock.y - 1) / threadsPerBlock.y);
+
+	// Run cuda ray tracer kernel
+	heatmapKernel<<<numBlocks, threadsPerBlock>>>(params);
+	CHECK_CUDA_ERROR(cudaGetLastError());
+	CHECK_CUDA_ERROR(cudaDeviceSynchronize());
+}
+
+// Curand initialization kernel
+// ------------------------------------------------------------------------------------------------
+
+__global__ void initCurandKernel(CudaTracerParams params, unsigned long long seed)
+{
+	// Calculate surface coordinates
+	vec2i loc = vec2i(blockIdx.x * blockDim.x + threadIdx.x,
+	                  blockIdx.y * blockDim.y + threadIdx.y);
+	if (loc.x >= params.targetRes.x || loc.y >= params.targetRes.y) return;
+
+	uint32_t id = loc.x + loc.y * params.targetRes.x;
+	curand_init(seed, id, 0, &params.curandStates[id]);
+}
+
+void initCurand(const CudaTracerParams& params, unsigned long long seed) noexcept
+{
+	// Calculate number of threads and blocks to run
+	dim3 threadsPerBlock(8, 8);
+	dim3 numBlocks((params.targetRes.x + threadsPerBlock.x - 1) / threadsPerBlock.x,
+	               (params.targetRes.y + threadsPerBlock.y - 1) / threadsPerBlock.y);
+
+	// Initialize all curand states
+	initCurandKernel<<<numBlocks, threadsPerBlock>>>(params, seed);
+	CHECK_CUDA_ERROR(cudaGetLastError());
+	CHECK_CUDA_ERROR(cudaDeviceSynchronize());
+}
+
+// Clear surface kernel
+// ------------------------------------------------------------------------------------------------
+
+__global__ void clearSurfaceKernel(cudaSurfaceObject_t targetSurface, vec2i targetRes, vec4 color)
+{
+	vec2i loc = vec2i(blockIdx.x * blockDim.x + threadIdx.x,
+	                  blockIdx.y * blockDim.y + threadIdx.y);
+	if (loc.x >= targetRes.x || loc.y >= targetRes.y) return;
+
+	writeToSurface(targetSurface, loc, color);
+}
+
+void cudaClearSurface(const cudaSurfaceObject_t& targetSurface, const vec2i& targetRes, const vec4& color) noexcept
+{
+	vec2i surfaceRes = targetRes;
 
 	// Calculate number of threads and blocks to run
 	dim3 threadsPerBlock(8, 8);
@@ -287,7 +343,7 @@ void runCudaDebugRayTracer(const CudaTracerParams& params) noexcept
 	               (surfaceRes.y + threadsPerBlock.y - 1) / threadsPerBlock.y);
 
 	// Run cuda ray tracer kernel
-	cudaDebugRayTracerKernel<<<numBlocks, threadsPerBlock>>>(params);
+	clearSurfaceKernel<<<numBlocks, threadsPerBlock>>>(targetSurface, surfaceRes, color);
 	CHECK_CUDA_ERROR(cudaGetLastError());
 	CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 }

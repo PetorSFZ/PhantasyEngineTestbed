@@ -47,13 +47,14 @@ struct CudaTracerParams final {
 	// TODO: Dynamic geometry & dynamic light sources
 };
 
+void cudaRayTrace(const CudaTracerParams& params) noexcept;
 
-void initCurand(const CudaTracerParams& params);
+void cudaCastRayTest(const CudaTracerParams& params) noexcept;
 
-void clearSurface(const cudaSurfaceObject_t& surface, const vec2i& targetRes, const vec4& color);
+void cudaHeatmapTrace(const CudaTracerParams& params) noexcept;
 
-void runCudaRayTracer(const CudaTracerParams& params) noexcept;
+void initCurand(const CudaTracerParams& params, unsigned long long seed) noexcept;
 
-void runCudaDebugRayTracer(const CudaTracerParams& params) noexcept;
+void cudaClearSurface(const cudaSurfaceObject_t& surface, const vec2i& targetRes, const vec4& color) noexcept;
 
 } // namespace phe
