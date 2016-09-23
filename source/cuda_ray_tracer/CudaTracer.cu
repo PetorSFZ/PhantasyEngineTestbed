@@ -117,7 +117,6 @@ __global__ void cudaRayTracerKernel(CudaTracerParams params)
 			cudaTextureObject_t albedoTexture = params.textures[material.albedoIndex];
 			albedoColor = readMaterialTextureRGBA(albedoTexture, info.uv);
 		}
-		albedoColor.xyz = vec3(1, 1, 1);
 
 		float metallic = material.metallicValue;
 		if (params.materials[info.materialIndex].metallicIndex != UINT32_MAX) {
@@ -141,8 +140,7 @@ __global__ void cudaRayTracerKernel(CudaTracerParams params)
 		vec3 lightPos = light.pos;
 		vec3 lightDir = lightPos - offsetHitPos; // Intentionally not normalized!
 
-		vec3 tmpVec = lightDir.x > 0.01f ? vec3(0.0f, 1.0f, 0.0f) : vec3(1.0f, 0.0f, 0.0f);
-		vec3 u = normalize(cross(tmpVec, lightDir));
+		vec3 u = normalize(vec3(0, -lightDir.z, lightDir.y));
 		vec3 v = normalize(cross(u, lightDir));
 
 		float r1 = curand_uniform(&randState);
@@ -150,7 +148,7 @@ __global__ void cudaRayTracerKernel(CudaTracerParams params)
 		float azimuthAngle = 2.0f * PI() * r1;
 
 		vec3 lightPosOffset = u * cos(azimuthAngle) * r2 +
-			v * sin(azimuthAngle) * r2;
+		                      v * sin(azimuthAngle) * r2;
 
 		RayCastResult lightHit = castRay(params.staticBvhNodes, params.staticTriangleVertices, Ray(offsetHitPos, lightDir + lightPosOffset), 0.0001f, 1.0f);
 
@@ -184,8 +182,7 @@ __global__ void cudaRayTracerKernel(CudaTracerParams params)
 
 			// Find surface vectors u and v orthogonal to normal, using a tempVector not parallel
 			// to normal
-			vec3 tempVector = abs(info.normal.x) > 0.01f ? vec3(0.0f, 1.0f, 0.0f) : vec3(1.0f, 0.0f, 0.0f);
-			vec3 u = cross(tempVector, info.normal);
+			vec3 u = normalize(vec3(0, -info.normal.z, info.normal.y));
 			vec3 v = cross(info.normal, u);
 
 			rayDir = u * cos(azimuthAngle) * altitudeFactor +
