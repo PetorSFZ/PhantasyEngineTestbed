@@ -94,9 +94,14 @@ __device__ TriangleVertices loadTriangle(cudaTextureObject_t trianglesTex, uint3
 // cudaCastRay
 // ------------------------------------------------------------------------------------------------
 
+/// tMin is the closest the ray is allowed to intersect with the scene
+/// tMax is the farthest away the ray is allowed to intersect with the scene
+/// if noResultOnlyHit is true the function will return as soon as an intersection is found
+/// the result will therefore only contain information about whether an intersection happens or not
 template<size_t STACK_SIZE = 128>
 __device__ RayCastResult cudaCastRay(cudaTextureObject_t bvhNodesTex, cudaTextureObject_t trianglesTex,
-                                     const Ray& ray, float tMin = 0.0001f, float tMax = FLT_MAX) noexcept
+                                     const Ray& ray, float tMin = 0.0001f, float tMax = FLT_MAX,
+                                     bool noResultOnlyHit = false) noexcept
 {
 	const int32_t SENTINEL = int32_t(0x7FFFFFFF);
 
@@ -193,6 +198,10 @@ __device__ RayCastResult cudaCastRay(cudaTextureObject_t bvhNodesTex, cudaTextur
 					closest.t = hit.t;
 					closest.u = hit.u;
 					closest.v = hit.v;
+
+					if (noResultOnlyHit) {
+						return closest;
+					}
 				}
 
 				// Check if triangle was marked as last one
@@ -206,7 +215,7 @@ __device__ RayCastResult cudaCastRay(cudaTextureObject_t bvhNodesTex, cudaTextur
 			// otherwise this will end the loop
 			leafIndex = currentIndex;
 
-			// If currentIndex did contain a leaf we pop a new element from the stack into it
+			// If currentIndex contained a leaf it will be processed, so we pop a new element from the stack into it
 			if (currentIndex < 0) {
 				currentIndex = stack[stackIndex];
 				stackIndex -= 1;

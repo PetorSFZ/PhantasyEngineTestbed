@@ -150,9 +150,10 @@ __global__ void cudaRayTracerKernel(CudaTracerParams params)
 		vec3 lightPosOffset = u * cos(azimuthAngle) * r2 +
 		                      v * sin(azimuthAngle) * r2;
 
-		cudaCastRay(params.staticBvhNodesTex, params.staticTriangleVerticesTex, ray);
+
+		// TODO: THIS IS NOT OKAY. CUDACASTRAY ASSUMES NORMALIZED RAY. PLZ FIX.
 		Ray lightRay(offsetHitPos, lightDir + lightPosOffset);
-		RayCastResult lightHit = cudaCastRay(params.staticBvhNodesTex, params.staticTriangleVerticesTex, lightRay, 0.0001f, 1.0f);
+		RayCastResult lightHit = cudaCastRay(params.staticBvhNodesTex, params.staticTriangleVerticesTex, lightRay, 0.0001f, 1.0f, true);
 
 		// If there was no intersection, the point is directly illuminated
 		if (lightHit.triangleIndex == UINT32_MAX) {
