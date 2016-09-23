@@ -305,7 +305,7 @@ __global__ void initCurandKernel(CudaTracerParams params, unsigned long long see
 	if (loc.x >= params.targetRes.x || loc.y >= params.targetRes.y) return;
 
 	uint32_t id = loc.x + loc.y * params.targetRes.x;
-	curand_init(seed, id, 0, &params.curandStates[id]);
+	curand_init((id + 1) * seed, 0, 0, &params.curandStates[id]);
 }
 
 void initCurand(const CudaTracerParams& params, unsigned long long seed) noexcept
