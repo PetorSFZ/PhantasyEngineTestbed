@@ -109,7 +109,7 @@ int main(int, char**)
 
 	// Run gameloop
 	sfz::runGameLoop(engine.window(), SharedPtr<BaseScreen>(sfz_new<GameScreen>(
-		SharedPtr<GameLogic>(sfz_new<TestbedLogic>(std::move(renderers), rendererIndex)),
+		SharedPtr<GameLogic>(sfz_new<TestbedLogic>(std::move(renderers), rendererIndex, *level)),
 		level,
 		initialRenderer
 	)));

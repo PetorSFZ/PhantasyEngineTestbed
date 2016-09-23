@@ -66,6 +66,11 @@ void CPURayTracerRenderer::bakeStaticScene(const StaticScene& staticScene) noexc
 	}
 }
 
+void CPURayTracerRenderer::setDynObjectsForRendering(const DynArray<RawMesh>& meshes, const DynArray<mat4>& transforms) noexcept
+{
+
+}
+
 RenderResult CPURayTracerRenderer::render(Framebuffer& resultFB) noexcept
 {
 	// Calculate camera def in order to generate first rays
