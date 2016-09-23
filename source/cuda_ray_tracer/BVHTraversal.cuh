@@ -59,14 +59,22 @@ struct AABBIsect final {
 	float tOut;
 };
 
-__inline__ __device__ AABBIsect cudaIntersects(const Ray& ray, const vec3& min, const vec3& max, float tCurrMin, float tCurrMax) noexcept
+__inline__ __device__ AABBIsect cudaIntersects(const vec3& invDir, const vec3& originDivDir, const vec3& min, const vec3& max, float tCurrMin, float tCurrMax) noexcept
 {
-	vec3 lo = (min - ray.origin) * ray.invDir;
-	vec3 hi = (max - ray.origin) * ray.invDir;
+	//vec3 lo = (min - ray.origin) * ray.invDir;
+	//vec3 hi = (max - ray.origin) * ray.invDir;
+
+	// FMA operations
+	float loX = min.x * invDir.x - originDivDir.x;
+	float loY = min.y * invDir.y - originDivDir.y;
+	float loZ = min.z * invDir.z - originDivDir.z;
+	float hiX = max.x * invDir.x - originDivDir.x;
+	float hiY = max.y * invDir.y - originDivDir.y;
+	float hiZ = max.z * invDir.z - originDivDir.z;
 
 	AABBIsect tmp;
-	tmp.tIn = spanBeginKepler(lo.x, hi.x, lo.y, hi.y, lo.z, hi.z, tCurrMin);
-	tmp.tOut = spanEndKepler(lo.x, hi.x, lo.y, hi.y, lo.z, hi.z, tCurrMax);
+	tmp.tIn = spanBeginKepler(loX, hiX, loY, hiY, loZ, hiZ, tCurrMin);
+	tmp.tOut = spanEndKepler(loX, hiX, loY, hiY, loZ, hiZ, tCurrMax);
 	return tmp;
 }
 
@@ -100,9 +108,13 @@ __device__ TriangleVertices loadTriangle(cudaTextureObject_t trianglesTex, uint3
 /// the result will therefore only contain information about whether an intersection happens or not
 template<size_t STACK_SIZE = 128>
 __device__ RayCastResult cudaCastRay(cudaTextureObject_t bvhNodesTex, cudaTextureObject_t trianglesTex,
-                                     const Ray& ray, float tMin = 0.0001f, float tMax = FLT_MAX,
-                                     bool noResultOnlyHit = false) noexcept
+                                     const vec3& origin, const vec3& dir, float tMin = 0.0001f,
+                                     float tMax = FLT_MAX, bool noResultOnlyHit = false) noexcept
 {
+	// Calculate extra ray information for ray vs AABB intersection test
+	vec3 invDir = vec3(1.0f) / dir;
+	vec3 originDivDir = origin * invDir;
+
 	const int32_t SENTINEL = int32_t(0x7FFFFFFF);
 
 	// Create local stack
@@ -128,8 +140,8 @@ __device__ RayCastResult cudaCastRay(cudaTextureObject_t bvhNodesTex, cudaTextur
 			BVHNode node = loadBvhNode(bvhNodesTex, currentIndex);
 
 			// Perform AABB intersection tests and figure out which children we want to visit
-			AABBIsect lcHit = cudaIntersects(ray, node.leftChildAABBMin(), node.leftChildAABBMax(), tMin, closest.t);
-			AABBIsect rcHit = cudaIntersects(ray, node.rightChildAABBMin(), node.rightChildAABBMax(), tMin, closest.t);
+			AABBIsect lcHit = cudaIntersects(invDir, originDivDir, node.leftChildAABBMin(), node.leftChildAABBMax(), tMin, closest.t);
+			AABBIsect rcHit = cudaIntersects(invDir, originDivDir, node.rightChildAABBMin(), node.rightChildAABBMax(), tMin, closest.t);
 
 			bool visitLC = lcHit.tIn <= lcHit.tOut;
 			bool visitRC = rcHit.tIn <= rcHit.tOut;
@@ -191,7 +203,7 @@ __device__ RayCastResult cudaCastRay(cudaTextureObject_t bvhNodesTex, cudaTextur
 			int32_t triIndex = ~leafIndex; // Get actual index
 			while (true) {
 				TriangleVertices tri = loadTriangle(trianglesTex, triIndex);
-				TriangleHit hit = intersects(tri, ray.origin, ray.dir);
+				TriangleHit hit = intersects(tri, origin, dir);
 
 				if (hit.hit && hit.t < closest.t && tMin <= hit.t) {
 					closest.triangleIndex = uint32_t(triIndex);

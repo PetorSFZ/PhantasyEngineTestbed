@@ -100,7 +100,7 @@ __global__ void cudaRayTracerKernel(CudaTracerParams params)
 
 	const uint32_t PATH_LENGTH = 2;
 	for (int pathDepth = 0; pathDepth < PATH_LENGTH; pathDepth++) {
-		RayCastResult hit = cudaCastRay(params.staticBvhNodesTex, params.staticTriangleVerticesTex, ray);
+		RayCastResult hit = cudaCastRay(params.staticBvhNodesTex, params.staticTriangleVerticesTex, ray.origin, ray.dir);
 		if (hit.triangleIndex == ~0u) {
 			break;
 		}
@@ -155,7 +155,7 @@ __global__ void cudaRayTracerKernel(CudaTracerParams params)
 		vec3 offsetLightDir = normalize(offsetLightDiff);
 
 		Ray lightRay(offsetHitPos, offsetLightDir);
-		RayCastResult lightHit = cudaCastRay(params.staticBvhNodesTex, params.staticTriangleVerticesTex, lightRay, 0.0001f, length(offsetLightDiff), true);
+		RayCastResult lightHit = cudaCastRay(params.staticBvhNodesTex, params.staticTriangleVerticesTex, lightRay.origin, lightRay.dir, 0.0001f, length(offsetLightDiff), true);
 
 		// If there was no intersection, the point is directly illuminated
 		if (lightHit.triangleIndex == UINT32_MAX) {
@@ -232,7 +232,7 @@ __global__ void castRayTestKernel(CudaTracerParams params)
 	vec3 rayDir = calculatePrimaryRayDir(params.cam, vec2(loc), vec2(params.targetRes));
 	Ray ray(params.cam.origin, rayDir);
 
-	RayCastResult hit = cudaCastRay(params.staticBvhNodesTex, params.staticTriangleVerticesTex, ray);
+	RayCastResult hit = cudaCastRay(params.staticBvhNodesTex, params.staticTriangleVerticesTex, ray.origin, ray.dir);
 
 	vec3 color;
 	if (hit.triangleIndex != UINT32_MAX) {
