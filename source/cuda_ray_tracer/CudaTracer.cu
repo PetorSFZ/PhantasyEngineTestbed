@@ -229,7 +229,12 @@ __global__ void castRayTestKernel(CudaTracerParams params)
 
 	RayCastResult hit = cudaCastRay(params.staticBvhNodesTex, params.staticTriangleVerticesTex, ray);
 
-	vec3 color(hit.u, hit.v, hit.t);
+	vec3 color;
+	if (hit.triangleIndex != UINT32_MAX) {
+		color = vec3(hit.u, hit.v, hit.t);
+	} else {
+		color = vec3(0.0f);
+	}
 
 	writeToSurface(params.targetSurface, loc, vec4(color, 1.0));
 }
