@@ -35,7 +35,7 @@ public:
 
 	Setting* cudaRenderMode = nullptr;
 	CameraDef lastCamera;
-	int32_t lastRenderMode;
+	int32_t lastRenderMode = 0;
 	uint32_t accumulationPasses = 0;
 
 	// Holding the OpenGL Cuda surface data, surface object is in CudaTracerParams.
@@ -95,6 +95,7 @@ CudaTracerRenderer::CudaTracerRenderer() noexcept
 
 	GlobalConfig& cfg = GlobalConfig::instance();
 	mImpl->cudaRenderMode = cfg.sanitizeInt("CudaTracer", "cudaRenderMode", 0, 0, 2);
+	mImpl->lastRenderMode = mImpl->cudaRenderMode->intValue();
 }
 
 CudaTracerRenderer::~CudaTracerRenderer() noexcept
