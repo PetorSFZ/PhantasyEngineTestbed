@@ -231,6 +231,11 @@ void CudaTracerRenderer::bakeStaticScene(const StaticScene& staticScene) noexcep
 	mImpl->tracerParams.numStaticSphereLights = staticScene.sphereLights.size();
 }
 
+void CudaTracerRenderer::setDynObjectsForRendering(const DynArray<RawMesh>& meshes, const DynArray<mat4>& transforms) noexcept
+{
+
+}
+
 RenderResult CudaTracerRenderer::render(Framebuffer& resultFB) noexcept
 {
 	// Calculate camera def in order to generate first rays

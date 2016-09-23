@@ -51,6 +51,8 @@ public:
 
 	void bakeStaticScene(const StaticScene& staticScene) noexcept override final;
 
+	void setDynObjectsForRendering(const DynArray<RawMesh>& meshes, const DynArray<mat4>& transforms) noexcept override final;
+
 	RenderResult render(Framebuffer& resultFB) noexcept override final;
 
 protected:

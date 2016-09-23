@@ -79,6 +79,8 @@ public:
 
 	virtual void bakeStaticScene(const StaticScene& staticScene) noexcept = 0;
 
+	virtual void setDynObjectsForRendering(const DynArray<RawMesh>& meshes, const DynArray<mat4>& transforms) noexcept = 0;
+
 	/// The resultFB framebuffer is required to have a color texture (rgba 16bit float) and a
 	/// depth texture of type 32bit float, the resolution of the framebuffer must be the same
 	/// as the target resolution of the renderer.

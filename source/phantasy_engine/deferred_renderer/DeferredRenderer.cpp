@@ -50,6 +50,11 @@ static void stupidSetMaterialUniforms(Program& shader, const char* uniformName,
 	}
 }
 
+struct DynGLModel {
+	GLModel model;
+	mat4 transform;
+};
+
 // DeferredRendererImpl
 // ------------------------------------------------------------------------------------------------
 
@@ -61,6 +66,7 @@ public:
 
 	// Static scene
 	DynArray<GLModel> staticGLModels;
+	DynArray<DynGLModel> dynamicGLModels;
 	DynArray<SphereLight> staticSphereLights;
 
 	DeferredRendererImpl() noexcept
@@ -137,6 +143,17 @@ void DeferredRenderer::bakeStaticScene(const StaticScene& staticScene) noexcept
 	mImpl->staticSphereLights = staticScene.sphereLights;
 }
 
+void DeferredRenderer::setDynObjectsForRendering(const DynArray<RawMesh>& meshes, const DynArray<mat4>& transforms) noexcept
+{
+	DynArray<DynGLModel>& glModels = mImpl->dynamicGLModels;
+
+	glModels.clear();
+
+	for (uint64_t i = 0; i < meshes.size(); i++) {
+		glModels.add(DynGLModel{ GLModel(meshes[i]), transforms[i] });
+	}
+}
+
 RenderResult DeferredRenderer::render(Framebuffer& resultFB) noexcept
 {
 	auto& gbufferGenShader = mImpl->gbufferGenShader;
@@ -188,6 +205,11 @@ RenderResult DeferredRenderer::render(Framebuffer& resultFB) noexcept
 		
 
 		model.draw();
+	}
+
+	for (const DynGLModel& model : mImpl->dynamicGLModels) {
+		gl::setUniform(gbufferGenShader, "uModelMatrix", model.transform);
+		model.model.draw();
 	}
 
 	/*for (const RenderableComponent& component : mStaticScene->opaqueComponents) {

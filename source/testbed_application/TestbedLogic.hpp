@@ -3,6 +3,7 @@
 #pragma once
 
 #include <phantasy_engine/screens/GameScreen.hpp>
+#include <phantasy_engine/level/Level.hpp>
 
 #include "Helpers.hpp"
 
@@ -24,7 +25,7 @@ public:
 	// Constructors & destructors
 	// --------------------------------------------------------------------------------------------
 
-	TestbedLogic(DynArray<RendererAndStatus>&& renderers, uint32_t rendererIndex) noexcept;
+	TestbedLogic(DynArray<RendererAndStatus>&& renderers, uint32_t rendererIndex, phe::Level& level) noexcept;
 
 	// Overriden methods from GameLogic
 	// --------------------------------------------------------------------------------------------
@@ -56,4 +57,7 @@ private:
 
 	DynArray<RendererAndStatus> mRenderers;
 	uint32_t mCurrentRenderer;
+
+	uint32_t triangleObjectHandle;
+	DynArray<uint32_t> dynamicObjectInstances;
 };
