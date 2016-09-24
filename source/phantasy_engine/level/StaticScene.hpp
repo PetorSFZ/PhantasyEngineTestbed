@@ -5,6 +5,7 @@
 #include <sfz/containers/DynArray.hpp>
 
 #include "phantasy_engine/level/SphereLight.hpp"
+#include "phantasy_engine/ray_tracer_common/BVH.hpp"
 #include "phantasy_engine/rendering/RawMesh.hpp"
 
 namespace phe {
@@ -21,6 +22,7 @@ using sfz::DynArray;
 struct StaticScene {
 	DynArray<RawMesh> meshes;
 	DynArray<SphereLight> sphereLights;
+	BVH bvh; // BVH to be used for raycasting
 };
 
 } // namespace phe

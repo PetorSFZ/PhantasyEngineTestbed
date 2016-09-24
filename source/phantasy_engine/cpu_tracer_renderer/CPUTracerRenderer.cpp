@@ -49,21 +49,6 @@ void CPURayTracerRenderer::bakeStaticScene(const StaticScene& staticScene) noexc
 {
 	// Assume lifetime of StaticScene is not less than this
 	this->mStaticScene = &staticScene;
-
-	{
-		using time_point = std::chrono::high_resolution_clock::time_point;
-		time_point before = std::chrono::high_resolution_clock::now();
-
-		mBVH = std::move(buildStaticFrom(staticScene));
-		sanitizeBVH(mBVH);
-
-		time_point after = std::chrono::high_resolution_clock::now();
-		using FloatSecond = std::chrono::duration<float>;
-		float delta = std::chrono::duration_cast<FloatSecond>(after - before).count();
-		printf("CPU Ray Tracer: Time spent building BVH: %.3f seconds\n", delta);
-
-		printBVHMetrics(mBVH);
-	}
 }
 
 void CPURayTracerRenderer::setDynObjectsForRendering(const DynArray<RawMesh>& meshes, const DynArray<mat4>& transforms) noexcept
@@ -99,10 +84,11 @@ RenderResult CPURayTracerRenderer::render(Framebuffer& resultFB) noexcept
 					vec2 centerOffsCoord = locNormalized * 2.0f - vec2(1.0f); // [-1.0, 1.0]
 					vec3 rayDir = normalize(cam.dir + centerOffsCoord.x * cam.dX + centerOffsCoord.y * cam.dY);
 					Ray ray(cam.origin, rayDir);
+					
 
-					BVHNode* nodes = this->mBVH.nodes.data();
-					TriangleVertices* triangles = this->mBVH.triangles.data();
-					TriangleData* datas = this->mBVH.triangleDatas.data();
+					const BVHNode* nodes = this->mStaticScene->bvh.nodes.data();
+					const TriangleVertices* triangles = this->mStaticScene->bvh.triangles.data();
+					const TriangleData* datas = this->mStaticScene->bvh.triangleDatas.data();
 					
 					// Ray cast against BVH
 					RayCastResult hit = castRay(nodes, triangles, ray);
@@ -179,9 +165,9 @@ const uint8_t* CPURayTracerRenderer::sampleImage(const RawImage& image, const ve
 
 vec4 CPURayTracerRenderer::shadeHit(const Ray& ray, const RayCastResult& hit, const HitInfo& info) noexcept
 {
-	BVHNode* nodes = this->mBVH.nodes.data();
-	TriangleVertices* triangles = this->mBVH.triangles.data();
-	TriangleData* datas = this->mBVH.triangleDatas.data();
+	const BVHNode* nodes = this->mStaticScene->bvh.nodes.data();
+	const TriangleVertices* triangles = this->mStaticScene->bvh.triangles.data();
+	const TriangleData* datas = this->mStaticScene->bvh.triangleDatas.data();
 
 	const TriangleData& data = datas[hit.triangleIndex];
 

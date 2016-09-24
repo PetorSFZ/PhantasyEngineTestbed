@@ -2,6 +2,7 @@
 
 #include "phantasy_engine/ray_tracer_common/BVHMetrics.hpp"
 
+#include <sfz/geometry/AABB.hpp>
 #include <sfz/math/MathHelpers.hpp>
 
 #include "phantasy_engine/ray_tracer_common/BVHTraversal.hpp"

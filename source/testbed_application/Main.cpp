@@ -9,6 +9,8 @@
 #include <phantasy_engine/PhantasyEngine.hpp>
 #include <phantasy_engine/Config.hpp>
 #include <phantasy_engine/level/SponzaLoader.hpp>
+#include <phantasy_engine/ray_tracer_common/BVHSanitizer.hpp>
+#include <phantasy_engine/ray_tracer_common/StaticBVHBuilder.hpp>
 
 #include "Helpers.hpp"
 #include "TestbedLogic.hpp"
@@ -81,14 +83,27 @@ int main(int, char**)
 	SharedPtr<Level> level = makeShared<Level>();
 
 	using time_point = std::chrono::high_resolution_clock::time_point;
-	time_point before = std::chrono::high_resolution_clock::now();
+	using FloatSecond = std::chrono::duration<float>;
+	time_point before, after;
+	float delta;
+
+	before = std::chrono::high_resolution_clock::now();
 
 	loadStaticSceneSponza(modelsPath.str, "sponzaPBR/sponzaPBR.obj", *level, scalingMatrix4(0.05f));
-
-	time_point after = std::chrono::high_resolution_clock::now();
-	using FloatSecond = std::chrono::duration<float>;
-	float delta = std::chrono::duration_cast<FloatSecond>(after - before).count();
+	
+	after = std::chrono::high_resolution_clock::now();
+	delta = std::chrono::duration_cast<FloatSecond>(after - before).count();
 	printf("Time spent loading sponza: %.3f seconds\n", delta);
+
+	// Build the static scene BVH
+	before = std::chrono::high_resolution_clock::now();
+
+	phe::buildStaticBVH(level->staticScene);
+	phe::sanitizeBVH(level->staticScene.bvh);
+
+	after = std::chrono::high_resolution_clock::now();
+	delta = std::chrono::duration_cast<FloatSecond>(after - before).count();
+	printf("Time spent building static scene BVH: %.3f seconds\n", delta);
 
 	// Add lights to the scene
 	vec3 colours[]{

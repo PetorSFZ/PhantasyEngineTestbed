@@ -44,7 +44,6 @@ public:
 	cudaArray_t cudaArray = 0; // Probably no need to free, since memory is owned by OpenGL
 
 	// Parameters for tracer
-	BVH staticBvh; // TODO: Move out to static scene
 	DynArray<CudaBindlessTexture> textureWrappers;
 	DynArray<cudaTextureObject_t> textureObjectHandles;
 	CudaTracerParams tracerParams;
@@ -143,21 +142,7 @@ void CudaTracerRenderer::addMaterial(RawImage& texture, Material& material) noex
 
 void CudaTracerRenderer::bakeStaticScene(const StaticScene& staticScene) noexcept
 {
-	// Build the BVH
-	// TODO: Remove and place in static scene
-	BVH& staticBvh = mImpl->staticBvh;
-	{
-		using time_point = std::chrono::high_resolution_clock::time_point;
-		time_point before = std::chrono::high_resolution_clock::now();
-
-		staticBvh = std::move(buildStaticFrom(staticScene));
-		sanitizeBVH(staticBvh);
-
-		time_point after = std::chrono::high_resolution_clock::now();
-		using FloatSecond = std::chrono::duration<float>;
-		float delta = std::chrono::duration_cast<FloatSecond>(after - before).count();
-		printf("CudaTracerRenderer: Time spent building BVH: %.3f seconds\n", delta);
-	}
+	const BVH& staticBvh = staticScene.bvh;
 
 	// Copy static BVH to GPU
 	BVHNode*& gpuBVHNodes = mImpl->tracerParams.staticBvhNodes;

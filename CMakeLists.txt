@@ -111,7 +111,6 @@ set(PHANTASY_ENGINE_LIB_FILES
 
 	${PH_INCLUDE_DIR}/RayTracerCommon.hpp
 	${PH_INCLUDE_DIR}/ray_tracer_common/BVH.hpp
-	 ${PH_SOURCE_DIR}/ray_tracer_common/BVH.cpp
 	${PH_INCLUDE_DIR}/ray_tracer_common/BVHMetrics.hpp
 	 ${PH_SOURCE_DIR}/ray_tracer_common/BVHMetrics.cpp
 	${PH_INCLUDE_DIR}/ray_tracer_common/BVHNode.hpp
@@ -123,6 +122,8 @@ set(PHANTASY_ENGINE_LIB_FILES
 	${PH_INCLUDE_DIR}/ray_tracer_common/Intersection.hpp
 	${PH_INCLUDE_DIR}/ray_tracer_common/Ray.hpp
 	${PH_INCLUDE_DIR}/ray_tracer_common/Shading.hpp
+	${PH_INCLUDE_DIR}/ray_tracer_common/StaticBVHBuilder.hpp
+	 ${PH_SOURCE_DIR}/ray_tracer_common/StaticBVHBuilder.cpp
 	${PH_INCLUDE_DIR}/ray_tracer_common/Triangle.hpp
 
 	${PH_INCLUDE_DIR}/rendering/BaseRenderer.hpp

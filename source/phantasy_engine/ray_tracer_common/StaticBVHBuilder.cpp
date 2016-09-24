@@ -1,6 +1,9 @@
 // See 'LICENSE_PHANTASY_ENGINE' for copyright and contributors.
 
-#include "phantasy_engine/ray_tracer_common/BVH.hpp"
+#include "phantasy_engine/ray_tracer_common/StaticBVHBuilder.hpp"
+
+#include <sfz/geometry/AABB.hpp>
+#include <sfz/math/Vector.hpp>
 
 #include "phantasy_engine/sbvh-stuff/SplitBVHBuilder.h"
 #include "phantasy_engine/sbvh-stuff/BVH.h"
@@ -8,7 +11,9 @@
 
 namespace phe {
 
-void convertRecursively(phe::BVH& bvh, uint32_t& currentTriangleIndex, const nv::BVHNode* node)
+using sfz::vec3i;
+
+static void convertRecursively(phe::BVH& bvh, uint32_t& currentTriangleIndex, const nv::BVHNode* node)
 {
 	uint32_t nodeIndex = bvh.nodes.size();
 
@@ -63,7 +68,7 @@ void convertRecursively(phe::BVH& bvh, uint32_t& currentTriangleIndex, const nv:
 // Members
 // ------------------------------------------------------------------------------------------------
 
-phe::BVH buildStaticFrom(const StaticScene& scene) noexcept
+void buildStaticBVH(StaticScene& scene) noexcept
 {
 	// Extract information from StaticScene to simple arrays, whose indicies map to the same
 	// triangle.
@@ -103,7 +108,7 @@ phe::BVH buildStaticFrom(const StaticScene& scene) noexcept
 		}
 	}
 
-	return buildStaticFrom(inTriangles, inTriangleDatas); 
+	scene.bvh = std::move(buildStaticFrom(inTriangles, inTriangleDatas));
 }
 
 phe::BVH buildStaticFrom(const DynArray<TriangleVertices>& inTriangles,

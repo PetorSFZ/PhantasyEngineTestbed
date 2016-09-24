@@ -7,6 +7,7 @@
 
 #include <sfz/math/Vector.hpp>
 
+#include <phantasy_engine/level/SphereLight.hpp>
 #include <phantasy_engine/RayTracerCommon.hpp>
 #include <phantasy_engine/rendering/Material.hpp>
 
