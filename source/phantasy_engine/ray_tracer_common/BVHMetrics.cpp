@@ -180,13 +180,13 @@ static void processNode(const BVH& bvh, BVHMetrics& metrics, InternalBVHMetrics&
 		processLeaf(bvh, metrics, internalMetrics, node.leftChildNumTriangles(), depth + 1);
 	}
 	else {
-		processNode(bvh, metrics, internalMetrics, node.leftChildIndex(), depth + 1, leftAABB);
+		processNode(bvh, metrics, internalMetrics, node.leftChildIndexSafe(), depth + 1, leftAABB);
 	}
 	if (node.rightChildIsLeaf()) {
 		processLeaf(bvh, metrics, internalMetrics, node.rightChildNumTriangles(), depth + 1);
 	}
 	else {
-		processNode(bvh, metrics, internalMetrics, node.rightChildIndex(), depth + 1, rightAABB);
+		processNode(bvh, metrics, internalMetrics, node.rightChildIndexSafe(), depth + 1, rightAABB);
 	}
 }
 

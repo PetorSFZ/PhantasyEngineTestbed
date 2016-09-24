@@ -65,7 +65,7 @@ inline RayCastResult castRay(const BVHNode* nodes, const TriangleVertices* trian
 
 		// Visit children
 		if (visitLC) {
-			uint32_t lcIndex = node.leftChildIndex();
+			uint32_t lcIndex = node.leftChildIndexSafe();
 			uint32_t numTriangles = node.leftChildNumTriangles();
 
 			// Node is inner
@@ -94,7 +94,7 @@ inline RayCastResult castRay(const BVHNode* nodes, const TriangleVertices* trian
 			}
 		}
 		if (visitRC) {
-			uint32_t rcIndex = node.rightChildIndex();
+			uint32_t rcIndex = node.rightChildIndexSafe();
 			uint32_t numTriangles = node.rightChildNumTriangles();
 
 			// Node is inner
@@ -166,7 +166,7 @@ SFZ_CUDA_CALLABLE RayCastResult castDebugRay(const BVHNode* nodes, const Triangl
 		if (visitLC) {
 			debugData->aabbIntersections++;
 
-			uint32_t lcIndex = node.leftChildIndex();
+			uint32_t lcIndex = node.leftChildIndexSafe();
 			uint32_t numTriangles = node.leftChildNumTriangles();
 
 			// Node is inner
@@ -199,7 +199,7 @@ SFZ_CUDA_CALLABLE RayCastResult castDebugRay(const BVHNode* nodes, const Triangl
 		if (visitRC) {
 			debugData->aabbIntersections++;
 
-			uint32_t rcIndex = node.rightChildIndex();
+			uint32_t rcIndex = node.rightChildIndexSafe();
 			uint32_t numTriangles = node.rightChildNumTriangles();
 
 			// Node is inner

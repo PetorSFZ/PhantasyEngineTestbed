@@ -154,8 +154,8 @@ __device__ RayCastResult cudaCastRay(cudaTextureObject_t bvhNodesTex, cudaTextur
 
 			// If we need to visit at least one child
 			else {
-				int32_t lcIndex = node.leftChildIndex();
-				int32_t rcIndex = node.rightChildIndex();
+				int32_t lcIndex = node.leftChildIndexRaw();
+				int32_t rcIndex = node.rightChildIndexRaw();
 
 				// Put left child in currentIndex if we need to visit it, otherwise right child
 				currentIndex = visitLC ? lcIndex : rcIndex;

@@ -26,12 +26,12 @@ static int32_t sanitizeInternal(BVH& bvh, int32_t oldNodeIndex, DynArray<BVHNode
 	if (newNode.leftChildIsLeaf()) {
 
 		// Makes sure triangle index is bitwise negated
-		if (newNode.leftChildIndex() >= 0) {
-			newNode.setLeftChildLeaf(~newNode.leftChildIndex(), newNode.leftChildNumTriangles());
+		if (newNode.leftChildIndexRaw() >= 0) {
+			newNode.setLeftChildLeaf(~newNode.leftChildIndexRaw(), newNode.leftChildNumTriangles());
 		}
 		
 		// Sets padding to 0 in all non-last triangles in leaf
-		int32_t firstTriIndex = ~newNode.leftChildIndex();
+		int32_t firstTriIndex = ~newNode.leftChildIndexRaw();
 		int32_t lastTriIndex = firstTriIndex + newNode.leftChildNumTriangles() - 1;
 		for (int32_t i = firstTriIndex; i < lastTriIndex; i++) {
 			bvh.triangles[i].v0.w = 0.0f;
@@ -45,19 +45,19 @@ static int32_t sanitizeInternal(BVH& bvh, int32_t oldNodeIndex, DynArray<BVHNode
 		bvh.triangles[lastTriIndex].v2.w = -1.0f;
 	}
 	else {
-		newNode.setLeftChildInner(sanitizeInternal(bvh, newNode.leftChildIndex(), newNodes));
+		newNode.setLeftChildInner(sanitizeInternal(bvh, newNode.leftChildIndexRaw(), newNodes));
 	}
 
 	// Process right child
 	if (newNode.rightChildIsLeaf()) {
 		
 		// Makes sure triangle index is bitwise negated
-		if (newNode.rightChildIndex() >= 0) {
-			newNode.setRightChildLeaf(~newNode.rightChildIndex(), newNode.rightChildNumTriangles());
+		if (newNode.rightChildIndexRaw() >= 0) {
+			newNode.setRightChildLeaf(~newNode.rightChildIndexRaw(), newNode.rightChildNumTriangles());
 		}
 		
 		// Sets padding to 0 in all non-last triangles in leaf
-		int32_t firstTriIndex = ~newNode.rightChildIndex();
+		int32_t firstTriIndex = ~newNode.rightChildIndexRaw();
 		int32_t lastTriIndex = firstTriIndex + newNode.rightChildNumTriangles() - 1;
 		for (int32_t i = firstTriIndex; i < lastTriIndex; i++) {
 			bvh.triangles[i].v0.w = 0.0f;
@@ -71,7 +71,7 @@ static int32_t sanitizeInternal(BVH& bvh, int32_t oldNodeIndex, DynArray<BVHNode
 		bvh.triangles[lastTriIndex].v2.w = -1.0f;
 	}
 	else {
-		newNode.setRightChildInner(sanitizeInternal(bvh, newNode.rightChildIndex(), newNodes));
+		newNode.setRightChildInner(sanitizeInternal(bvh, newNode.rightChildIndexRaw(), newNodes));
 	}
 
 	return newNodeIndex;

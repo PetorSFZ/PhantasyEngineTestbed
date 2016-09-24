@@ -14,6 +14,12 @@ using sfz::vec4i;
 // BVHNode
 // ------------------------------------------------------------------------------------------------
 
+/// Each node in the BVH has two children. There are two types of children, inner nodes and leafs.
+/// If the child is an inner node its index points to the next BVHNode in the array. If the child
+/// is a leaf node its index points to the first triangle in the triangle arrays.
+///
+/// The index is bitwise negated (~) if it is a leaf. Use the "safe" index getters if you don't
+/// care about that detail.
 struct BVHNode {
 	
 	// Data (You are not meant to access these directly, use the getters and setters!)
@@ -28,7 +34,7 @@ struct BVHNode {
 	// iData contains the following:
 	// [lcIndex, rcIndex, lcNumTriangles, rcNumTriangles]
 	// In an inner node lcIndex and rcIndex are the indices of the children inner nodes. In a
-	// leaf node they are indices to the first triangles.
+	// leaf node they are (bitwise negated) indices to the first triangles.
 	// lcNumTriangles and rcNumTriangles are 0 in inner nodes, in leaf nodes they tell the number
 	// of triangles pointed to by the leaf node 
 	vec4i iData;
@@ -56,14 +62,26 @@ struct BVHNode {
 		return fData[2].yzw;
 	}
 
-	SFZ_CUDA_CALLABLE int32_t leftChildIndex() const noexcept
+	SFZ_CUDA_CALLABLE int32_t leftChildIndexRaw() const noexcept
 	{
 		return iData.x;
 	}
 
-	SFZ_CUDA_CALLABLE int32_t rightChildIndex() const noexcept
+	SFZ_CUDA_CALLABLE int32_t rightChildIndexRaw() const noexcept
 	{
 		return iData.y;
+	}
+
+	inline int32_t leftChildIndexSafe() const noexcept
+	{
+		int32_t index = leftChildIndexRaw();
+		return (index < 0) ? ~index : index;
+	}
+
+	inline int32_t rightChildIndexSafe() const noexcept
+	{
+		int32_t index = rightChildIndexRaw();
+		return (index < 0) ? ~index : index;
 	}
 
 	SFZ_CUDA_CALLABLE int32_t leftChildNumTriangles() const noexcept
