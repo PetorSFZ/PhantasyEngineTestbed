@@ -9,7 +9,6 @@
 #include <phantasy_engine/PhantasyEngine.hpp>
 #include <phantasy_engine/Config.hpp>
 #include <phantasy_engine/level/SponzaLoader.hpp>
-#include <phantasy_engine/ray_tracer_common/BVHSanitizer.hpp>
 #include <phantasy_engine/ray_tracer_common/StaticBVHBuilder.hpp>
 
 #include "Helpers.hpp"
