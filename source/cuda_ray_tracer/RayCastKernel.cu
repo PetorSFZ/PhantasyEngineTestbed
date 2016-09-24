@@ -14,7 +14,53 @@ using sfz::vec3i;
 using sfz::vec4;
 using sfz::vec4i;
 
-// Generate primary rays kernel
+// Main ray cast kernel
+// ------------------------------------------------------------------------------------------------
+
+__global__ void rayCastKernel(cudaTextureObject_t bvhNodes, cudaTextureObject_t triangleVerts,
+                              const RayIn* rays, RayHit* rayHits, uint32_t numRays)
+{
+	static_assert(sizeof(RayIn) == 32, "RayIn is padded");
+	static_assert(sizeof(RayHit) == 16, "RayHitOut is padded");
+
+	const int tid = threadIdx.x;
+
+	RayHit tmp;
+	tmp.u = 1.0f;
+	tmp.v = 0.0f;
+	tmp.t = 0.0f;
+	rayHits[tid] = tmp; 
+}
+
+// RayCastKernel launch function
+// ------------------------------------------------------------------------------------------------
+
+void launchRayCastKernel(cudaTextureObject_t bvhNodes, cudaTextureObject_t triangleVerts,
+                         const RayIn* rays, RayHit* rayHits, uint32_t numRays) noexcept
+{
+	cudaDeviceProp properties;
+	cudaGetDeviceProperties(&properties, 0); // TODO: Maybe not device 0?
+	int maxNumMultiProcessors = properties.multiProcessorCount;
+	int maxNumThreadsPerMultiProcessor = properties.maxThreadsPerMultiProcessor;
+	int maxNumThreadsPerBlock = properties.maxThreadsPerBlock;
+	vec3i maxGridSize = vec3i(properties.maxGridSize);
+
+	//printf("maxNumMultiProcessors: %i\n", maxNumMultiProcessors);
+	//printf("maxNumThreadsPerMultiProcessor: %i\n", maxNumThreadsPerMultiProcessor);
+	//printf("maxNumThreadsPerBlock: %i\n", maxNumThreadsPerBlock);
+	//printf("maxGridSize: %s\n", toString(maxGridSize).str);
+
+	uint32_t blocksPerMultiprocessor = maxNumThreadsPerMultiProcessor / maxNumThreadsPerBlock;
+
+	uint32_t threadsPerBlock = maxNumThreadsPerMultiProcessor / blocksPerMultiprocessor;
+	uint32_t numBlocks = blocksPerMultiprocessor * maxNumMultiProcessors;
+
+	rayCastKernel<<<numBlocks, threadsPerBlock>>>(bvhNodes, triangleVerts, rays, rayHits, numRays);
+	CHECK_CUDA_ERROR(cudaGetLastError());
+	CHECK_CUDA_ERROR(cudaDeviceSynchronize());
+}
+
+// Secondary helper kernels (for debugging and profiling)
 // ------------------------------------------------------------------------------------------------
 
 __device__ vec3 calculatePrimaryRayDir(const CameraDef& cam, vec2 loc, vec2 surfaceRes)
@@ -46,9 +92,6 @@ __global__ void genPrimaryRaysKernel(RayIn* rays, CameraDef cam, vec2i res)
 	rays[id] = ray;
 }
 
-// Write ray hits to surface kernel
-// ------------------------------------------------------------------------------------------------
-
 __global__ void writeRayHitsToScreenKernel(cudaSurfaceObject_t surface, vec2i res, const RayHit* rayHits)
 {
 	static_assert(sizeof(RayHit) == 16, "RayHitOut is padded");
@@ -66,33 +109,12 @@ __global__ void writeRayHitsToScreenKernel(cudaSurfaceObject_t surface, vec2i re
 	surf2Dwrite(toFloat4(color), surface, loc.x * sizeof(float4), loc.y);
 }
 
-// Main ray cast kernel
-// ------------------------------------------------------------------------------------------------
-
-__global__ void rayCastKernel(cudaTextureObject_t bvhNodes, cudaTextureObject_t triangleVerts,
-                              const RayIn* rays, RayHit* rayHits, uint32_t numRays)
-{
-	static_assert(sizeof(RayIn) == 32, "RayIn is padded");
-	static_assert(sizeof(RayHit) == 16, "RayHitOut is padded");
-
-	const int tid = threadIdx.x;
-
-	RayHit tmp;
-	tmp.u = 1.0f;
-	tmp.v = 0.0f;
-	tmp.t = 0.0f;
-	rayHits[tid] = tmp; 
-}
-
-// RayCastKernel launch function
-// ------------------------------------------------------------------------------------------------
-
-void genPrimaryRays(RayIn* rays, const CameraDef& cam, vec2i res) noexcept
+void launchGenPrimaryRaysKernel(RayIn* rays, const CameraDef& cam, vec2i res) noexcept
 {
 	// Calculate number of threads and blocks to run
 	dim3 threadsPerBlock(8, 8);
 	dim3 numBlocks((res.x + threadsPerBlock.x - 1) / threadsPerBlock.x,
-	               (res.y + threadsPerBlock.y - 1) / threadsPerBlock.y);
+		(res.y + threadsPerBlock.y - 1) / threadsPerBlock.y);
 
 	// Run cuda ray tracer kernel
 	genPrimaryRaysKernel<<<numBlocks, threadsPerBlock>>>(rays, cam, res);
@@ -100,40 +122,15 @@ void genPrimaryRays(RayIn* rays, const CameraDef& cam, vec2i res) noexcept
 	CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 }
 
-void writeRayHitsToScreen(cudaSurfaceObject_t surface, vec2i res, const RayHit* rayHits) noexcept
+void launchWriteRayHitsToScreenKernel(cudaSurfaceObject_t surface, vec2i res, const RayHit* rayHits) noexcept
 {
 	// Calculate number of threads and blocks to run
 	dim3 threadsPerBlock(8, 8);
 	dim3 numBlocks((res.x + threadsPerBlock.x - 1) / threadsPerBlock.x,
-	               (res.y + threadsPerBlock.y - 1) / threadsPerBlock.y);
+		(res.y + threadsPerBlock.y - 1) / threadsPerBlock.y);
 
 	// Run cuda ray tracer kernel
 	writeRayHitsToScreenKernel<<<numBlocks, threadsPerBlock>>>(surface, res, rayHits);
-	CHECK_CUDA_ERROR(cudaGetLastError());
-	CHECK_CUDA_ERROR(cudaDeviceSynchronize());
-}
-
-void launchRayCastKernel(cudaTextureObject_t bvhNodes, cudaTextureObject_t triangleVerts,
-                         const RayIn* rays, RayHit* rayHits, uint32_t numRays) noexcept
-{
-	cudaDeviceProp properties;
-	cudaGetDeviceProperties(&properties, 0); // TODO: Maybe not device 0?
-	int maxNumMultiProcessors = properties.multiProcessorCount;
-	int maxNumThreadsPerMultiProcessor = properties.maxThreadsPerMultiProcessor;
-	int maxNumThreadsPerBlock = properties.maxThreadsPerBlock;
-	vec3i maxGridSize = vec3i(properties.maxGridSize);
-
-	//printf("maxNumMultiProcessors: %i\n", maxNumMultiProcessors);
-	//printf("maxNumThreadsPerMultiProcessor: %i\n", maxNumThreadsPerMultiProcessor);
-	//printf("maxNumThreadsPerBlock: %i\n", maxNumThreadsPerBlock);
-	//printf("maxGridSize: %s\n", toString(maxGridSize).str);
-
-	uint32_t blocksPerMultiprocessor = maxNumThreadsPerMultiProcessor / maxNumThreadsPerBlock;
-
-	uint32_t threadsPerBlock = maxNumThreadsPerMultiProcessor / blocksPerMultiprocessor;
-	uint32_t numBlocks = blocksPerMultiprocessor * maxNumMultiProcessors;
-
-	rayCastKernel<<<numBlocks, threadsPerBlock>>>(bvhNodes, triangleVerts, rays, rayHits, numRays);
 	CHECK_CUDA_ERROR(cudaGetLastError());
 	CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 }

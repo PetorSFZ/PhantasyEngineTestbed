@@ -46,11 +46,14 @@ static_assert(sizeof(RayHit) == 16, "RayHitOut is padded");
 // RayCastKernel launch function
 // ------------------------------------------------------------------------------------------------
 
-void genPrimaryRays(RayIn* rays, const CameraDef& cam, vec2i res) noexcept;
-
-void writeRayHitsToScreen(cudaSurfaceObject_t surface, vec2i res, const RayHit* rayHits) noexcept;
-
 void launchRayCastKernel(cudaTextureObject_t bvhNodes, cudaTextureObject_t triangleVerts,
                          const RayIn* rays, RayHit* rayHits, uint32_t numRays) noexcept;
+
+// Secondary helper kernels (for debugging and profiling)
+// ------------------------------------------------------------------------------------------------
+
+void launchGenPrimaryRaysKernel(RayIn* rays, const CameraDef& cam, vec2i res) noexcept;
+
+void launchWriteRayHitsToScreenKernel(cudaSurfaceObject_t surface, vec2i res, const RayHit* rayHits) noexcept;
 
 } // namespace phe

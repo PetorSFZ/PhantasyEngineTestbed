@@ -264,11 +264,10 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB) noexcept
 		cudaHeatmapTrace(params);
 		break;
 	case 2:
-		genPrimaryRays(mImpl->gpuRaysBuffer, params.cam, mTargetResolution);
+		launchGenPrimaryRaysKernel(mImpl->gpuRaysBuffer, params.cam, mTargetResolution);
 		launchRayCastKernel(mImpl->tracerParams.staticBvhNodesTex, mImpl->tracerParams.staticTriangleVerticesTex,
 		                    mImpl->gpuRaysBuffer, mImpl->gpuRayHitsBuffer, mTargetResolution.x * mTargetResolution.y);
-		writeRayHitsToScreen(mImpl->tracerParams.targetSurface, mImpl->tracerParams.targetRes, mImpl->gpuRayHitsBuffer);
-		//cudaCastRayTest(params);
+		launchWriteRayHitsToScreenKernel(mImpl->tracerParams.targetSurface, mImpl->tracerParams.targetRes, mImpl->gpuRayHitsBuffer);
 		break;
 	default:
 		sfz_assert_debug(false);
