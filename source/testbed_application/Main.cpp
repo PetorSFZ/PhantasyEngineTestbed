@@ -94,15 +94,56 @@ int main(int, char**)
 	delta = std::chrono::duration_cast<FloatSecond>(after - before).count();
 	printf("Time spent loading sponza: %.3f seconds\n", delta);
 
-	// Build the static scene BVH
-	before = std::chrono::high_resolution_clock::now();
+	{
+		StackString256 bvhNodesCachePath;
+		bvhNodesCachePath.printf("%ssponza_bvhnode.bvhcache", basePath());
+		StackString256 bvhTriVertsCachePath;
+		bvhTriVertsCachePath.printf("%ssponza_triverts.bvhcache", basePath());
+		StackString256 bvhTriDatasCachePath;
+		bvhTriDatasCachePath.printf("%ssponza_tridatas.bvhcache", basePath());
 
-	phe::buildStaticBVH(level->staticScene);
-	phe::sanitizeBVH(level->staticScene.bvh);
+		BVH& bvh = level->staticScene.bvh;
 
-	after = std::chrono::high_resolution_clock::now();
-	delta = std::chrono::duration_cast<FloatSecond>(after - before).count();
-	printf("Time spent building static scene BVH: %.3f seconds\n", delta);
+		// Check if BVH is cached
+		if (fileExists(bvhNodesCachePath.str) &&
+			fileExists(bvhTriVertsCachePath.str) &&
+			fileExists(bvhTriDatasCachePath.str)) {
+
+			printf("Started reading static BVH from file cache\n");
+			DynArray<uint8_t> nodes = readBinaryFile(bvhNodesCachePath.str);
+			DynArray<uint8_t> triVerts = readBinaryFile(bvhTriVertsCachePath.str);
+			DynArray<uint8_t> triDatas = readBinaryFile(bvhTriDatasCachePath.str);
+
+			bvh.nodes.add((BVHNode*)nodes.data(), nodes.size() / sizeof(BVHNode));
+			bvh.triangleVerts.add((TriangleVertices*)triVerts.data(), triVerts.size() / sizeof(TriangleVertices));
+			bvh.triangleDatas.add((TriangleData*)triDatas.data(), triDatas.size() / sizeof(TriangleData));
+
+			printf("Finished reading static BVH from file cache\n");
+
+			if (bvh.triangleVerts.size() != bvh.triangleDatas.size()) {
+				sfz::error("Invalid BVH cache");
+			}
+			// TODO: Insert more error checks
+		}
+
+		// Create BVH and write it to file
+		else {
+			printf("Started building static BVH\n");
+			before = std::chrono::high_resolution_clock::now();
+
+			phe::buildStaticBVH(level->staticScene);
+			phe::sanitizeBVH(bvh);
+
+			after = std::chrono::high_resolution_clock::now();
+			delta = std::chrono::duration_cast<FloatSecond>(after - before).count();
+			printf("Finished building static BVH: %.3f seconds\n", delta);
+
+			writeBinaryFile(bvhNodesCachePath.str, (const uint8_t*)bvh.nodes.data(), bvh.nodes.size() * sizeof(BVHNode));
+			writeBinaryFile(bvhTriVertsCachePath.str, (const uint8_t*)bvh.triangleVerts.data(), bvh.triangleVerts.size() * sizeof(TriangleVertices));
+			writeBinaryFile(bvhTriDatasCachePath.str, (const uint8_t*)bvh.triangleDatas.data(), bvh.triangleDatas.size() * sizeof(TriangleData));
+			printf("Wrote static BVH to file for future runs\n");
+		}
+	}
 
 	// Add lights to the scene
 	vec3 colours[]{
