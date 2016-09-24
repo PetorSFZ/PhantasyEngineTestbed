@@ -34,15 +34,15 @@ static int32_t sanitizeInternal(BVH& bvh, int32_t oldNodeIndex, DynArray<BVHNode
 		int32_t firstTriIndex = ~newNode.leftChildIndexRaw();
 		int32_t lastTriIndex = firstTriIndex + newNode.leftChildNumTriangles() - 1;
 		for (int32_t i = firstTriIndex; i < lastTriIndex; i++) {
-			bvh.triangles[i].v0.w = 0.0f;
-			bvh.triangles[i].v1.w = 0.0f;
-			bvh.triangles[i].v2.w = 0.0f;
+			bvh.triangleVerts[i].v0.w = 0.0f;
+			bvh.triangleVerts[i].v1.w = 0.0f;
+			bvh.triangleVerts[i].v2.w = 0.0f;
 		}
 		
 		// Sets padding to -1.0f in last triangle in leaf (end marker)
-		bvh.triangles[lastTriIndex].v0.w = -1.0f;
-		bvh.triangles[lastTriIndex].v1.w = -1.0f;
-		bvh.triangles[lastTriIndex].v2.w = -1.0f;
+		bvh.triangleVerts[lastTriIndex].v0.w = -1.0f;
+		bvh.triangleVerts[lastTriIndex].v1.w = -1.0f;
+		bvh.triangleVerts[lastTriIndex].v2.w = -1.0f;
 	}
 	else {
 		newNode.setLeftChildInner(sanitizeInternal(bvh, newNode.leftChildIndexRaw(), newNodes));
@@ -60,15 +60,15 @@ static int32_t sanitizeInternal(BVH& bvh, int32_t oldNodeIndex, DynArray<BVHNode
 		int32_t firstTriIndex = ~newNode.rightChildIndexRaw();
 		int32_t lastTriIndex = firstTriIndex + newNode.rightChildNumTriangles() - 1;
 		for (int32_t i = firstTriIndex; i < lastTriIndex; i++) {
-			bvh.triangles[i].v0.w = 0.0f;
-			bvh.triangles[i].v1.w = 0.0f;
-			bvh.triangles[i].v2.w = 0.0f;
+			bvh.triangleVerts[i].v0.w = 0.0f;
+			bvh.triangleVerts[i].v1.w = 0.0f;
+			bvh.triangleVerts[i].v2.w = 0.0f;
 		}
 		
 		// Sets padding to -1.0f in last triangle in leaf (end marker)
-		bvh.triangles[lastTriIndex].v0.w = -1.0f;
-		bvh.triangles[lastTriIndex].v1.w = -1.0f;
-		bvh.triangles[lastTriIndex].v2.w = -1.0f;
+		bvh.triangleVerts[lastTriIndex].v0.w = -1.0f;
+		bvh.triangleVerts[lastTriIndex].v1.w = -1.0f;
+		bvh.triangleVerts[lastTriIndex].v2.w = -1.0f;
 	}
 	else {
 		newNode.setRightChildInner(sanitizeInternal(bvh, newNode.rightChildIndexRaw(), newNodes));
@@ -205,7 +205,7 @@ phe::BVH buildStaticFrom(const DynArray<TriangleVertices>& inTriangles,
 	phe::BVH convertedBvh;
 
 	for (uint32_t i = 0; i < sbvh.getTriIndices().getSize(); i++) {
-		convertedBvh.triangles.add(inTriangles[sbvh.getTriIndices().get(i)]);
+		convertedBvh.triangleVerts.add(inTriangles[sbvh.getTriIndices().get(i)]);
 		convertedBvh.triangleDatas.add(inTriangleDatas[sbvh.getTriIndices().get(i)]);
 	}
 

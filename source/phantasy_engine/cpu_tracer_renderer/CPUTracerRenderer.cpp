@@ -87,7 +87,7 @@ RenderResult CPURayTracerRenderer::render(Framebuffer& resultFB) noexcept
 					
 
 					const BVHNode* nodes = this->mStaticScene->bvh.nodes.data();
-					const TriangleVertices* triangles = this->mStaticScene->bvh.triangles.data();
+					const TriangleVertices* triangles = this->mStaticScene->bvh.triangleVerts.data();
 					const TriangleData* datas = this->mStaticScene->bvh.triangleDatas.data();
 					
 					// Ray cast against BVH
@@ -166,7 +166,7 @@ const uint8_t* CPURayTracerRenderer::sampleImage(const RawImage& image, const ve
 vec4 CPURayTracerRenderer::shadeHit(const Ray& ray, const RayCastResult& hit, const HitInfo& info) noexcept
 {
 	const BVHNode* nodes = this->mStaticScene->bvh.nodes.data();
-	const TriangleVertices* triangles = this->mStaticScene->bvh.triangles.data();
+	const TriangleVertices* triangles = this->mStaticScene->bvh.triangleVerts.data();
 	const TriangleData* datas = this->mStaticScene->bvh.triangleDatas.data();
 
 	const TriangleData& data = datas[hit.triangleIndex];

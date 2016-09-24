@@ -61,7 +61,7 @@ BVHMetrics computeBVHMetrics(const BVH& bvh)
 
 	metrics.nodeCount = bvh.nodes.size();
 	metrics.leafCount = 0;
-	metrics.triangleCount = bvh.triangles.size();
+	metrics.triangleCount = bvh.triangleVerts.size();
 
 	metrics.minLeafDepth = UINT32_MAX;
 	metrics.maxLeafDepth = 0;
@@ -238,7 +238,7 @@ static void computeTraversalMetrics(BVHMetrics& metrics, const BVH& bvh) noexcep
 
 	for (const auto& ray : SAMPLE_RAYS) {
 		DebugRayCastData debugData;
-		RayCastResult rayResult = castDebugRay(bvh.nodes.data(), bvh.triangles.data(), ray, &debugData);
+		RayCastResult rayResult = castDebugRay(bvh.nodes.data(), bvh.triangleVerts.data(), ray, &debugData);
 
 		updateMax(traversalMetrics.maxNodesVisited, debugData.nodesVisited);
 		updateMax(traversalMetrics.maxTriangleIntersectionTests, debugData.triangleIntersectionTests);

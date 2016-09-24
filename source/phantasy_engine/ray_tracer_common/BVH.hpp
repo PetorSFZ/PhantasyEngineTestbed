@@ -21,7 +21,7 @@ struct BVH final {
 	DynArray<BVHNode> nodes;
 
 	// These arrays are supposed to be the same size, an index is valid in both lists
-	DynArray<TriangleVertices> triangles;
+	DynArray<TriangleVertices> triangleVerts;
 	DynArray<TriangleData> triangleDatas;
 };
 

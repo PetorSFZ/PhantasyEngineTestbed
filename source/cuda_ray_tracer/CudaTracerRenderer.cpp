@@ -175,9 +175,9 @@ void CudaTracerRenderer::bakeStaticScene(const StaticScene& staticScene) noexcep
 	// Copy static triangle vertices to GPU
 	TriangleVertices*& gpuTriangleVertices = mImpl->tracerParams.staticTriangleVertices;
 	CHECK_CUDA_ERROR(cudaFree(gpuTriangleVertices));
-	size_t numTriangleVertBytes = staticBvh.triangles.size() * sizeof(TriangleVertices);
+	size_t numTriangleVertBytes = staticBvh.triangleVerts.size() * sizeof(TriangleVertices);
 	CHECK_CUDA_ERROR(cudaMalloc(&gpuTriangleVertices, numTriangleVertBytes));
-	CHECK_CUDA_ERROR(cudaMemcpy(gpuTriangleVertices, staticBvh.triangles.data(), numTriangleVertBytes, cudaMemcpyHostToDevice));
+	CHECK_CUDA_ERROR(cudaMemcpy(gpuTriangleVertices, staticBvh.triangleVerts.data(), numTriangleVertBytes, cudaMemcpyHostToDevice));
 
 	// Create texture object for triangle vertices
 	CHECK_CUDA_ERROR(cudaDestroyTextureObject(mImpl->tracerParams.staticTriangleVerticesTex));
