@@ -20,6 +20,7 @@
 #include "CudaBindlessTexture.hpp"
 #include "CudaHelpers.hpp"
 #include "CudaTracer.cuh"
+#include "RayCastKernel.cuh"
 
 namespace phe {
 
@@ -47,6 +48,10 @@ public:
 	DynArray<CudaBindlessTexture> textureWrappers;
 	DynArray<cudaTextureObject_t> textureObjectHandles;
 	CudaTracerParams tracerParams;
+
+	// Temp
+	RayIn* gpuRaysBuffer = nullptr;
+	RayHit* gpuRayHitsBuffer = nullptr;
 
 	CudaTracerRendererImpl() noexcept
 	{
@@ -76,6 +81,10 @@ public:
 
 		// Static light sources
 		CHECK_CUDA_ERROR(cudaFree(tracerParams.staticSphereLights));
+
+		// Temp
+		CHECK_CUDA_ERROR(cudaFree(gpuRaysBuffer));
+		CHECK_CUDA_ERROR(cudaFree(gpuRayHitsBuffer));
 	}
 };
 
@@ -255,7 +264,11 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB) noexcept
 		cudaHeatmapTrace(params);
 		break;
 	case 2:
-		cudaCastRayTest(params);
+		genPrimaryRays(mImpl->gpuRaysBuffer, params.cam, mTargetResolution);
+		launchRayCastKernel(mImpl->tracerParams.staticBvhNodesTex, mImpl->tracerParams.staticTriangleVerticesTex,
+		                    mImpl->gpuRaysBuffer, mImpl->gpuRayHitsBuffer, mTargetResolution.x * mTargetResolution.y);
+		writeRayHitsToScreen(mImpl->tracerParams.targetSurface, mImpl->tracerParams.targetRes, mImpl->gpuRayHitsBuffer);
+		//cudaCastRayTest(params);
 		break;
 	default:
 		sfz_assert_debug(false);
@@ -347,6 +360,15 @@ void CudaTracerRenderer::targetResolutionUpdated() noexcept
 
 	auto timeSeed = static_cast<unsigned long long>(time(nullptr));
 	initCurand(mImpl->tracerParams, timeSeed);
+
+	// Allocate ray infos for each pixel
+	CHECK_CUDA_ERROR(cudaFree(mImpl->gpuRaysBuffer));
+	size_t numRayBytes = mTargetResolution.x * mTargetResolution.y * sizeof(RayIn);
+	CHECK_CUDA_ERROR(cudaMalloc(&mImpl->gpuRaysBuffer, numRayBytes));
+
+	CHECK_CUDA_ERROR(cudaFree(mImpl->gpuRayHitsBuffer));
+	size_t numRayHitBytes = mTargetResolution.x * mTargetResolution.y * sizeof(RayHit);
+	CHECK_CUDA_ERROR(cudaMalloc(&mImpl->gpuRayHitsBuffer, numRayHitBytes));
 }
 
 } // namespace phe
