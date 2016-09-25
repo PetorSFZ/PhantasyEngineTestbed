@@ -93,6 +93,102 @@ inline __device__ vec3 calculateRandomizedPrimaryRayDir(const CameraDef& cam, ve
 // Main ray tracing kernel
 // ------------------------------------------------------------------------------------------------
 
+__device__ vec3 shadeHit(const CudaTracerParams& params, curandState& randState, const Ray& ray,
+                         const RayCastResult& hit, const HitInfo& info, const vec3& offsetHitPos,
+                         const vec3& albedoColor, float metallic, float roughness) noexcept
+{
+	vec3 color = vec3(0.0f);
+
+	for (uint32_t i = 0; i < params.numStaticSphereLights; i++) {
+		const SphereLight& light = params.staticSphereLights[i];
+
+		if (light.shadows) {
+			vec3 lightPos = light.pos;
+			vec3 lightDir = normalize(lightPos - offsetHitPos);
+
+			// Slightly offset light ray to get stochastic soft shadows
+			vec3 circleU;
+			if (abs(info.normal.z) > 0.01f) {
+				circleU = normalize(vec3(0.0f, -info.normal.z, info.normal.y));
+			}
+			else {
+				circleU = normalize(vec3(-info.normal.y, info.normal.x, 0.0f));
+			}
+			vec3 circleV = cross(circleU, lightDir);
+
+			float r1 = curand_uniform(&randState);
+			float r2 = (2.0f * light.radius * curand_uniform(&randState)) - light.radius;
+			float azimuthAngle = 2.0f * PI() * r1;
+
+			vec3 lightPosOffset = circleU * cos(azimuthAngle) * r2 +
+				circleV * sin(azimuthAngle) * r2;
+
+			vec3 offsetLightDiff = lightPos + lightPosOffset - offsetHitPos;
+			vec3 offsetLightDir = normalize(offsetLightDiff);
+
+			Ray lightRay(offsetHitPos, offsetLightDir);
+
+			RayCastResult lightHit = cudaCastRay(params.staticBvhNodesTex, params.staticTriangleVerticesTex,
+				lightRay.origin, lightRay.dir, 0.0001f, length(offsetLightDiff), true);
+
+			if (lightHit.triangleIndex != UINT32_MAX) {
+				// In shadow, do not add light contribution
+				continue;
+			}
+		}
+
+		vec3 toLight = light.pos - info.pos;
+		float toLightDist = length(toLight);
+
+		// Early exit if light is out of range
+		if (toLightDist > light.range) {
+			continue;
+		}
+
+		vec3 l = toLight / toLightDist;
+		vec3 v = normalize(-ray.dir);
+		vec3 h = normalize(l + v);
+
+		float nDotL = dot(info.normal, l);
+		if (nDotL <= 0.0f) {
+			continue;
+		}
+
+		float nDotV = dot(info.normal, v);
+
+		nDotV = std::max(0.001f, nDotV);
+
+		// Lambert diffuse
+		vec3 diffuse = albedoColor / sfz::PI();
+
+		// Cook-Torrance specular
+		// Normal distribution function
+		float nDotH = std::max(sfz::dot(info.normal, h), 0.0f); // max() should be superfluous here
+		float ctD = ggx(nDotH, roughness * roughness);
+
+		// Geometric self-shadowing term
+		float k = pow(roughness + 1.0, 2) / 8.0;
+		float ctG = geometricSchlick(nDotL, nDotV, k);
+
+		// Fresnel function
+		// Assume all dielectrics have a f0 of 0.04, for metals we assume f0 == albedo
+		vec3 f0 = sfz::lerp(vec3(0.04f), albedoColor, metallic);
+		vec3 ctF = fresnelSchlick(nDotL, f0);
+
+		// Calculate final Cook-Torrance specular value
+		vec3 specular = ctD * ctF * ctG / (4.0f * nDotL * nDotV);
+
+		// Calculates light strength
+		float fallofNumerator = pow(sfz::clamp(1.0f - std::pow(toLightDist / light.range, 4.0f), 0.0f, 1.0f), 2);
+		float fallofDenominator = (toLightDist * toLightDist + 1.0);
+		float falloff = fallofNumerator / fallofDenominator;
+		vec3 lighting = falloff * light.strength;
+
+		color += (diffuse + specular) * lighting * nDotL;
+	}
+	return color;
+}
+
 __global__ void cudaRayTracerKernel(CudaTracerParams params)
 {
 	// Calculate surface coordinates
@@ -131,58 +227,31 @@ __global__ void cudaRayTracerKernel(CudaTracerParams params)
 		}
 
 		const Material& material = params.materials[info.materialIndex];
-		vec4 albedoColor = material.albedoValue;
+		vec4 albedoValue = material.albedoValue;
 		if (params.materials[info.materialIndex].albedoIndex != UINT32_MAX) {
 			cudaTextureObject_t albedoTexture = params.textures[material.albedoIndex];
-			albedoColor = readMaterialTextureRGBA(albedoTexture, info.uv);
+			albedoValue = readMaterialTextureRGBA(albedoTexture, info.uv);
 		}
+		vec3 albedoColor = albedoValue.xyz;
+		albedoColor = linearize(albedoColor);
 
 		float metallic = material.metallicValue;
 		if (params.materials[info.materialIndex].metallicIndex != UINT32_MAX) {
 			cudaTextureObject_t metallicTexture = params.textures[material.metallicIndex];
 			metallic = readMaterialTextureGray(metallicTexture, info.uv);
 		}
+		metallic = linearize(metallic);
 
 		float roughness = material.roughnessValue;
 		if (params.materials[info.materialIndex].roughnessIndex != UINT32_MAX) {
 			cudaTextureObject_t roughnessTexture = params.textures[material.roughnessIndex];
 			roughness = readMaterialTextureGray(roughnessTexture, info.uv);
 		}
-
-		// Any later contrubutions are colored by this material's albedo
-		mask *= albedoColor.xyz;
+		roughness = linearize(roughness);
 
 		vec3 offsetHitPos = info.pos + info.normal * 0.01f;
 
-		// Check if directly illuminated by light source by casting light ray
-		SphereLight& light = params.staticSphereLights[0];
-		vec3 lightPos = light.pos;
-		vec3 lightDir = normalize(lightPos - offsetHitPos);
-
-		// Slightly offset target to get stochastic soft shadows
-		vec3 u = normalize(vec3(0, -lightDir.z, lightDir.y));
-		vec3 v = cross(u, lightDir);
-
-		float r1 = curand_uniform(&randState);
-		float r2 = (2.0f * light.radius * curand_uniform(&randState)) - light.radius;
-		float azimuthAngle = 2.0f * PI() * r1;
-
-		vec3 lightPosOffset = u * cos(azimuthAngle) * r2 +
-		                      v * sin(azimuthAngle) * r2;
-
-		vec3 offsetLightDiff = lightPos + lightPosOffset - offsetHitPos;
-		vec3 offsetLightDir = normalize(offsetLightDiff);
-
-		Ray lightRay(offsetHitPos, offsetLightDir);
-		RayCastResult lightHit = cudaCastRay(params.staticBvhNodesTex, params.staticTriangleVerticesTex, lightRay.origin, lightRay.dir, 0.0001f, length(offsetLightDiff), true);
-
-		// If there was no intersection, the point is directly illuminated
-		if (lightHit.triangleIndex == UINT32_MAX) {
-			// Add contribution of light source
-			vec3 l = -normalize(info.pos - lightPos);
-			float diffuseFactor = max(dot(l, info.normal), 0.0f);
-			color += mask * diffuseFactor * vec3(0.6f);
-		}
+		color += mask * shadeHit(params, randState, ray, hit, info, offsetHitPos, albedoColor, metallic, roughness);
 
 		// No need to find next ray at last bounce
 		// TODO: Restructure loop to make more elegant
@@ -190,29 +259,32 @@ __global__ void cudaRayTracerKernel(CudaTracerParams params)
 			break;
 		}
 
-		// TODO: Use BRDF
-		if (roughness < 0.2f) {
-			// Let next ray be perfect mirror reflection
-			rayDir = rayDir - 2 * (dot(rayDir, info.normal)) * info.normal;
+		// Any later contrubutions are colored by this material's albedo
+		mask *= albedoColor;
+		// Temporarily amplify the ambiance effect
+		// TODO: Weigh this properly using BRDF
+		mask *= 3.0f;
+
+		// To get ambient light, take cosine-weighted sample over the hemisphere
+		// and trace in that direction.
+
+		float r1 = curand_uniform(&randState);
+		float r2 = curand_uniform(&randState);
+		float azimuthAngle = 2.0f * PI() * r1;
+		float altitudeFactor = sqrtf(r2);
+
+		// Find surface vectors u and v orthogonal to normal
+		vec3 u;
+		if (abs(info.normal.z) > 0.01f) {
+			u = normalize(vec3(0.0f, -info.normal.z, info.normal.y));
+		} else {
+			u = normalize(vec3(-info.normal.y, info.normal.x, 0.0f));
 		}
-		else {
-			// Treat material as fully diffuse. Take cosine-weighted sample over the hemisphere
-			// and trace in that direction.
+		vec3 v = cross(info.normal, u);
 
-			float r1 = curand_uniform(&randState);
-			float r2 = curand_uniform(&randState);
-			float azimuthAngle = 2.0f * PI() * r1;
-			float altitudeFactor = sqrtf(r2);
-
-			// Find surface vectors u and v orthogonal to normal, using a tempVector not parallel
-			// to normal
-			vec3 u = normalize(vec3(0, -info.normal.z, info.normal.y));
-			vec3 v = cross(info.normal, u);
-
-			rayDir = u * cos(azimuthAngle) * altitudeFactor +
-			         v * sin(azimuthAngle) * altitudeFactor +
-			         info.normal * sqrtf(1 - r2);
-		}
+		rayDir = u * cos(azimuthAngle) * altitudeFactor +
+		         v * sin(azimuthAngle) * altitudeFactor +
+		         info.normal * sqrtf(1 - r2);
 		ray = Ray(offsetHitPos, rayDir);
 	}
 
