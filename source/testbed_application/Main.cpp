@@ -146,21 +146,33 @@ int main(int, char**)
 	}
 
 	// Add lights to the scene
-	vec3 colours[]{
-		vec3{ 1.0f, 0.0f, 0.0f },
+	vec3 lightColors[]{
 		vec3{ 1.0f, 0.0f, 1.0f },
-		vec3{ 0.0f, 1.0f, 1.0f },
-		vec3{ 1.0f, 1.0f, 0.0f },
-		vec3{ 0.0f, 1.0f, 0.0f }
+		vec3{ 1.0f, 1.0f, 1.0f }
+		//vec3{ 0.0f, 1.0f, 1.0f },
+		//vec3{ 1.0f, 1.0f, 0.0f },
+		//vec3{ 1.0f, 1.0f, 1.0f }
 	};
-	for (int i = 0; i < 5; i++) {
+	size_t numLights = sizeof(lightColors) / sizeof(vec3);
+
+	for (int i = 0; i < numLights; i++) {
 		SphereLight sphereLight;
-		sphereLight.pos = vec3{ -50.0f + 25.0f * i , 5.0f, 0.0f };
-		sphereLight.range = 50.0f;
-		sphereLight.strength = 100.0f * colours[i];
-		sphereLight.radius = 2.0f;
-		level->staticScene.sphereLights.add(sphereLight);
+		sphereLight.pos = vec3(-50.0f + 100.0f * i / (numLights - 1), 5.0f, 0.0f);
+		sphereLight.range = 70.0f;
+		sphereLight.strength = 300.0f * lightColors[i];
+		sphereLight.radius = 0.5f;
+		sphereLight.shadows = true;
+		level->staticScene.sphereLights.add(std::move(sphereLight));
 	}
+
+	SphereLight sunlight;
+	sunlight.pos = vec3(28.0f, 81.0f, 0.0f);
+	sunlight.range = 10000.0f;
+	sunlight.strength = 10000.0f * vec3(1.0f);
+	sunlight.radius = 2.0f;
+	sunlight.shadows = true;
+
+	level->staticScene.sphereLights.add(std::move(sunlight));
 
 	// Run gameloop
 	sfz::runGameLoop(engine.window(), SharedPtr<BaseScreen>(sfz_new<GameScreen>(
