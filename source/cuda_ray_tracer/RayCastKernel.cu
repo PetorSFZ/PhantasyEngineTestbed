@@ -166,67 +166,149 @@ static __device__ TriangleVertices loadTriangle(cudaTextureObject_t trianglesTex
 // Main ray cast kernel
 // ------------------------------------------------------------------------------------------------
 
+// Constants
+// The block dimensions for the ray cast kernel. Only height (y) may be varied.
+static const uint32_t RAY_CAST_KERNEL_BLOCK_WIDTH = 32;
+static const uint32_t RAY_CAST_KERNEL_MAX_BLOCK_HEIGHT = 64;
+static const uint32_t RAY_CAST_KERNEL_BLOCK_DEPTH = 1;
+// The node stack size, BVHs may not have deeper leaves than this
+static const const uint32_t RAY_CAST_KERNEL_STACK_SIZE = 128;
+// The smallest number of active threads in a warp before we attempt to allocate new rays for the
+// remaining threads
+static const const uint32_t RAY_CAST_DYNAMIC_FETCH_THRESHOLD = 20;
+
+// The global (atomic) index used to allocate arrays from global list
+static __device__ uint32_t nextGlobalRayIndex;
+
+static __global__ void zeroNextGlobalRayIndexKernel()
+{
+	nextGlobalRayIndex = 0u;
+}
+
 __global__ void rayCastKernel(cudaTextureObject_t bvhNodes, cudaTextureObject_t triangleVerts,
-                              const RayIn* rays, RayHit* rayHits, uint32_t numRays, uint32_t numThreads)
+                              const RayIn* rays, RayHit* rayHits, uint32_t numRays)
 {
 	static_assert(sizeof(RayIn) == 32, "RayIn is padded");
 	static_assert(sizeof(RayHit) == 16, "RayHitOut is padded");
 	
 	// Constants
 	const int32_t SENTINEL = int32_t(0x7FFFFFFF);
-	const uint32_t STACK_SIZE = 128;
 
-	// Retreive thread id
-	const int tid = threadIdx.x + blockIdx.x * blockDim.x;
+	// Retreive thread id in warp
+	// NOTE: Width of block (i.e. blockDim.x) and warp size MUST be exactly 32
+	const uint32_t warpThreadIdx = threadIdx.x;
+	// Below code could have been used to calculate warpThreadIdx without the width=32 assumption
+	// const uint32_t tid = threadIdx.x + threadIdx.y * blockDim.x;
+	// const uint32_t warpThreadIdx = tid / WARP_SIZE;
 	
-	// Create local stack
-	int32_t stack[STACK_SIZE];
+	// Each row (i.e. warp) gets its own shared index. This index is used as the base for the block
+	// of allocated rays for the warp.
+	__shared__ volatile uint32_t baseAllocatedRayIndices[RAY_CAST_KERNEL_MAX_BLOCK_HEIGHT];
+	volatile uint32_t& baseAllocatedRayIndex = baseAllocatedRayIndices[threadIdx.y];
 	
+	// Stack holding node indices
+	int32_t nodeIndexStack[RAY_CAST_KERNEL_STACK_SIZE];
+	nodeIndexStack[0] = SENTINEL;
+
+	// Index to the current topmost element in the stack
+	int32_t stackTopIndex = 0;
+	
+	// Holds the index to the current node to check out
+	int32_t currentNodeIndex = SENTINEL; // Start of as "terminated"
+	
+	// Holds the index of the current thread
+	uint32_t globalRayIndex;
+
+	// Temporary to store the final result in
+	RayHit resHit;
+
 	// Very naive loop over all input rays
-	for (uint32_t rayIdx = tid; rayIdx < numRays; rayIdx += numThreads) {
+	//for (uint32_t rayIdx = tid; rayIdx < numRays; rayIdx += numThreads) {
+	while (true) {
+
+		// Ray information
+		vec3 origin, dir, invDir, originDivDir;
+		float tMin;
+		bool noResultOnlyHit;
 		
-		// Retrieve ray information
-		const RayIn ray = rays[rayIdx];
-		const vec3 origin = ray.origin();
-		const vec3 dir = ray.dir();
-		const vec3 invDir = vec3(1.0f) / dir;
-		const vec3 originDivDir = origin * invDir;
-		const float tMin = 0.0001f;
-		const float tMax = ray.maxDist();
-		const bool noResultOnlyHit = ray.noResultOnlyHit();
+		// Check whether this thread needs a new ray or not
+		const bool needWork = currentNodeIndex == SENTINEL;
 
-		// Reset stack
-		stack[0] = SENTINEL;
-		uint32_t stackIndex = 0u; // Currently pointing to the topmost element (the sentinel)
+		// Mask that contains the needWork flag for every thread in this warp
+		const uint32_t needWorkMask = __ballot(needWork);
 
-		int32_t currentIndex = 0u; // The current index to check, start of with first node
+		// Find number of threads that need work by counting the number of ones in needWorkMask
+		const uint32_t numThreadsNeedWork = __popc(needWorkMask);
 
-		// Temporary to store the final result in
-		RayHit resHit;
-		resHit.triangleIndex = ~0u;
-		resHit.t = tMax;
+		// All bit indices >= to warpThreadIdx will be 0, all indices < will be 1.
+		// I.e. for warpThreadIdx 3: [0, 0, ..., 0, 1, 1, 1]
+		// warpThreadIdx 2: [0, 0, ..., 0, 1, 1]
+		// warpTrheadIdx 0: [0, 0, ..., 0]
+		const uint32_t lowerThreadsBallotMask = (1u << warpThreadIdx) - 1u;
+
+		// Remove all 1s for warp thread with larger or equal idx, then count the remaining ones.
+		// I.e. the thread with the lowest warpThreadIdx that needs work will get 0, the next lowest
+		// one 1, etc.
+		const uint32_t rayAllocationIdx = __popc(needWorkMask & lowerThreadsBallotMask);
+
+		// Allocate rays from global list of rays
+		if (needWork) {
+		
+			// Allocate number of needed rays for warp atomically with only one warp thread
+			if (rayAllocationIdx == 0) {
+				// atomicAdd(addr, diff) => returns *addr, then adds diff
+				baseAllocatedRayIndex = atomicAdd(&nextGlobalRayIndex, numThreadsNeedWork);
+			}
+
+			// Set globalRayIndex for current thread
+			globalRayIndex = baseAllocatedRayIndex + rayAllocationIdx;
+
+			// Terminate thread if the allocated ray does not exist.
+			// NOTE: This is the only place a thread can terminate in this kernel
+			if (globalRayIndex >= numRays) break;
+			
+			// Retrieve ray and set information
+			const RayIn ray = rays[globalRayIndex];
+			origin = ray.origin();
+			dir = ray.dir();
+			invDir = vec3(1.0f) / dir;
+			originDivDir = origin * invDir;
+			tMin = 0.0001f;
+			noResultOnlyHit = ray.noResultOnlyHit();
+
+			// Reset stack
+			stackTopIndex = 0;
+			currentNodeIndex = 0;
+
+			// Reset temporary
+			resHit.triangleIndex = ~0u;
+			resHit.t = ray.maxDist();
+		}
 
 		// Traverse through the tree
-		while (currentIndex != SENTINEL) {
+		while (currentNodeIndex != SENTINEL) {
 		
 			// Traverse nodes until all threads in warp have found leaf
 			int32_t leafIndex = 1; // Positive, so not a leaf
-			while (currentIndex != SENTINEL && currentIndex >= 0) { // If currentIndex is negative we have a leaf node
+			// If currentIndex is negative we have a leaf node
+			while (currentNodeIndex != SENTINEL && currentNodeIndex >= 0) {
 			
 				// Load inner node pointed at by currentIndex
-				BVHNode node = loadBvhNode(bvhNodes, currentIndex);
+				BVHNode node = loadBvhNode(bvhNodes, currentNodeIndex);
 
 				// Perform AABB intersection tests and figure out which children we want to visit
-				AABBIsect lcHit = rayVsAaabb(invDir, originDivDir, node.leftChildAABBMin(), node.leftChildAABBMax(), tMin, resHit.t);
-				AABBIsect rcHit = rayVsAaabb(invDir, originDivDir, node.rightChildAABBMin(), node.rightChildAABBMax(), tMin, resHit.t);
+				AABBIsect lcHit = rayVsAaabb(invDir, originDivDir, node.leftChildAABBMin(),
+				                             node.leftChildAABBMax(), tMin, resHit.t);
+				AABBIsect rcHit = rayVsAaabb(invDir, originDivDir, node.rightChildAABBMin(),
+				                             node.rightChildAABBMax(), tMin, resHit.t);
 
 				bool visitLC = lcHit.tIn <= lcHit.tOut;
 				bool visitRC = rcHit.tIn <= rcHit.tOut;
 
 				// If we don't need to visit any children we simply pop a new index from the stack
 				if (!visitLC && !visitRC) {
-					currentIndex = stack[stackIndex];
-					stackIndex -= 1;
+					currentNodeIndex = nodeIndexStack[stackTopIndex];
+					stackTopIndex -= 1;
 				}
 
 				// If we need to visit at least one child
@@ -235,28 +317,28 @@ __global__ void rayCastKernel(cudaTextureObject_t bvhNodes, cudaTextureObject_t 
 					int32_t rcIndex = node.rightChildIndexRaw();
 
 					// Put left child in currentIndex if we need to visit it, otherwise right child
-					currentIndex = visitLC ? lcIndex : rcIndex;
+					currentNodeIndex = visitLC ? lcIndex : rcIndex;
 
 					// If we need to visit both children we push the furthest one away to the stack
 					if (visitLC && visitRC) {
-						stackIndex += 1;
+						stackTopIndex += 1;
 						if (lcHit.tIn > rcHit.tIn) {
-							stack[stackIndex] = lcIndex;
-							currentIndex = rcIndex;
+							nodeIndexStack[stackTopIndex] = lcIndex;
+							currentNodeIndex = rcIndex;
 						} else {
-							stack[stackIndex] = rcIndex;
+							nodeIndexStack[stackTopIndex] = rcIndex;
 						}
 					}
 				}
 
 				// If currentIndex is a leaf and we have not yet found a leaf index
-				if (currentIndex < 0 && leafIndex >= 0) {
-					leafIndex = currentIndex; // Store leaf index for later processing
+				if (currentNodeIndex < 0 && leafIndex >= 0) {
+					leafIndex = currentNodeIndex; // Store leaf index for later processing
 
 					// Pop index from stack
 					// If this is also a leaf index we will process it together with leafIndex later
-					currentIndex = stack[stackIndex];
-					stackIndex -= 1;
+					currentNodeIndex = nodeIndexStack[stackTopIndex];
+					stackTopIndex -= 1;
 				}
 
 				// Exit loop if all threads in warp have found at least one triangle
@@ -289,9 +371,7 @@ __global__ void rayCastKernel(cudaTextureObject_t bvhNodes, cudaTextureObject_t 
 						resHit.v = hit.v;
 
 						if (noResultOnlyHit) {
-							// TODO: HMMM
-							leafIndex = SENTINEL;
-							currentIndex = SENTINEL;
+							currentNodeIndex = SENTINEL;
 							break;
 						}
 					}
@@ -305,17 +385,28 @@ __global__ void rayCastKernel(cudaTextureObject_t bvhNodes, cudaTextureObject_t 
 
 				// currentIndex could potentially contain another leaf we want to process,
 				// otherwise this will end the loop
-				leafIndex = currentIndex;
+				leafIndex = currentNodeIndex;
 
-				// If currentIndex contained a leaf it will be processed, so we pop a new element from the stack into it
-				if (currentIndex < 0) {
-					currentIndex = stack[stackIndex];
-					stackIndex -= 1;
+				// If currentIndex contained a leaf it will be processed, so we pop a new element
+				// from the stack into it
+				if (currentNodeIndex < 0) {
+					currentNodeIndex = nodeIndexStack[stackTopIndex];
+					stackTopIndex -= 1;
 				}
+			}
+
+			// Calculate how many threads are currently working, threads not working are idling
+			// and will not contribute a "true" to the ballot.
+			uint32_t numThreadsCurrentlyWorking = __popc(__ballot(true));
+			
+			// If not enough threads are working we attempt to allocate more rays for them
+			if (numThreadsCurrentlyWorking < RAY_CAST_DYNAMIC_FETCH_THRESHOLD) {
+				break;
 			}
 		}
 
-		rayHits[rayIdx] = resHit;
+		// Store rayhit in output array
+		rayHits[globalRayIndex] = resHit;
 	}
 }
 
@@ -325,6 +416,11 @@ __global__ void rayCastKernel(cudaTextureObject_t bvhNodes, cudaTextureObject_t 
 void launchRayCastKernel(cudaTextureObject_t bvhNodes, cudaTextureObject_t triangleVerts,
                          const RayIn* rays, RayHit* rayHits, uint32_t numRays) noexcept
 {
+	// Set the ray counter to 0
+	zeroNextGlobalRayIndexKernel<<<1, 1>>>();
+	CHECK_CUDA_ERROR(cudaGetLastError());
+	CHECK_CUDA_ERROR(cudaDeviceSynchronize());
+
 	cudaDeviceProp properties;
 	cudaGetDeviceProperties(&properties, 0); // TODO: Maybe not device 0?
 	int maxNumMultiProcessors = properties.multiProcessorCount;
@@ -343,7 +439,13 @@ void launchRayCastKernel(cudaTextureObject_t bvhNodes, cudaTextureObject_t trian
 	uint32_t numBlocks = blocksPerMultiprocessor * maxNumMultiProcessors;
 	uint32_t numThreads = threadsPerBlock * numBlocks;
 
-	rayCastKernel<<<numBlocks, threadsPerBlock>>>(bvhNodes, triangleVerts, rays, rayHits, numRays, numThreads);
+	dim3 blockDims;
+	blockDims.x = RAY_CAST_KERNEL_BLOCK_WIDTH;
+	blockDims.y = threadsPerBlock / RAY_CAST_KERNEL_BLOCK_WIDTH;
+	sfz_assert_debug(blockDims.y <= RAY_CAST_KERNEL_MAX_BLOCK_HEIGHT);
+	blockDims.z = RAY_CAST_KERNEL_BLOCK_DEPTH;
+
+	rayCastKernel<<<numBlocks, blockDims>>>(bvhNodes, triangleVerts, rays, rayHits, numRays);
 	CHECK_CUDA_ERROR(cudaGetLastError());
 	CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 }

@@ -102,7 +102,7 @@ CudaTracerRenderer::CudaTracerRenderer() noexcept
 	gl::setUniform(mImpl->transferShader, "uSrcTexture", 0);
 
 	GlobalConfig& cfg = GlobalConfig::instance();
-	mImpl->cudaRenderMode = cfg.sanitizeInt("CudaTracer", "cudaRenderMode", 0, 0, 2);
+	mImpl->cudaRenderMode = cfg.sanitizeInt("CudaTracer", "cudaRenderMode", 0, 0, 3);
 	mImpl->lastRenderMode = mImpl->cudaRenderMode->intValue();
 }
 
@@ -264,6 +264,9 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB) noexcept
 		cudaHeatmapTrace(params);
 		break;
 	case 2:
+		cudaCastRayTest(params);
+		break;
+	case 3:
 		launchGenPrimaryRaysKernel(mImpl->gpuRaysBuffer, params.cam, mTargetResolution);
 		launchRayCastKernel(mImpl->tracerParams.staticBvhNodesTex, mImpl->tracerParams.staticTriangleVerticesTex,
 		                    mImpl->gpuRaysBuffer, mImpl->gpuRayHitsBuffer, mTargetResolution.x * mTargetResolution.y);
