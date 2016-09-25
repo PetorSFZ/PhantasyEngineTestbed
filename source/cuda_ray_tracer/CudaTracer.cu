@@ -30,6 +30,25 @@ __device__ vec4 readMaterialTextureRGBA(cudaTextureObject_t texture, vec2 coord)
 	return vec4(float(res.x), float(res.y), float(res.z), float(res.w)) / 255.0f;
 }
 
+inline __device__ vec3 vectorPow(const vec3& vector, float exponent) noexcept
+{
+	vec3 result;
+	result.x = std::pow(vector.x, exponent);
+	result.y = std::pow(vector.y, exponent);
+	result.z = std::pow(vector.z, exponent);
+	return result;
+}
+
+inline __device__ vec3 linearize(vec3 rgbGamma)
+{
+	return vectorPow(rgbGamma, 2.2f);
+}
+
+inline __device__ float linearize(float value)
+{
+	return std::pow(value, 2.2f);
+}
+
 // Surface manipulation helpers
 // ------------------------------------------------------------------------------------------------
 
