@@ -195,6 +195,7 @@ if(CUDA_TRACER)
 		 ${CT_SOURCE_DIR}/CudaTracer.cu
 		${CT_INCLUDE_DIR}/CudaTracerRenderer.hpp
 		 ${CT_SOURCE_DIR}/CudaTracerRenderer.cpp
+		${CT_INCLUDE_DIR}/Morton.cuh
 		${CT_INCLUDE_DIR}/RayCastKernel.cuh
 		 ${CT_SOURCE_DIR}/RayCastKernel.cu
 	)
