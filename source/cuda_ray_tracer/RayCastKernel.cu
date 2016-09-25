@@ -185,7 +185,7 @@ static __global__ void zeroNextGlobalRayIndexKernel()
 	nextGlobalRayIndex = 0u;
 }
 
-__global__ void rayCastKernel(cudaTextureObject_t bvhNodes, cudaTextureObject_t triangleVerts,
+static __global__ void rayCastKernel(cudaTextureObject_t bvhNodes, cudaTextureObject_t triangleVerts,
                               const RayIn* rays, RayHit* rayHits, uint32_t numRays)
 {
 	static_assert(sizeof(RayIn) == 32, "RayIn is padded");
@@ -222,15 +222,15 @@ __global__ void rayCastKernel(cudaTextureObject_t bvhNodes, cudaTextureObject_t 
 	// Temporary to store the final result in
 	RayHit resHit;
 
+	// Ray information
+	vec3 origin, dir, invDir, originDivDir;
+	float tMin;
+	bool noResultOnlyHit;
+
 	// Very naive loop over all input rays
 	//for (uint32_t rayIdx = tid; rayIdx < numRays; rayIdx += numThreads) {
 	while (true) {
 
-		// Ray information
-		vec3 origin, dir, invDir, originDivDir;
-		float tMin;
-		bool noResultOnlyHit;
-		
 		// Check whether this thread needs a new ray or not
 		const bool needWork = currentNodeIndex == SENTINEL;
 
@@ -453,7 +453,7 @@ void launchRayCastKernel(cudaTextureObject_t bvhNodes, cudaTextureObject_t trian
 // Secondary helper kernels (for debugging and profiling)
 // ------------------------------------------------------------------------------------------------
 
-__device__ vec3 calculatePrimaryRayDir(const CameraDef& cam, vec2 loc, vec2 surfaceRes)
+static __device__ vec3 calculatePrimaryRayDir(const CameraDef& cam, vec2 loc, vec2 surfaceRes)
 {
 	vec2 locNormalized = loc / surfaceRes; // [0, 1]
 	vec2 centerOffsCoord = locNormalized * 2.0f - vec2(1.0f); // [-1.0, 1.0]
@@ -461,7 +461,7 @@ __device__ vec3 calculatePrimaryRayDir(const CameraDef& cam, vec2 loc, vec2 surf
 	return normalize(nonNormRayDir);
 }
 
-__global__ void genPrimaryRaysKernel(RayIn* rays, CameraDef cam, vec2i res)
+static __global__ void genPrimaryRaysKernel(RayIn* rays, CameraDef cam, vec2i res)
 {
 	static_assert(sizeof(RayIn) == 32, "RayIn is padded");
 
@@ -482,7 +482,7 @@ __global__ void genPrimaryRaysKernel(RayIn* rays, CameraDef cam, vec2i res)
 	rays[id] = ray;
 }
 
-__global__ void writeRayHitsToScreenKernel(cudaSurfaceObject_t surface, vec2i res, const RayHit* rayHits)
+static __global__ void writeRayHitsToScreenKernel(cudaSurfaceObject_t surface, vec2i res, const RayHit* rayHits)
 {
 	static_assert(sizeof(RayHit) == 16, "RayHitOut is padded");
 
