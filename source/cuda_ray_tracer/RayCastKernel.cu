@@ -426,24 +426,23 @@ void launchRayCastKernel(cudaTextureObject_t bvhNodes, cudaTextureObject_t trian
 	int maxNumMultiProcessors = properties.multiProcessorCount;
 	int maxNumThreadsPerMultiProcessor = properties.maxThreadsPerMultiProcessor;
 	int maxNumThreadsPerBlock = properties.maxThreadsPerBlock;
-	vec3i maxGridSize = vec3i(properties.maxGridSize);
 
 	//printf("maxNumMultiProcessors: %i\n", maxNumMultiProcessors);
 	//printf("maxNumThreadsPerMultiProcessor: %i\n", maxNumThreadsPerMultiProcessor);
 	//printf("maxNumThreadsPerBlock: %i\n", maxNumThreadsPerBlock);
-	//printf("maxGridSize: %s\n", toString(maxGridSize).str);
-
+	
+	uint32_t factorSmallerBlocks = 4;
 	uint32_t blocksPerMultiprocessor = maxNumThreadsPerMultiProcessor / maxNumThreadsPerBlock;
-
-	uint32_t threadsPerBlock = maxNumThreadsPerMultiProcessor / blocksPerMultiprocessor;
-	uint32_t numBlocks = blocksPerMultiprocessor * maxNumMultiProcessors;
-	uint32_t numThreads = threadsPerBlock * numBlocks;
+	uint32_t threadsPerBlock = maxNumThreadsPerMultiProcessor / (factorSmallerBlocks * blocksPerMultiprocessor);
+	uint32_t numBlocks = blocksPerMultiprocessor * maxNumMultiProcessors * factorSmallerBlocks;
 
 	dim3 blockDims;
 	blockDims.x = RAY_CAST_KERNEL_BLOCK_WIDTH;
 	blockDims.y = threadsPerBlock / RAY_CAST_KERNEL_BLOCK_WIDTH;
 	sfz_assert_debug(blockDims.y <= RAY_CAST_KERNEL_MAX_BLOCK_HEIGHT);
 	blockDims.z = RAY_CAST_KERNEL_BLOCK_DEPTH;
+
+	//printf("numBlocks = %i,  blockDims = [%i, %i]\n", numBlocks, blockDims.x, blockDims.y);
 
 	rayCastKernel<<<numBlocks, blockDims>>>(bvhNodes, triangleVerts, rays, rayHits, numRays);
 	CHECK_CUDA_ERROR(cudaGetLastError());
