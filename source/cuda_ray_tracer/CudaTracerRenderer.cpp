@@ -35,9 +35,13 @@ public:
 	FullscreenTriangle fullscreenTriangle;
 
 	Setting* cudaRenderMode = nullptr;
+	Setting* cudaDeviceIndex = nullptr;
 	CameraDef lastCamera;
 	int32_t lastRenderMode = 0;
 	uint32_t accumulationPasses = 0;
+
+	// The device properties of the used CUDA device
+	cudaDeviceProp deviceProperties;
 
 	// Holding the OpenGL Cuda surface data, surface object is in CudaTracerParams.
 	GLuint glTex = 0;
@@ -52,11 +56,6 @@ public:
 	// Temp
 	RayIn* gpuRaysBuffer = nullptr;
 	RayHit* gpuRayHitsBuffer = nullptr;
-
-	CudaTracerRendererImpl() noexcept
-	{
-		
-	}
 
 	~CudaTracerRendererImpl() noexcept
 	{
@@ -104,6 +103,15 @@ CudaTracerRenderer::CudaTracerRenderer() noexcept
 	GlobalConfig& cfg = GlobalConfig::instance();
 	mImpl->cudaRenderMode = cfg.sanitizeInt("CudaTracer", "cudaRenderMode", 0, 0, 3);
 	mImpl->lastRenderMode = mImpl->cudaRenderMode->intValue();
+	mImpl->cudaDeviceIndex = cfg.sanitizeInt("CudaTracer", "deviceIndex", 0, 0, 32);
+
+	// Initialize cuda and get device properties
+	CHECK_CUDA_ERROR(cudaSetDevice(mImpl->cudaDeviceIndex->intValue()));
+	CHECK_CUDA_ERROR(cudaGetDeviceProperties(&mImpl->deviceProperties, mImpl->cudaDeviceIndex->intValue()));
+
+	printf("multiProcessorCount: %i\n", mImpl->deviceProperties.multiProcessorCount);
+	printf("maxThreadsPerMultiProcessor: %i\n", mImpl->deviceProperties.maxThreadsPerMultiProcessor);
+	printf("maxThreadsPerBlock: %i\n", mImpl->deviceProperties.maxThreadsPerBlock);
 }
 
 CudaTracerRenderer::~CudaTracerRenderer() noexcept
@@ -269,7 +277,7 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB) noexcept
 	case 3:
 		launchGenPrimaryRaysKernel(mImpl->gpuRaysBuffer, params.cam, mTargetResolution);
 		launchRayCastKernel(mImpl->tracerParams.staticBvhNodesTex, mImpl->tracerParams.staticTriangleVerticesTex,
-		                    mImpl->gpuRaysBuffer, mImpl->gpuRayHitsBuffer, mTargetResolution.x * mTargetResolution.y);
+		                    mImpl->gpuRaysBuffer, mImpl->gpuRayHitsBuffer, mTargetResolution.x * mTargetResolution.y, mImpl->deviceProperties);
 		launchWriteRayHitsToScreenKernel(mImpl->tracerParams.targetSurface, mImpl->tracerParams.targetRes, mImpl->gpuRayHitsBuffer);
 		break;
 	default:

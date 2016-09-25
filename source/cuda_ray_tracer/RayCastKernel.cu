@@ -178,7 +178,7 @@ static const const uint32_t RAY_CAST_KERNEL_STACK_SIZE = 128;
 static const const uint32_t RAY_CAST_DYNAMIC_FETCH_THRESHOLD = 20;
 
 // The global (atomic) index used to allocate arrays from global list
-static __device__ uint32_t nextGlobalRayIndex;
+static __device__ uint32_t nextGlobalRayIndex = 0u;
 
 static __global__ void zeroNextGlobalRayIndexKernel()
 {
@@ -414,27 +414,19 @@ static __global__ void rayCastKernel(cudaTextureObject_t bvhNodes, cudaTextureOb
 // ------------------------------------------------------------------------------------------------
 
 void launchRayCastKernel(cudaTextureObject_t bvhNodes, cudaTextureObject_t triangleVerts,
-                         const RayIn* rays, RayHit* rayHits, uint32_t numRays) noexcept
+                         const RayIn* rays, RayHit* rayHits, uint32_t numRays,
+                         const cudaDeviceProp& deviceProperties) noexcept
 {
-	// Set the ray counter to 0
-	zeroNextGlobalRayIndexKernel<<<1, 1>>>();
-	CHECK_CUDA_ERROR(cudaGetLastError());
-	CHECK_CUDA_ERROR(cudaDeviceSynchronize());
+	uint32_t numSM = deviceProperties.multiProcessorCount;
+	uint32_t threadsPerSM = deviceProperties.maxThreadsPerMultiProcessor;
+	uint32_t maxThreadsPerBlock = deviceProperties.maxThreadsPerBlock;
 
-	cudaDeviceProp properties;
-	cudaGetDeviceProperties(&properties, 0); // TODO: Maybe not device 0?
-	int maxNumMultiProcessors = properties.multiProcessorCount;
-	int maxNumThreadsPerMultiProcessor = properties.maxThreadsPerMultiProcessor;
-	int maxNumThreadsPerBlock = properties.maxThreadsPerBlock;
+	uint32_t factorExtraBlocks = 1; // Creates more blocks than necessary to fill device (more threads)
+	uint32_t factorSmallerBlocks = 4; // Creates smaller blocks without changing number of threads
 
-	//printf("maxNumMultiProcessors: %i\n", maxNumMultiProcessors);
-	//printf("maxNumThreadsPerMultiProcessor: %i\n", maxNumThreadsPerMultiProcessor);
-	//printf("maxNumThreadsPerBlock: %i\n", maxNumThreadsPerBlock);
-	
-	uint32_t factorSmallerBlocks = 4;
-	uint32_t blocksPerMultiprocessor = maxNumThreadsPerMultiProcessor / maxNumThreadsPerBlock;
-	uint32_t threadsPerBlock = maxNumThreadsPerMultiProcessor / (factorSmallerBlocks * blocksPerMultiprocessor);
-	uint32_t numBlocks = blocksPerMultiprocessor * maxNumMultiProcessors * factorSmallerBlocks;
+	uint32_t blocksPerSM = threadsPerSM / maxThreadsPerBlock;
+	uint32_t threadsPerBlock = threadsPerSM / (factorSmallerBlocks * blocksPerSM);
+	uint32_t numBlocks = blocksPerSM * numSM * factorSmallerBlocks * factorExtraBlocks;
 
 	dim3 blockDims;
 	blockDims.x = RAY_CAST_KERNEL_BLOCK_WIDTH;
@@ -442,11 +434,15 @@ void launchRayCastKernel(cudaTextureObject_t bvhNodes, cudaTextureObject_t trian
 	sfz_assert_debug(blockDims.y <= RAY_CAST_KERNEL_MAX_BLOCK_HEIGHT);
 	blockDims.z = RAY_CAST_KERNEL_BLOCK_DEPTH;
 
-	//printf("numBlocks = %i,  blockDims = [%i, %i]\n", numBlocks, blockDims.x, blockDims.y);
-
 	rayCastKernel<<<numBlocks, blockDims>>>(bvhNodes, triangleVerts, rays, rayHits, numRays);
 	CHECK_CUDA_ERROR(cudaGetLastError());
 	CHECK_CUDA_ERROR(cudaDeviceSynchronize());
+
+	// Set the ray counter to 0
+	zeroNextGlobalRayIndexKernel<<<1, 1>>>();
+	// Probably not necessary to synchronize here
+	//CHECK_CUDA_ERROR(cudaGetLastError());
+	//CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 }
 
 // Secondary helper kernels (for debugging and profiling)
