@@ -20,6 +20,7 @@
 #include "CudaBindlessTexture.hpp"
 #include "CudaHelpers.hpp"
 #include "CudaTracer.cuh"
+#include "RayCastKernel.cuh"
 
 namespace phe {
 
@@ -34,9 +35,13 @@ public:
 	FullscreenTriangle fullscreenTriangle;
 
 	Setting* cudaRenderMode = nullptr;
+	Setting* cudaDeviceIndex = nullptr;
 	CameraDef lastCamera;
 	int32_t lastRenderMode = 0;
 	uint32_t accumulationPasses = 0;
+
+	// The device properties of the used CUDA device
+	cudaDeviceProp deviceProperties;
 
 	// Holding the OpenGL Cuda surface data, surface object is in CudaTracerParams.
 	GLuint glTex = 0;
@@ -48,10 +53,9 @@ public:
 	DynArray<cudaTextureObject_t> textureObjectHandles;
 	CudaTracerParams tracerParams;
 
-	CudaTracerRendererImpl() noexcept
-	{
-		
-	}
+	// Temp
+	RayIn* gpuRaysBuffer = nullptr;
+	RayHit* gpuRayHitsBuffer = nullptr;
 
 	~CudaTracerRendererImpl() noexcept
 	{
@@ -76,6 +80,10 @@ public:
 
 		// Static light sources
 		CHECK_CUDA_ERROR(cudaFree(tracerParams.staticSphereLights));
+
+		// Temp
+		CHECK_CUDA_ERROR(cudaFree(gpuRaysBuffer));
+		CHECK_CUDA_ERROR(cudaFree(gpuRayHitsBuffer));
 	}
 };
 
@@ -93,8 +101,17 @@ CudaTracerRenderer::CudaTracerRenderer() noexcept
 	gl::setUniform(mImpl->transferShader, "uSrcTexture", 0);
 
 	GlobalConfig& cfg = GlobalConfig::instance();
-	mImpl->cudaRenderMode = cfg.sanitizeInt("CudaTracer", "cudaRenderMode", 0, 0, 2);
+	mImpl->cudaRenderMode = cfg.sanitizeInt("CudaTracer", "cudaRenderMode", 0, 0, 3);
 	mImpl->lastRenderMode = mImpl->cudaRenderMode->intValue();
+	mImpl->cudaDeviceIndex = cfg.sanitizeInt("CudaTracer", "deviceIndex", 0, 0, 32);
+
+	// Initialize cuda and get device properties
+	CHECK_CUDA_ERROR(cudaSetDevice(mImpl->cudaDeviceIndex->intValue()));
+	CHECK_CUDA_ERROR(cudaGetDeviceProperties(&mImpl->deviceProperties, mImpl->cudaDeviceIndex->intValue()));
+
+	printf("multiProcessorCount: %i\n", mImpl->deviceProperties.multiProcessorCount);
+	printf("maxThreadsPerMultiProcessor: %i\n", mImpl->deviceProperties.maxThreadsPerMultiProcessor);
+	printf("maxThreadsPerBlock: %i\n", mImpl->deviceProperties.maxThreadsPerBlock);
 }
 
 CudaTracerRenderer::~CudaTracerRenderer() noexcept
@@ -257,6 +274,12 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB) noexcept
 	case 2:
 		cudaCastRayTest(params);
 		break;
+	case 3:
+		launchGenPrimaryRaysKernel(mImpl->gpuRaysBuffer, params.cam, mTargetResolution);
+		launchRayCastKernel(mImpl->tracerParams.staticBvhNodesTex, mImpl->tracerParams.staticTriangleVerticesTex,
+		                    mImpl->gpuRaysBuffer, mImpl->gpuRayHitsBuffer, mTargetResolution.x * mTargetResolution.y, mImpl->deviceProperties);
+		launchWriteRayHitsToScreenKernel(mImpl->tracerParams.targetSurface, mImpl->tracerParams.targetRes, mImpl->gpuRayHitsBuffer);
+		break;
 	default:
 		sfz_assert_debug(false);
 		break;
@@ -347,6 +370,15 @@ void CudaTracerRenderer::targetResolutionUpdated() noexcept
 
 	auto timeSeed = static_cast<unsigned long long>(time(nullptr));
 	initCurand(mImpl->tracerParams, timeSeed);
+
+	// Allocate ray infos for each pixel
+	CHECK_CUDA_ERROR(cudaFree(mImpl->gpuRaysBuffer));
+	size_t numRayBytes = mTargetResolution.x * mTargetResolution.y * sizeof(RayIn);
+	CHECK_CUDA_ERROR(cudaMalloc(&mImpl->gpuRaysBuffer, numRayBytes));
+
+	CHECK_CUDA_ERROR(cudaFree(mImpl->gpuRayHitsBuffer));
+	size_t numRayHitBytes = mTargetResolution.x * mTargetResolution.y * sizeof(RayHit);
+	CHECK_CUDA_ERROR(cudaMalloc(&mImpl->gpuRayHitsBuffer, numRayHitBytes));
 }
 
 } // namespace phe

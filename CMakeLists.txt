@@ -194,7 +194,11 @@ if(CUDA_TRACER)
 		${CT_INCLUDE_DIR}/CudaTracer.cuh
 		 ${CT_SOURCE_DIR}/CudaTracer.cu
 		${CT_INCLUDE_DIR}/CudaTracerRenderer.hpp
-		 ${CT_SOURCE_DIR}/CudaTracerRenderer.cpp)
+		 ${CT_SOURCE_DIR}/CudaTracerRenderer.cpp
+		${CT_INCLUDE_DIR}/Morton.cuh
+		${CT_INCLUDE_DIR}/RayCastKernel.cuh
+		 ${CT_SOURCE_DIR}/RayCastKernel.cu
+	)
 	set_directory_source_group(${CUDA_TRACER_FILES})
 
 	# CUDA Tracer Library
