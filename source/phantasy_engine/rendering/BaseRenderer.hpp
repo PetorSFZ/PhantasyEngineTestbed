@@ -7,6 +7,7 @@
 #include <sfz/math/Matrix.hpp>
 #include <sfz/memory/SmartPointers.hpp>
 
+#include "phantasy_engine/level/DynObject.hpp"
 #include "phantasy_engine/level/StaticScene.hpp"
 #include "phantasy_engine/level/SphereLight.hpp"
 #include "phantasy_engine/rendering/Material.hpp"
@@ -72,19 +73,25 @@ public:
 	// Virtual methods
 	// --------------------------------------------------------------------------------------------
 	
-	virtual void bakeMaterials(const DynArray<RawImage>& textures,
-	                           const DynArray<Material>& materials) noexcept = 0;
+	virtual void setMaterialsAndTextures(const DynArray<Material>& materials,
+	                                     const DynArray<RawImage>& textures) noexcept = 0;
 
-	virtual void addMaterial(RawImage& texture, Material& material) noexcept = 0;
+	virtual void addTexture(const RawImage& texture) noexcept = 0;
 
-	virtual void bakeStaticScene(const StaticScene& staticScene) noexcept = 0;
+	virtual void addMaterial(const Material& material) noexcept = 0;
 
-	virtual void setDynObjectsForRendering(const DynArray<RawMesh>& meshes, const DynArray<mat4>& transforms) noexcept = 0;
+	virtual void setStaticScene(const StaticScene& staticScene) noexcept = 0;
+	
+	virtual void setDynamicMeshes(const DynArray<RawMesh>& meshes) noexcept = 0;
+
+	virtual void addDynamicMesh(const RawMesh& mesh) noexcept = 0;
 
 	/// The resultFB framebuffer is required to have a color texture (rgba 16bit float) and a
 	/// depth texture of type 32bit float, the resolution of the framebuffer must be the same
 	/// as the target resolution of the renderer.
-	virtual RenderResult render(Framebuffer& resultFB) noexcept = 0;
+	virtual RenderResult render(Framebuffer& resultFB,
+	                            const DynArray<DynObject>& objects,
+	                            const DynArray<SphereLight>& lights) noexcept = 0;
 
 	// Non-virtual methods
 	// --------------------------------------------------------------------------------------------

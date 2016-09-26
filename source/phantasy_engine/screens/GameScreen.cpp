@@ -43,8 +43,8 @@ GameScreen::GameScreen(SharedPtr<GameLogic> gameLogicIn, SharedPtr<Level> levelI
 	gl::setUniform(mGammaCorrectionShader, "uLinearTexture", 0);
 
 	// Set and bake static scene
-	this->renderer->bakeMaterials(this->level->textures, this->level->materials);
-	this->renderer->bakeStaticScene(this->level->staticScene);
+	this->renderer->setMaterialsAndTextures(this->level->materials, this->level->textures);
+	this->renderer->setStaticScene(this->level->staticScene);
 }
 
 // GameScreen: Overriden methods from sfz::BaseScreen
@@ -151,7 +151,7 @@ void GameScreen::render(UpdateState& state)
 	}
 
 	// Render the level
-	RenderResult res = renderer->render(mResultFB);
+	RenderResult res = renderer->render(mResultFB, level->objects, level->sphereLights);
 
 	glDisable(GL_BLEND);
 	glEnable(GL_CULL_FACE);

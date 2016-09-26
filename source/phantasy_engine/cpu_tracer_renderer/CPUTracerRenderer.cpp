@@ -32,31 +32,43 @@ CPURayTracerRenderer::CPURayTracerRenderer() noexcept
 // CPURayTracerRenderer: Virtual methods from BaseRenderer interface
 // ------------------------------------------------------------------------------------------------
 
-void CPURayTracerRenderer::bakeMaterials(const DynArray<RawImage>& textures,
-                                         const DynArray<Material>& materials) noexcept
+void CPURayTracerRenderer::setMaterialsAndTextures(const DynArray<Material>& materials,
+                                                   const DynArray<RawImage>& textures) noexcept
 {
 	// Assume lifetime of DynArrays are not less than this
 	this->mTextures = &textures;
 	this->mMaterials = &materials;
 }
 
-void CPURayTracerRenderer::addMaterial(RawImage& texture, Material& material) noexcept
+void CPURayTracerRenderer::addTexture(const RawImage& texture) noexcept
 {
-
+	sfz::error("CPURayTracerRenderer: addTexture() not implemented");
 }
 
-void CPURayTracerRenderer::bakeStaticScene(const StaticScene& staticScene) noexcept
+void CPURayTracerRenderer::addMaterial(const Material& material) noexcept
+{
+	sfz::error("CPURayTracerRenderer: addMaterial() not implemented");
+}
+
+void CPURayTracerRenderer::setStaticScene(const StaticScene& staticScene) noexcept
 {
 	// Assume lifetime of StaticScene is not less than this
 	this->mStaticScene = &staticScene;
 }
 
-void CPURayTracerRenderer::setDynObjectsForRendering(const DynArray<RawMesh>& meshes, const DynArray<mat4>& transforms) noexcept
+void CPURayTracerRenderer::setDynamicMeshes(const DynArray<RawMesh>& meshes) noexcept
 {
 
 }
 
-RenderResult CPURayTracerRenderer::render(Framebuffer& resultFB) noexcept
+void CPURayTracerRenderer::addDynamicMesh(const RawMesh& mesh) noexcept
+{
+	sfz::error("CPURayTracerRenderer: addDynamicMesh() not implemented");
+}
+
+RenderResult CPURayTracerRenderer::render(Framebuffer& resultFB,
+                                          const DynArray<DynObject>& objects,
+                                          const DynArray<SphereLight>& lights) noexcept
 {
 	// Calculate camera def in order to generate first rays
 	vec2 resultRes = vec2(mTargetResolution);

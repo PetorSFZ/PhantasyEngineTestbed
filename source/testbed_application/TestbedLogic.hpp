@@ -59,5 +59,4 @@ private:
 	uint32_t mCurrentRenderer;
 
 	uint32_t triangleObjectHandle;
-	DynArray<uint32_t> dynamicObjectInstances;
 };

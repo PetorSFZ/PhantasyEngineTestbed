@@ -28,16 +28,22 @@ public:
 	// Virtual methods from BaseRenderer interface
 	// --------------------------------------------------------------------------------------------
 
-	void bakeMaterials(const DynArray<RawImage>& textures,
-	                   const DynArray<Material>& materials) noexcept override final;
+	void setMaterialsAndTextures(const DynArray<Material>& materials,
+	                             const DynArray<RawImage>& textures) noexcept override final;
 
-	void addMaterial(RawImage& texture, Material& material) noexcept override final;
+	void addTexture(const RawImage& texture) noexcept override final;
 
-	void bakeStaticScene(const StaticScene& staticScene) noexcept override final;
+	void addMaterial(const Material& material) noexcept override final;
 
-	void setDynObjectsForRendering(const DynArray<RawMesh>& meshes, const DynArray<mat4>& transforms) noexcept override final;
+	void setStaticScene(const StaticScene& staticScene) noexcept override final;
+	
+	void setDynamicMeshes(const DynArray<RawMesh>& meshes) noexcept override final;
 
-	RenderResult render(Framebuffer& resultFB) noexcept override final;
+	void addDynamicMesh(const RawMesh& mesh) noexcept override final;
+
+	RenderResult render(Framebuffer& resultFB,
+	                    const DynArray<DynObject>& objects,
+	                    const DynArray<SphereLight>& lights) noexcept override final;
 
 protected:
 	// Protected virtual methods from BaseRenderer interface

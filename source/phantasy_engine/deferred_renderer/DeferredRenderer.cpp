@@ -50,11 +50,6 @@ static void stupidSetMaterialUniforms(Program& shader, const char* uniformName,
 	}
 }
 
-struct DynGLModel {
-	GLModel model;
-	mat4 transform;
-};
-
 // DeferredRendererImpl
 // ------------------------------------------------------------------------------------------------
 
@@ -66,8 +61,10 @@ public:
 
 	// Static scene
 	DynArray<GLModel> staticGLModels;
-	DynArray<DynGLModel> dynamicGLModels;
 	DynArray<SphereLight> staticSphereLights;
+
+	// Dynamic scene
+	DynArray<GLModel> dynamicGLModels;
 
 	DeferredRendererImpl() noexcept
 	{
@@ -119,22 +116,28 @@ DeferredRenderer::~DeferredRenderer() noexcept
 // DeferredRenderer: Virtual methods from BaseRenderer interface
 // ------------------------------------------------------------------------------------------------
 
-void DeferredRenderer::bakeMaterials(const DynArray<RawImage>& textures,
-                                     const DynArray<Material>& materials) noexcept
+void DeferredRenderer::setMaterialsAndTextures(const DynArray<Material>& materials,
+                                               const DynArray<RawImage>& textures) noexcept
 {
 	sfz_assert_debug(materials.size() <= 512);
 	glUseProgram(mImpl->gbufferGenShader.handle());
 	stupidSetMaterialUniforms(mImpl->gbufferGenShader, "uMaterials", materials);
 }
 
-void DeferredRenderer::addMaterial(RawImage& texture, Material& material) noexcept
+void DeferredRenderer::addTexture(const RawImage& texture) noexcept
+{
+	sfz::error("DeferredRenderer: addTexture() not implemented");
+}
+
+void DeferredRenderer::addMaterial(const Material& material) noexcept
 {
 	sfz::error("DeferredRenderer: addMaterial() not implemented");
 }
 
-void DeferredRenderer::bakeStaticScene(const StaticScene& staticScene) noexcept
+void DeferredRenderer::setStaticScene(const StaticScene& staticScene) noexcept
 {
 	DynArray<GLModel>& glModels = mImpl->staticGLModels;
+	glModels.clear();
 
 	for (const RawMesh& mesh : staticScene.meshes) {
 		glModels.add(GLModel(mesh));
@@ -142,19 +145,25 @@ void DeferredRenderer::bakeStaticScene(const StaticScene& staticScene) noexcept
 
 	mImpl->staticSphereLights = staticScene.sphereLights;
 }
-
-void DeferredRenderer::setDynObjectsForRendering(const DynArray<RawMesh>& meshes, const DynArray<mat4>& transforms) noexcept
+	
+void DeferredRenderer::setDynamicMeshes(const DynArray<RawMesh>& meshes) noexcept
 {
-	DynArray<DynGLModel>& glModels = mImpl->dynamicGLModels;
-
+	DynArray<GLModel>& glModels = mImpl->dynamicGLModels;
 	glModels.clear();
 
-	for (uint64_t i = 0; i < meshes.size(); i++) {
-		glModels.add(DynGLModel{ GLModel(meshes[i]), transforms[i] });
+	for (const RawMesh& mesh :meshes) {
+		glModels.add(GLModel(mesh));
 	}
 }
 
-RenderResult DeferredRenderer::render(Framebuffer& resultFB) noexcept
+void DeferredRenderer::addDynamicMesh(const RawMesh& mesh) noexcept
+{
+	sfz::error("DeferredRenderer: addDynamicMeshes() not implemented");
+}
+
+RenderResult DeferredRenderer::render(Framebuffer& resultFB,
+                                      const DynArray<DynObject>& objects,
+                                      const DynArray<SphereLight>& lights) noexcept
 {
 	auto& gbufferGenShader = mImpl->gbufferGenShader;
 	auto& shadingShader = mImpl->shadingShader;
@@ -188,8 +197,8 @@ RenderResult DeferredRenderer::render(Framebuffer& resultFB) noexcept
 	gl::setUniform(gbufferGenShader, "uModelMatrix", identityMatrix4<float>());
 	gl::setUniform(gbufferGenShader, "uNormalMatrix", inverse(transpose(viewMatrix)));
 
-	//const int modelMatrixLoc = glGetUniformLocation(mGBufferGenShader.handle(), "uModelMatrix");
-	//const int normalMatrixLoc = glGetUniformLocation(mGBufferGenShader.handle(), "uNormalMatrix");
+	const int modelMatrixLoc = glGetUniformLocation(gbufferGenShader.handle(), "uModelMatrix");
+	const int normalMatrixLoc = glGetUniformLocation(gbufferGenShader.handle(), "uNormalMatrix");
 
 	const int hasAlbedoTextureLoc = glGetUniformLocation(gbufferGenShader.handle(), "uHasAlbedoTexture");
 	const int albedoValueLoc = glGetUniformLocation(gbufferGenShader.handle(), "uAlbedoValue");
@@ -203,13 +212,13 @@ RenderResult DeferredRenderer::render(Framebuffer& resultFB) noexcept
 	for (const GLModel& model : mImpl->staticGLModels) {
 		
 		
-
 		model.draw();
 	}
 
-	for (const DynGLModel& model : mImpl->dynamicGLModels) {
-		gl::setUniform(gbufferGenShader, "uModelMatrix", model.transform);
-		model.model.draw();
+	for (const DynObject& obj : objects) {
+		gl::setUniform(modelMatrixLoc, obj.transform);
+		gl::setUniform(normalMatrixLoc, inverse(transpose(viewMatrix * obj.transform)));
+		const GLModel& model = mImpl->dynamicGLModels[obj.meshIndex];
 	}
 
 	/*for (const RenderableComponent& component : mStaticScene->opaqueComponents) {

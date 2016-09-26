@@ -29,6 +29,39 @@ static void ensureIniDirectoryExists()
 	sfz::createDirectory(tmp.str);
 }
 
+static uint32_t loadModel(const char* basePath, const char* fileName, phe::Level& level,
+                          const mat4& modelMatrix) noexcept
+{
+	phe::RawMesh mesh;
+	phe::Vertex v0, v1, v2;
+	v0.pos = vec3(0.0f, 0.0f, 0.0f);
+	v1.pos = vec3(0.0f, 1.0f, 0.0f);
+	v2.pos = vec3(1.0f, 1.0f, 0.0f);
+	v0.normal = vec3(0.0f, 0.0f, 1.0f);
+	v1.normal = vec3(0.0f, 0.0f, 1.0f);
+	v2.normal = vec3(0.0f, 0.0f, 1.0f);
+	v0.uv = vec2(0.0f, 0.0f);
+	v1.uv = vec2(0.0f, 1.0f);
+	v2.uv = vec2(1.0f, 1.0f);
+	mesh.vertices.add(v0);
+	mesh.vertices.add(v1);
+	mesh.vertices.add(v2);
+
+	mesh.materialIndices.add(0);
+	mesh.materialIndices.add(0);
+	mesh.materialIndices.add(0);
+
+	mesh.indices.add(0);
+	mesh.indices.add(1);
+	mesh.indices.add(2);
+	mesh.indices.add(2);
+	mesh.indices.add(1);
+	mesh.indices.add(0);
+
+	level.meshes.add(mesh);
+	return level.meshes.size() - 1u;
+}
+
 // Main
 // ------------------------------------------------------------------------------------------------
 
@@ -175,6 +208,9 @@ int main(int, char**)
 	sunlight.dynamicShadows = true;
 
 	level->staticScene.sphereLights.add(std::move(sunlight));
+
+	// Add triangle mesh to scene
+	loadModel(nullptr, nullptr, *level, mat4());
 
 	// Run gameloop
 	sfz::runGameLoop(engine.window(), SharedPtr<BaseScreen>(sfz_new<GameScreen>(

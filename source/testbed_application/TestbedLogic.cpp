@@ -10,56 +10,14 @@
 
 using namespace sfz;
 
-uint32_t loadModel(const char* basePath, const char* fileName, phe::Level& level,
-	const mat4& modelMatrix) noexcept
+uint32_t spawnObjectInstance(uint32_t meshId, phe::Level& level, mat4 transform)
 {
-	phe::RawMesh mesh;
-	phe::Vertex v0, v1, v2;
-	v0.pos = vec3(0.0f, 0.0f, 0.0f);
-	v1.pos = vec3(0.0f, 1.0f, 0.0f);
-	v2.pos = vec3(1.0f, 1.0f, 0.0f);
-	v0.normal = vec3(0.0f, 0.0f, 1.0f);
-	v1.normal = vec3(0.0f, 0.0f, 1.0f);
-	v2.normal = vec3(0.0f, 0.0f, 1.0f);
-	v0.uv = vec2(0.0f, 0.0f);
-	v1.uv = vec2(0.0f, 1.0f);
-	v2.uv = vec2(1.0f, 1.0f);
-	mesh.vertices.add(v0);
-	mesh.vertices.add(v1);
-	mesh.vertices.add(v2);
+	phe::DynObject obj;
+	obj.meshIndex = meshId;
+	obj.transform = transform;
 
-	mesh.materialIndices.add(0);
-	mesh.materialIndices.add(0);
-	mesh.materialIndices.add(0);
-
-	mesh.indices.add(0);
-	mesh.indices.add(1);
-	mesh.indices.add(2);
-	mesh.indices.add(2);
-	mesh.indices.add(1);
-	mesh.indices.add(0);
-
-	level.dynamicMeshes.add(mesh);
-
-	phe::DynObject object;
-	object.meshIndex = 0;
-	object.numMeshes = 1;
-
-	uint32_t id = level.dynamicObjects.size();
-	level.dynamicObjects.add(object);
-	return id;
-}
-
-uint32_t spawnObjectInstance(uint32_t objectId, phe::Level& level, mat4 transform)
-{
-	phe::DynObjectInstance instance;
-	instance.id = level.dynamicObjectInstances.size();
-	instance.objectIndex = objectId;
-	instance.transform = transform;
-
-	uint32_t id = level.dynamicObjectInstances.size();
-	level.dynamicObjectInstances.add(instance);
-	return id;
+	level.objects.add(obj);
+	return level.objects.size() - 1;
 }
 
 // TestbedLogic: Constructors & destructors
@@ -70,7 +28,7 @@ TestbedLogic::TestbedLogic(DynArray<RendererAndStatus>&& renderers, uint32_t ren
 	mRenderers(std::move(renderers)),
 	mCurrentRenderer(rendererIndex)
 {
-	triangleObjectHandle = loadModel("", "", level, identityMatrix4<float>());
+	triangleObjectHandle = 0;
 }
 
 // TestbedLogic: Overriden methods from GameLogic
@@ -123,8 +81,9 @@ UpdateOp TestbedLogic::update(GameScreen& screen, UpdateState& state) noexcept
 
 	// Check if current renderer needs to be baked or not
 	if (!mRenderers[mCurrentRenderer].baked) {
-		screen.renderer->bakeMaterials(screen.level->textures, screen.level->materials);
-		screen.renderer->bakeStaticScene(screen.level->staticScene);
+		screen.renderer->setMaterialsAndTextures(screen.level->materials, screen.level->textures);
+		screen.renderer->setStaticScene(screen.level->staticScene);
+		screen.renderer->setDynamicMeshes(screen.level->meshes);
 		mRenderers[mCurrentRenderer].baked = true;
 	}
 
@@ -187,7 +146,7 @@ UpdateOp TestbedLogic::update(GameScreen& screen, UpdateState& state) noexcept
 
 	// Face buttons
 	if (ctrl.y == ButtonState::DOWN) {
-		dynamicObjectInstances.add(spawnObjectInstance(triangleObjectHandle, *screen.level, translationMatrix(screen.cam.pos())));
+		spawnObjectInstance(triangleObjectHandle, *screen.level, translationMatrix(screen.cam.pos()));
 	}
 	if (ctrl.x == ButtonState::DOWN) {
 	}
@@ -205,21 +164,6 @@ UpdateOp TestbedLogic::update(GameScreen& screen, UpdateState& state) noexcept
 
 	DynArray<phe::RawMesh> meshes;
 	DynArray<mat4> transforms;
-
-	for (uint32_t id : dynamicObjectInstances) {
-		for (phe::DynObjectInstance instance : screen.level->dynamicObjectInstances) {
-			if (id == instance.id) {
-				phe::DynObject object = screen.level->dynamicObjects[instance.objectIndex];
-				
-				for (uint32_t i = object.meshIndex; i < object.meshIndex + object.numMeshes; i++) {
-					meshes.add(screen.level->dynamicMeshes[i]);
-					transforms.add(instance.transform);
-				}
-			}
-		}
-	}
-
-	screen.renderer->setDynObjectsForRendering(meshes, transforms);
 
 	return SCREEN_NO_OP;
 }

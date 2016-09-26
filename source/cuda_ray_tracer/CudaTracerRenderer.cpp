@@ -122,8 +122,8 @@ CudaTracerRenderer::~CudaTracerRenderer() noexcept
 // CudaTracerRenderer: Virtual methods from BaseRenderer interface
 // ------------------------------------------------------------------------------------------------
 
-void CudaTracerRenderer::bakeMaterials(const DynArray<RawImage>& textures,
-                                       const DynArray<Material>& materials) noexcept
+void CudaTracerRenderer::setMaterialsAndTextures(const DynArray<Material>& materials,
+                                                 const DynArray<RawImage>& textures) noexcept
 {
 	// Copy materials to CUDA
 	Material*& gpuMaterials = mImpl->tracerParams.materials;
@@ -152,12 +152,17 @@ void CudaTracerRenderer::bakeMaterials(const DynArray<RawImage>& textures,
 	mImpl->tracerParams.numTextures = textures.size();
 }
 
-void CudaTracerRenderer::addMaterial(RawImage& texture, Material& material) noexcept
+void CudaTracerRenderer::addTexture(const RawImage& texture) noexcept
+{
+	sfz::error("CudaTracerRenderer: addTexture() not implemented");
+}
+
+void CudaTracerRenderer::addMaterial(const Material& material) noexcept
 {
 	sfz::error("CudaTracerRenderer: addMaterial() not implemented");
 }
 
-void CudaTracerRenderer::bakeStaticScene(const StaticScene& staticScene) noexcept
+void CudaTracerRenderer::setStaticScene(const StaticScene& staticScene) noexcept
 {
 	const BVH& staticBvh = staticScene.bvh;
 
@@ -232,13 +237,20 @@ void CudaTracerRenderer::bakeStaticScene(const StaticScene& staticScene) noexcep
 	CHECK_CUDA_ERROR(cudaMemcpy(gpuSphereLights, staticScene.sphereLights.data(), numSphereLightBytes, cudaMemcpyHostToDevice));
 	mImpl->tracerParams.numStaticSphereLights = staticScene.sphereLights.size();
 }
-
-void CudaTracerRenderer::setDynObjectsForRendering(const DynArray<RawMesh>& meshes, const DynArray<mat4>& transforms) noexcept
+	
+void CudaTracerRenderer::setDynamicMeshes(const DynArray<RawMesh>& meshes) noexcept
 {
 
 }
 
-RenderResult CudaTracerRenderer::render(Framebuffer& resultFB) noexcept
+void CudaTracerRenderer::addDynamicMesh(const RawMesh& mesh) noexcept
+{
+	sfz::error("CudaTracerRenderer: addDynamicMesh() not implemented");
+}
+
+RenderResult CudaTracerRenderer::render(Framebuffer& resultFB,
+                                        const DynArray<DynObject>& objects,
+                                        const DynArray<SphereLight>& lights) noexcept
 {
 	// Calculate camera def in order to generate first rays
 	vec2 resultRes = vec2(mTargetResolution);
