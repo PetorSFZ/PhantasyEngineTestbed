@@ -162,8 +162,6 @@ UpdateOp TestbedLogic::update(GameScreen& screen, UpdateState& state) noexcept
 
 	screen.cam.setDir(screen.cam.dir(), vec3(0.0f, 1.0f, 0.0f));
 
-	DynArray<phe::RawMesh> meshes;
-	DynArray<mat4> transforms;
 
 	return SCREEN_NO_OP;
 }

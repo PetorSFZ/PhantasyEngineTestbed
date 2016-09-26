@@ -45,6 +45,7 @@ GameScreen::GameScreen(SharedPtr<GameLogic> gameLogicIn, SharedPtr<Level> levelI
 	// Set and bake static scene
 	this->renderer->setMaterialsAndTextures(this->level->materials, this->level->textures);
 	this->renderer->setStaticScene(this->level->staticScene);
+	this->renderer->setDynamicMeshes(this->level->meshes);
 }
 
 // GameScreen: Overriden methods from sfz::BaseScreen

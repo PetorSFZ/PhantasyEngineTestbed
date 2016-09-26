@@ -151,7 +151,7 @@ void DeferredRenderer::setDynamicMeshes(const DynArray<RawMesh>& meshes) noexcep
 	DynArray<GLModel>& glModels = mImpl->dynamicGLModels;
 	glModels.clear();
 
-	for (const RawMesh& mesh :meshes) {
+	for (const RawMesh& mesh : meshes) {
 		glModels.add(GLModel(mesh));
 	}
 }
@@ -211,7 +211,6 @@ RenderResult DeferredRenderer::render(Framebuffer& resultFB,
 
 	for (const GLModel& model : mImpl->staticGLModels) {
 		
-		
 		model.draw();
 	}
 
@@ -219,6 +218,7 @@ RenderResult DeferredRenderer::render(Framebuffer& resultFB,
 		gl::setUniform(modelMatrixLoc, obj.transform);
 		gl::setUniform(normalMatrixLoc, inverse(transpose(viewMatrix * obj.transform)));
 		const GLModel& model = mImpl->dynamicGLModels[obj.meshIndex];
+		model.draw();
 	}
 
 	/*for (const RenderableComponent& component : mStaticScene->opaqueComponents) {
