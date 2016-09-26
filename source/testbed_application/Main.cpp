@@ -161,7 +161,8 @@ int main(int, char**)
 		sphereLight.range = 70.0f;
 		sphereLight.strength = 300.0f * lightColors[i];
 		sphereLight.radius = 0.5f;
-		sphereLight.shadows = true;
+		sphereLight.staticShadows = true;
+		sphereLight.dynamicShadows = true;
 		level->staticScene.sphereLights.add(std::move(sphereLight));
 	}
 
@@ -170,7 +171,8 @@ int main(int, char**)
 	sunlight.range = 10000.0f;
 	sunlight.strength = 10000.0f * vec3(1.0f);
 	sunlight.radius = 2.0f;
-	sunlight.shadows = true;
+	sunlight.staticShadows = true;
+	sunlight.dynamicShadows = true;
 
 	level->staticScene.sphereLights.add(std::move(sunlight));
 
