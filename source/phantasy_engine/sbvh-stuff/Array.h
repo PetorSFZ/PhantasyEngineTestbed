@@ -162,7 +162,7 @@ template <class T> void Array<T>::removeSwap(int start, int end)
 	int oldSize = m_size;
 	m_size += start - end;
 
-	int copyStart = max(m_size, end);
+	int copyStart = std::max(m_size, end);
 	copy(m_ptr + start, m_ptr + copyStart, oldSize - copyStart);
 }
 
@@ -280,12 +280,18 @@ template <class T> void Array<T>::realloc(int size)
 
 //------------------------------------------------------------------------
 
+template<>
 inline void Array<S32>::copy(S32* dst, const S32* src, int size)        { memcpy(dst, src, size * sizeof(S32)); }
+template<>
 inline void Array<U32>::copy(U32* dst, const U32* src, int size)        { memcpy(dst, src, size * sizeof(U32)); }
+template<>
 inline void Array<F32>::copy(F32* dst, const F32* src, int size)        { memcpy(dst, src, size * sizeof(F32)); }
 
+template<>
 inline void Array<sfz::vec2>::copy(sfz::vec2* dst, const sfz::vec2* src, int size)  { memcpy(dst, src, size * sizeof(sfz::vec2)); }
+template<>
 inline void Array<sfz::vec3>::copy(sfz::vec3* dst, const sfz::vec3* src, int size)  { memcpy(dst, src, size * sizeof(sfz::vec3)); }
+template<>
 inline void Array<sfz::vec4>::copy(sfz::vec4* dst, const sfz::vec4* src, int size)  { memcpy(dst, src, size * sizeof(sfz::vec4)); }
 
 //------------------------------------------------------------------------
