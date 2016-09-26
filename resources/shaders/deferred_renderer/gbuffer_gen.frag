@@ -1,25 +1,5 @@
 #version 450
 
-// Material struct
-// ------------------------------------------------------------------------------------------------
-
-struct Material {
-	vec4 albedoValue;
-	int albedoIndex;
-
-	float roughnessValue;
-	int roughnessIndex;
-
-	float metallicValue;
-	int metallicIndex;
-};
-
-struct ParsedMaterial {
-	vec4 albedo;
-	float roughness;
-	float metallic;
-};
-
 // Input, output and uniforms
 // ------------------------------------------------------------------------------------------------
 
@@ -46,20 +26,30 @@ uniform int uHasMetallicTexture = 0;
 uniform sampler2D uMetallicTexture;
 uniform float uMetallicValue = 0.0;
 
-uniform Material uMaterials[128];
+struct CompactMaterial {
+	ivec4 textureIndices; // [albedoTexIndex, roughnessTexIndex, metallicTexIndex, padding]
+	vec4 albedoValue;
+	vec4 materialValue; // [roughnessValue, metallicValue, padding, padding]
+};
+
+layout(std430, binding = 0) buffer MaterialSSBO
+{
+	CompactMaterial materials[];
+};
 
 // Main
 // ------------------------------------------------------------------------------------------------
 
 void main()
 {
-	Material mat = uMaterials[materialId];
+	CompactMaterial mat = materials[materialId];
 
 	// TODO: Normal mapping
 	outFragNormal = vec4(normalize(normal), 1.0);
 
 	// Albedo
-	vec4 albedo = mat.albedoValue;
+	vec4 albedo = vec4(0.0);
+	//vec4 albedo = mat.albedoValue;
 	/*if (mat.albedoIndex != -1) {
 
 		// albedo = sample
@@ -81,4 +71,7 @@ void main()
 		// metallic = sample
 	}
 	outFragMaterial = vec4(roughness, metallic, 0.0, 1.0);*/
+
+
+	outFragNormal = vec4(vec3(float(mat.textureIndices.x) / 100.0f), 1.0);
 }

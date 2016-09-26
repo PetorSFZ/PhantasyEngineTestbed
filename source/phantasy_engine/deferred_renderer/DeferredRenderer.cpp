@@ -9,6 +9,7 @@
 #include <sfz/util/IO.hpp>
 
 #include "phantasy_engine/deferred_renderer/GLModel.hpp"
+#include "phantasy_engine/deferred_renderer/SSBO.hpp"
 #include "phantasy_engine/level/SphereLight.hpp"
 #include "phantasy_engine/rendering/FullscreenTriangle.hpp"
 
@@ -50,6 +51,31 @@ static void stupidSetMaterialUniforms(Program& shader, const char* uniformName,
 	}
 }
 
+struct CompactMaterial final {
+	vec4i textureIndices; // [albedoTexIndex, roughnessTexIndex, metallicTexIndex, padding]
+	vec4 albedoValue;
+	vec4 materialValue; // [roughnessValue, metallicValue, padding, padding]
+};
+
+CompactMaterial compact(const Material& m) noexcept
+{
+	CompactMaterial tmp;
+	
+	tmp.textureIndices.x = m.albedoIndex;
+	tmp.textureIndices.y = m.roughnessIndex;
+	tmp.textureIndices.z = m.metallicIndex;
+	tmp.textureIndices.w = 0.0f; // padding
+
+	tmp.albedoValue = m.albedoValue;
+
+	tmp.materialValue.x = m.roughnessValue;
+	tmp.materialValue.y = m.metallicValue;
+	tmp.materialValue.z = 0.0f; // padding
+	tmp.materialValue.w = 0.0f; // padding
+
+	return tmp;
+}
+
 // DeferredRendererImpl
 // ------------------------------------------------------------------------------------------------
 
@@ -66,10 +92,9 @@ public:
 	// Dynamic scene
 	DynArray<GLModel> dynamicGLModels;
 
-	DeferredRendererImpl() noexcept
-	{
+	// Material SSBO
+	SSBO materialSSBO;
 
-	}
 	~DeferredRendererImpl() noexcept
 	{
 
@@ -119,9 +144,19 @@ DeferredRenderer::~DeferredRenderer() noexcept
 void DeferredRenderer::setMaterialsAndTextures(const DynArray<Material>& materials,
                                                const DynArray<RawImage>& textures) noexcept
 {
-	sfz_assert_debug(materials.size() <= 512);
-	glUseProgram(mImpl->gbufferGenShader.handle());
-	stupidSetMaterialUniforms(mImpl->gbufferGenShader, "uMaterials", materials);
+	// Create compact materials from material list
+	DynArray<CompactMaterial> tmpCompactMaterials;
+	tmpCompactMaterials.setCapacity(materials.size());
+	for (const Material& m : materials) {
+		tmpCompactMaterials.add(compact(m));
+	}
+
+	// Allocate SSBO memory and upload compact materials
+	uint32_t numCompactMaterialBytes = tmpCompactMaterials.size() * sizeof(CompactMaterial);
+	mImpl->materialSSBO.create(numCompactMaterialBytes);
+	mImpl->materialSSBO.uploadData(tmpCompactMaterials.data(), numCompactMaterialBytes);
+
+	// TODO: ArrayTexture
 }
 
 void DeferredRenderer::addTexture(const RawImage& texture) noexcept
@@ -208,6 +243,8 @@ RenderResult DeferredRenderer::render(Framebuffer& resultFB,
 
 	const int hasMetallicTextureLoc = glGetUniformLocation(gbufferGenShader.handle(), "uHasMetallicTexture");
 	const int metallicValueLoc = glGetUniformLocation(gbufferGenShader.handle(), "uMetallicValue");
+
+	mImpl->materialSSBO.bind(0);
 
 	for (const GLModel& model : mImpl->staticGLModels) {
 		
