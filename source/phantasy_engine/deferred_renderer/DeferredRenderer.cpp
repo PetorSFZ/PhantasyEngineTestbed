@@ -63,7 +63,7 @@ CompactMaterial compact(const Material& m) noexcept
 class DeferredRendererImpl final {
 public:
 	// Shaders
-	Program gbufferGenShader, shadingShader, writeDepthShader;
+	Program gbufferGenShader, shadingShader;
 	
 	// Framebuffers
 	Framebuffer gbuffer;
@@ -108,11 +108,6 @@ DeferredRenderer::DeferredRenderer() noexcept
 	});
 
 	mImpl->shadingShader = Program::postProcessFromFile(shadersPath.str, "shading.frag");
-
-	mImpl->writeDepthShader = Program::postProcessFromFile(shadersPath.str, "write_depth.frag");
-	mImpl->writeDepthShader.useProgram();
-	gl::setUniform(mImpl->writeDepthShader, "uDepthTexture", 0);
-
 }
 
 DeferredRenderer::DeferredRenderer(DeferredRenderer&& other) noexcept
@@ -314,16 +309,13 @@ RenderResult DeferredRenderer::render(Framebuffer& resultFB,
 	// Copy depth buffer to result framebuffer
 	// --------------------------------------------------------------------------------------------
 
-	glDisable(GL_DEPTH_TEST);
-	
-	mImpl->writeDepthShader.useProgram();
-	resultFB.bindViewport();
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, gbuffer.fbo());
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, resultFB.fbo());
 
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, mImpl->gbuffer.depthTexture());
-	
-	mImpl->fullscreenTriangle.render();
-	
+	glBlitFramebuffer(0, 0, mTargetResolution.x, mTargetResolution.y,
+	                  0, 0, mTargetResolution.x, mTargetResolution.y,
+	                  GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+
 	RenderResult tmp;
 	tmp.renderedRes = mTargetResolution;
 	return tmp;
