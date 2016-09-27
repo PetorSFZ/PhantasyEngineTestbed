@@ -9,6 +9,7 @@
 #include <sfz/util/IO.hpp>
 
 #include "phantasy_engine/deferred_renderer/GLModel.hpp"
+#include "phantasy_engine/deferred_renderer/GLTexture.hpp"
 #include "phantasy_engine/deferred_renderer/SSBO.hpp"
 #include "phantasy_engine/level/SphereLight.hpp"
 #include "phantasy_engine/rendering/FullscreenTriangle.hpp"
@@ -26,45 +27,25 @@ static const uint32_t GBUFFER_NORMAL = 0;
 static const uint32_t GBUFFER_ALBEDO = 1;
 static const uint32_t GBUFFER_MATERIAL = 2;
 
-static void stupidSetMaterialUniforms(Program& shader, const char* uniformName,
-                                      const DynArray<Material>& materials)
-{
-	StackString tmpStr;
-	for (uint32_t i = 0; i < materials.size(); i++) {
-		tmpStr.printf("%s[%u].%s", uniformName, i, "albedoValue");
-		gl::setUniform(shader, tmpStr.str, materials[i].albedoValue);
-		tmpStr.printf("%s[%u].%s", uniformName, i, "albedoIndex");
-		int32_t albedoIndex = (materials[i].albedoIndex == ~0u) ? int32_t(-1) : int32_t(materials[i].albedoIndex);
-		gl::setUniform(shader, tmpStr.str, albedoIndex);
-
-		tmpStr.printf("%s[%u].%s", uniformName, i, "roughnessValue");
-		gl::setUniform(shader, tmpStr.str, materials[i].roughnessValue);
-		tmpStr.printf("%s[%u].%s", uniformName, i, "roughnessIndex");
-		int32_t roughnessIndex = (materials[i].roughnessIndex == ~0u) ? int32_t(-1) : int32_t(materials[i].roughnessIndex);
-		gl::setUniform(shader, tmpStr.str, roughnessIndex);
-
-		tmpStr.printf("%s[%u].%s", uniformName, i, "metallicValue");
-		gl::setUniform(shader, tmpStr.str, materials[i].metallicValue);
-		tmpStr.printf("%s[%u].%s", uniformName, i, "metallicIndex");
-		int32_t metallicIndex = (materials[i].metallicIndex == ~0u) ? int32_t(-1) : int32_t(materials[i].metallicIndex);
-		gl::setUniform(shader, tmpStr.str, metallicIndex);
-	}
-}
-
 struct CompactMaterial final {
 	vec4i textureIndices; // [albedoTexIndex, roughnessTexIndex, metallicTexIndex, padding]
 	vec4 albedoValue;
 	vec4 materialValue; // [roughnessValue, metallicValue, padding, padding]
 };
 
+int32_t glslifyTextureIndex(uint32_t textureIndex) noexcept
+{
+	return (textureIndex == ~0u) ? -1 : int32_t(textureIndex);
+}
+
 CompactMaterial compact(const Material& m) noexcept
 {
 	CompactMaterial tmp;
 	
-	tmp.textureIndices.x = m.albedoIndex;
-	tmp.textureIndices.y = m.roughnessIndex;
-	tmp.textureIndices.z = m.metallicIndex;
-	tmp.textureIndices.w = 0.0f; // padding
+	tmp.textureIndices.x = glslifyTextureIndex(m.albedoIndex);
+	tmp.textureIndices.y = glslifyTextureIndex(m.roughnessIndex);
+	tmp.textureIndices.z = glslifyTextureIndex(m.metallicIndex);
+	tmp.textureIndices.w = 0; // padding
 
 	tmp.albedoValue = m.albedoValue;
 
@@ -81,9 +62,19 @@ CompactMaterial compact(const Material& m) noexcept
 
 class DeferredRendererImpl final {
 public:
+	// Shaders
 	Program gbufferGenShader, shadingShader;
+	
+	// Framebuffers
 	Framebuffer gbuffer;
+
+	// Allmighty fullscreen triangle
 	FullscreenTriangle fullscreenTriangle;
+
+	// Textures & materials
+	DynArray<GLTexture> textures;
+	SSBO texturesSSBO;
+	SSBO materialSSBO;
 
 	// Static scene
 	DynArray<GLModel> staticGLModels;
@@ -91,9 +82,6 @@ public:
 
 	// Dynamic scene
 	DynArray<GLModel> dynamicGLModels;
-
-	// Material SSBO
-	SSBO materialSSBO;
 
 	~DeferredRendererImpl() noexcept
 	{
@@ -156,7 +144,19 @@ void DeferredRenderer::setMaterialsAndTextures(const DynArray<Material>& materia
 	mImpl->materialSSBO.create(numCompactMaterialBytes);
 	mImpl->materialSSBO.uploadData(tmpCompactMaterials.data(), numCompactMaterialBytes);
 
-	// TODO: ArrayTexture
+	// Create GLTextures
+	DynArray<uint64_t> tmpBindlessTextureHandles;
+	tmpBindlessTextureHandles.setCapacity(textures.size());
+	mImpl->textures.setCapacity(textures.size());
+	for (const RawImage& img : textures) {
+		mImpl->textures.add(GLTexture(img));
+		tmpBindlessTextureHandles.add(mImpl->textures.last().bindlessHandle());
+	}
+
+	// Allocate SSBO memory and upload bindless texture handles
+	uint32_t numBindlessTextureHandleBytes = tmpBindlessTextureHandles.size() * sizeof(uint64_t);
+	mImpl->texturesSSBO.create(numBindlessTextureHandleBytes);
+	mImpl->texturesSSBO.uploadData(tmpBindlessTextureHandles.data(), numBindlessTextureHandleBytes);
 }
 
 void DeferredRenderer::addTexture(const RawImage& texture) noexcept
@@ -223,31 +223,18 @@ RenderResult DeferredRenderer::render(Framebuffer& resultFB,
 	gl::setUniform(gbufferGenShader, "uProjMatrix", projMatrix);
 	gl::setUniform(gbufferGenShader, "uViewMatrix", viewMatrix);
 
-	gl::setUniform(gbufferGenShader, "uAlbedoTexture", 0);
-	gl::setUniform(gbufferGenShader, "uRoughnessTexture", 1);
-	gl::setUniform(gbufferGenShader, "uMetallicTexture", 2);
-	gl::setUniform(gbufferGenShader, "uSpecularTexture", 3);
-
-	// For the static scene the model matrix should be identity
-	gl::setUniform(gbufferGenShader, "uModelMatrix", identityMatrix4<float>());
-	gl::setUniform(gbufferGenShader, "uNormalMatrix", inverse(transpose(viewMatrix)));
+	// Bind SSBOs
+	mImpl->materialSSBO.bind(0);
+	mImpl->texturesSSBO.bind(1);
 
 	const int modelMatrixLoc = glGetUniformLocation(gbufferGenShader.handle(), "uModelMatrix");
 	const int normalMatrixLoc = glGetUniformLocation(gbufferGenShader.handle(), "uNormalMatrix");
 
-	const int hasAlbedoTextureLoc = glGetUniformLocation(gbufferGenShader.handle(), "uHasAlbedoTexture");
-	const int albedoValueLoc = glGetUniformLocation(gbufferGenShader.handle(), "uAlbedoValue");
-
-	const int hasRoughnessTextureLoc = glGetUniformLocation(gbufferGenShader.handle(), "uHasRoughnessTexture");
-	const int rougnessValueLoc = glGetUniformLocation(gbufferGenShader.handle(), "uRoughnessValue");
-
-	const int hasMetallicTextureLoc = glGetUniformLocation(gbufferGenShader.handle(), "uHasMetallicTexture");
-	const int metallicValueLoc = glGetUniformLocation(gbufferGenShader.handle(), "uMetallicValue");
-
-	mImpl->materialSSBO.bind(0);
+	// For the static scene the model matrix should be identity
+	gl::setUniform(modelMatrixLoc, identityMatrix4<float>());
+	gl::setUniform(normalMatrixLoc, inverse(transpose(viewMatrix)));
 
 	for (const GLModel& model : mImpl->staticGLModels) {
-		
 		model.draw();
 	}
 
@@ -257,50 +244,6 @@ RenderResult DeferredRenderer::render(Framebuffer& resultFB,
 		const GLModel& model = mImpl->dynamicGLModels[obj.meshIndex];
 		model.draw();
 	}
-
-	/*for (const RenderableComponent& component : mStaticScene->opaqueComponents) {
-
-		const Material& m = component.material;
-
-		// Set albedo
-		if (m.albedoIndex != uint32_t(~0)) {
-			gl::setUniform(hasAlbedoTextureLoc, 1);
-			glActiveTexture(GL_TEXTURE0);
-			sfz_assert_debug(m.albedoIndex < mStaticScene->textures.size());
-			sfz_assert_debug(mStaticScene->textures[m.albedoIndex].isValid());
-			glBindTexture(GL_TEXTURE_2D, mStaticScene->textures[m.albedoIndex].handle());
-		} else {
-			gl::setUniform(hasAlbedoTextureLoc, 0);
-			gl::setUniform(albedoValueLoc, m.albedoValue);
-		}
-
-		// Set roughness
-		if (m.roughnessIndex != uint32_t(~0)) {
-			gl::setUniform(hasRoughnessTextureLoc, 1);
-			glActiveTexture(GL_TEXTURE1);
-			sfz_assert_debug(m.roughnessIndex < mStaticScene->textures.size());
-			sfz_assert_debug(mStaticScene->textures[m.roughnessIndex].isValid());
-			glBindTexture(GL_TEXTURE_2D, mStaticScene->textures[m.roughnessIndex].handle());
-		} else {
-			gl::setUniform(hasRoughnessTextureLoc, 0);
-			gl::setUniform(rougnessValueLoc, m.roughnessValue);
-		}
-
-		// Set metallic
-		if (m.metallicIndex != uint32_t(~0)) {
-			gl::setUniform(hasMetallicTextureLoc, 1);
-			glActiveTexture(GL_TEXTURE2);
-			sfz_assert_debug(m.metallicIndex < mStaticScene->textures.size());
-			sfz_assert_debug(mStaticScene->textures[m.metallicIndex].isValid());
-			glBindTexture(GL_TEXTURE_2D, mStaticScene->textures[m.metallicIndex].handle());
-		} else {
-			gl::setUniform(hasMetallicTextureLoc, 0);
-			gl::setUniform(metallicValueLoc, m.metallicValue);
-		}
-
-		// Render model
-		component.glModel.draw();
-	}*/
 
 	// Shading
 	// --------------------------------------------------------------------------------------------

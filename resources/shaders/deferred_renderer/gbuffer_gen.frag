@@ -1,4 +1,5 @@
 #version 450
+#extension GL_ARB_bindless_texture : require
 
 // Input, output and uniforms
 // ------------------------------------------------------------------------------------------------
@@ -13,19 +14,7 @@ layout(location = 0) out vec4 outFragNormal;
 layout(location = 1) out vec4 outFragAlbedo;
 layout(location = 2) out vec4 outFragMaterial;
 
-// Uniforms
-uniform int uHasAlbedoTexture = 0;
-uniform sampler2D uAlbedoTexture;
-uniform vec4 uAlbedoValue = vec4(vec3(0.0), 1.0);
-
-uniform int uHasRoughnessTexture = 0;
-uniform sampler2D uRoughnessTexture;
-uniform float uRoughnessValue = 0.0;
-
-uniform int uHasMetallicTexture = 0;
-uniform sampler2D uMetallicTexture;
-uniform float uMetallicValue = 0.0;
-
+// Shader Storage Buffer Objects
 struct CompactMaterial {
 	ivec4 textureIndices; // [albedoTexIndex, roughnessTexIndex, metallicTexIndex, padding]
 	vec4 albedoValue;
@@ -35,6 +24,11 @@ struct CompactMaterial {
 layout(std430, binding = 0) buffer MaterialSSBO
 {
 	CompactMaterial materials[];
+};
+
+layout(std430, binding = 1) buffer TextureSSBO
+{
+	sampler2D textures[];
 };
 
 // Main
@@ -48,30 +42,30 @@ void main()
 	outFragNormal = vec4(normalize(normal), 1.0);
 
 	// Albedo
-	vec4 albedo = vec4(0.0);
-	//vec4 albedo = mat.albedoValue;
-	/*if (mat.albedoIndex != -1) {
-
-		// albedo = sample
+	int albedoIndex = mat.textureIndices.x;
+	vec4 albedo = mat.albedoValue;
+	if (albedoIndex >= 0) {
+		albedo = texture(textures[albedoIndex], uv);
 
 		if (albedo.a < 0.1) {
 			discard;
 			return;
 		}
-	}*/
+	}
 	outFragAlbedo = vec4(albedo.rgb, 1.0);
 
-	/*// Materials
-	float roughness = mat.roughnessValue;
-	if (mat.roughnessIndex != -1) {
-		// roughness = sample
+	// Material
+	int roughnessIndex = mat.textureIndices.y;
+	float roughness = mat.materialValue.x;
+	if (roughnessIndex >= 0) {
+		roughness = texture(textures[roughnessIndex], uv).r;
 	}
-	float metallic = mat.metallicValue;
-	if (mat.metallicValue != -1) {
-		// metallic = sample
+
+	int metallicIndex = mat.textureIndices.z;
+	float metallic = mat.materialValue.y;
+	if (metallicIndex >= 0) {
+		metallic = texture(textures[metallicIndex], uv).r;
 	}
-	outFragMaterial = vec4(roughness, metallic, 0.0, 1.0);*/
 
-
-	outFragNormal = vec4(vec3(float(mat.textureIndices.x) / 100.0f), 1.0);
+	outFragMaterial = vec4(roughness, metallic, 0.0, 0.0);
 }

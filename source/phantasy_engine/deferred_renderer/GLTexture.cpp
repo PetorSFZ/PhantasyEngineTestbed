@@ -37,11 +37,11 @@ void GLTexture::load(const RawImage& image, GLTextureFiltering filtering) noexce
 {
 	sfz_assert_debug(image.pitch == (image.dim.x * image.bytesPerPixel));
 	if (image.imgData.data() == nullptr) return;
-	if (mHandle != 0) this->destroy();
+	if (mTextureHandle != 0) this->destroy();
 
 	// Creating OpenGL texture
-	glGenTextures(1, &mHandle);
-	glBindTexture(GL_TEXTURE_2D, mHandle);
+	glGenTextures(1, &mTextureHandle);
+	glBindTexture(GL_TEXTURE_2D, mTextureHandle);
 	
 	// Transfer data from raw image
 	switch (image.bytesPerPixel) {
@@ -67,27 +67,55 @@ void GLTexture::load(const RawImage& image, GLTextureFiltering filtering) noexce
 	mFiltering = filtering != GLTextureFiltering::NEAREST ?
 	             GLTextureFiltering::NEAREST : GLTextureFiltering::BILINEAR;
 	setFilteringFormat(filtering);
+
+	// Create Bindless handle
+	mBindlessHandle = glGetTextureHandleARB(mTextureHandle);
+	sfz_assert_debug(mBindlessHandle != 0u);
+	this->makeResident();
 }
 
 void GLTexture::destroy() noexcept
 {
-	glDeleteTextures(1, &mHandle); // Silently ignores mHandle == 0
-	mHandle = 0;
+	this->makeNonResident();
+	glDeleteTextures(1, &mTextureHandle); // Silently ignores mTextureHandle == 0
+	mTextureHandle = 0u;
+	mFiltering = GLTextureFiltering::NEAREST;
+	mBindlessHandle = 0u;
 }
 
 void GLTexture::swap(GLTexture& other) noexcept
 {
-	std::swap(this->mHandle, other.mHandle);
+	std::swap(this->mTextureHandle, other.mTextureHandle);
 	std::swap(this->mFiltering, other.mFiltering);
+	std::swap(this->mBindlessHandle, other.mBindlessHandle);
 }
+
+void GLTexture::makeResident() noexcept
+{
+	if (mBindlessHandle != 0u) {
+		glMakeTextureHandleResidentARB(mBindlessHandle);
+	}
+}
+
+void GLTexture::makeNonResident() noexcept
+{
+	if (mBindlessHandle != 0u) {
+		if (glIsTextureHandleResidentARB(mBindlessHandle)) {
+			glMakeTextureHandleNonResidentARB(mBindlessHandle);
+		}
+	}
+}
+
+// GLTexture: Private methods
+// ------------------------------------------------------------------------------------------------
 
 void GLTexture::setFilteringFormat(GLTextureFiltering filtering) noexcept
 {
-	if (mHandle == 0) return;
+	if (mTextureHandle == 0u) return;
 	if (mFiltering == filtering) return;
 	mFiltering = filtering;
 
-	glBindTexture(GL_TEXTURE_2D, mHandle);
+	glBindTexture(GL_TEXTURE_2D, mTextureHandle);
 
 	// Sets specified texture filtering, generating mipmaps if needed.
 	switch (mFiltering) {

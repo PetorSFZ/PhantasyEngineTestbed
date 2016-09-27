@@ -201,8 +201,8 @@ int main(int, char**)
 
 	SphereLight sunlight;
 	sunlight.pos = vec3(28.0f, 81.0f, 0.0f);
-	sunlight.range = 10000.0f;
-	sunlight.strength = 10000.0f * vec3(1.0f);
+	sunlight.range = 100.0f;
+	sunlight.strength = 5000.0f * vec3(1.0f);
 	sunlight.radius = 2.0f;
 	sunlight.staticShadows = true;
 	sunlight.dynamicShadows = true;
