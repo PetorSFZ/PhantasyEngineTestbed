@@ -63,7 +63,7 @@ CompactMaterial compact(const Material& m) noexcept
 class DeferredRendererImpl final {
 public:
 	// Shaders
-	Program gbufferGenShader, shadingShader;
+	Program gbufferGenShader, shadingShader, writeDepthShader;
 	
 	// Framebuffers
 	Framebuffer gbuffer;
@@ -108,6 +108,11 @@ DeferredRenderer::DeferredRenderer() noexcept
 	});
 
 	mImpl->shadingShader = Program::postProcessFromFile(shadersPath.str, "shading.frag");
+
+	mImpl->writeDepthShader = Program::postProcessFromFile(shadersPath.str, "write_depth.frag");
+	mImpl->writeDepthShader.useProgram();
+	gl::setUniform(mImpl->writeDepthShader, "uDepthTexture", 0);
+
 }
 
 DeferredRenderer::DeferredRenderer(DeferredRenderer&& other) noexcept
@@ -132,6 +137,11 @@ DeferredRenderer::~DeferredRenderer() noexcept
 void DeferredRenderer::setMaterialsAndTextures(const DynArray<Material>& materials,
                                                const DynArray<RawImage>& textures) noexcept
 {
+	// Destroy old values
+	mImpl->textures.clear();
+	mImpl->texturesSSBO.destroy();
+	mImpl->materialSSBO.destroy();
+
 	// Create compact materials from material list
 	DynArray<CompactMaterial> tmpCompactMaterials;
 	tmpCompactMaterials.setCapacity(materials.size());
@@ -281,6 +291,7 @@ RenderResult DeferredRenderer::render(Framebuffer& resultFB,
 	const int lightStrengthLoc = glGetUniformLocation(shadingShader.handle(), "uLightStrength");
 	const int lightRangeLoc = glGetUniformLocation(shadingShader.handle(), "uLightRange");
 
+	// Static lights
 	for (const SphereLight& sphereLight : mImpl->staticSphereLights) {
 		const vec3 lightPosVS = transformPoint(viewMatrix, sphereLight.pos);
 		gl::setUniform(lightPosLoc, lightPosVS);
@@ -289,6 +300,29 @@ RenderResult DeferredRenderer::render(Framebuffer& resultFB,
 
 		mImpl->fullscreenTriangle.render();
 	}
+
+	// Dynamic lights
+	for (const SphereLight& sphereLight : lights) {
+		const vec3 lightPosVS = transformPoint(viewMatrix, sphereLight.pos);
+		gl::setUniform(lightPosLoc, lightPosVS);
+		gl::setUniform(lightStrengthLoc, sphereLight.strength);
+		gl::setUniform(lightRangeLoc, sphereLight.range);
+
+		mImpl->fullscreenTriangle.render();
+	}
+
+	// Copy depth buffer to result framebuffer
+	// --------------------------------------------------------------------------------------------
+
+	glDisable(GL_DEPTH_TEST);
+	
+	mImpl->writeDepthShader.useProgram();
+	resultFB.bindViewport();
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, mImpl->gbuffer.depthTexture());
+	
+	mImpl->fullscreenTriangle.render();
 	
 	RenderResult tmp;
 	tmp.renderedRes = mTargetResolution;
