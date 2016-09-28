@@ -147,6 +147,7 @@ UpdateOp TestbedLogic::update(GameScreen& screen, UpdateState& state) noexcept
 	// Face buttons
 	if (ctrl.y == ButtonState::DOWN) {
 		spawnObjectInstance(triangleObjectHandle, *screen.level, translationMatrix(screen.cam.pos()));
+		spawnObjectInstance(triangleObjectHandle, *screen.level, translationMatrix(screen.cam.pos()));
 	}
 	if (ctrl.x == ButtonState::DOWN) {
 	}
@@ -161,7 +162,6 @@ UpdateOp TestbedLogic::update(GameScreen& screen, UpdateState& state) noexcept
 	}
 
 	screen.cam.setDir(screen.cam.dir(), vec3(0.0f, 1.0f, 0.0f));
-
 
 	return SCREEN_NO_OP;
 }

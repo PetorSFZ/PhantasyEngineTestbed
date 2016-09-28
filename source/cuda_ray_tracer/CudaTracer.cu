@@ -216,12 +216,24 @@ __global__ void cudaRayTracerKernel(CudaTracerParams params)
 	const uint32_t PATH_LENGTH = 2;
 	for (int pathDepth = 0; pathDepth < PATH_LENGTH; pathDepth++) {
 		RayCastResult hit = cudaCastRay(params.staticBvhNodesTex, params.staticTriangleVerticesTex, ray.origin, ray.dir);
+
 		if (hit.triangleIndex == ~0u) {
 			break;
 		}
 
 		HitInfo info = interpretHit(params.staticTriangleDatas, hit, ray);
-
+		
+		for (int i = 0; i < params.numDynBvhs; i++) {
+			RayCastResult newHit = cudaCastRay(params.dynamicBvhNodesTex[i], params.dynamicTriangleVerticesTex[i], ray.origin, ray.dir);
+			if (newHit.t < hit.t) {
+				hit = newHit;
+				if (hit.triangleIndex == ~0u) {
+					break;
+				}
+				info = interpretHit(params.dynamicTriangleDatas[i], hit, ray);
+			}
+		}
+		
 		if (info.materialIndex == UINT32_MAX) {
 			break;
 		}
@@ -324,6 +336,11 @@ __global__ void castRayTestKernel(CudaTracerParams params)
 	Ray ray(params.cam.origin, rayDir);
 
 	RayCastResult hit = cudaCastRay(params.staticBvhNodesTex, params.staticTriangleVerticesTex, ray.origin, ray.dir);
+
+	for (int i = 0; i < params.numDynBvhs; i++) {
+		RayCastResult newHit = cudaCastRay(params.dynamicBvhNodesTex[i], params.dynamicTriangleVerticesTex[i], ray.origin, ray.dir);
+		if (newHit.t < hit.t) hit = newHit;
+	}
 
 	vec3 color;
 	if (hit.triangleIndex != UINT32_MAX) {

@@ -6,8 +6,10 @@
 
 #include <sfz/gl/Program.hpp>
 #include <sfz/math/MathHelpers.hpp>
+#include <sfz/math/MatrixSupport.hpp>
 #include <sfz/memory/New.hpp>
 #include <sfz/util/IO.hpp>
+#include <sfz/geometry/AABB.hpp>
 
 #include <sfz/gl/IncludeOpenGL.hpp>
 #include <cuda_gl_interop.h>
@@ -48,6 +50,10 @@ public:
 	cudaGraphicsResource_t cudaResource = 0;
 	cudaArray_t cudaArray = 0; // Probably no need to free, since memory is owned by OpenGL
 
+	BVH staticBvh; // TODO: Move out to static scene
+	OuterBVH dynamicBvh;
+	DynArray<RawMesh> dynMeshes;
+	
 	// Parameters for tracer
 	DynArray<CudaBindlessTexture> textureWrappers;
 	DynArray<cudaTextureObject_t> textureObjectHandles;
@@ -240,7 +246,90 @@ void CudaTracerRenderer::setStaticScene(const StaticScene& staticScene) noexcept
 	
 void CudaTracerRenderer::setDynamicMeshes(const DynArray<RawMesh>& meshes) noexcept
 {
+	mImpl->dynMeshes = meshes;
+}
 
+template<class T>
+void stupidGpuSend(T*& gpuPtr, const DynArray<T>& cpuData) noexcept
+{
+	CHECK_CUDA_ERROR(cudaFree(gpuPtr));
+	size_t numBytes = cpuData.size() * sizeof(T);
+	CHECK_CUDA_ERROR(cudaMalloc(&gpuPtr, numBytes));
+	CHECK_CUDA_ERROR(cudaMemcpy(gpuPtr, cpuData.data(), numBytes, cudaMemcpyHostToDevice));
+}
+
+
+void CudaTracerRenderer::sendDynamicBvhToCuda()
+{
+	//const OuterBVH
+	OuterBVH& dynamicOuterBvh = mImpl->dynamicBvh;
+
+	// Copy dynamic BVH to GPU
+	stupidGpuSend(mImpl->tracerParams.dynamicOuterBvhNodes, dynamicOuterBvh.nodes);
+
+	uint32_t numInnerBvhs = dynamicOuterBvh.bvhs.size();
+
+	DynArray<BVHNode*> bvhNodePointers = DynArray<BVHNode*>(numInnerBvhs, nullptr, numInnerBvhs);
+	DynArray<cudaTextureObject_t> bvhNodeTex = DynArray<cudaTextureObject_t>(numInnerBvhs, 0, numInnerBvhs);
+	DynArray<TriangleData*> bvhTriangleDataPointers = DynArray<TriangleData*>(numInnerBvhs, nullptr, numInnerBvhs);
+	DynArray<TriangleVertices*> bvhTriangleVerticesPointers = DynArray<TriangleVertices*>(numInnerBvhs, nullptr, numInnerBvhs);
+	DynArray<cudaTextureObject_t> bvhTriangleVerticesTex = DynArray<cudaTextureObject_t>(numInnerBvhs, 0, numInnerBvhs);
+
+	for (int i = 0; i < numInnerBvhs; i++) {
+		BVH& bvh = dynamicOuterBvh.bvhs[i];
+		stupidGpuSend(bvhNodePointers[i], bvh.nodes);
+		stupidGpuSend(bvhTriangleDataPointers[i], bvh.triangleDatas);
+
+		// Create texture object for BVH
+		CHECK_CUDA_ERROR(cudaDestroyTextureObject(bvhNodeTex[i]));
+
+		cudaResourceDesc bvhNodesResDesc;
+		memset(&bvhNodesResDesc, 0, sizeof(cudaResourceDesc));
+		bvhNodesResDesc.resType = cudaResourceTypeLinear;
+		bvhNodesResDesc.res.linear.devPtr = bvhNodePointers[i];
+		bvhNodesResDesc.res.linear.desc.f = cudaChannelFormatKindFloat;
+		bvhNodesResDesc.res.linear.desc.x = 32; // bits per channel
+		bvhNodesResDesc.res.linear.desc.y = 32; // bits per channel
+		bvhNodesResDesc.res.linear.desc.z = 32; // bits per channel
+		bvhNodesResDesc.res.linear.desc.w = 32; // bits per channel
+		bvhNodesResDesc.res.linear.sizeInBytes = bvh.nodes.size() * sizeof(BVHNode);
+
+		cudaTextureDesc bvhNodesTexDesc;
+		memset(&bvhNodesTexDesc, 0, sizeof(cudaTextureDesc));
+		bvhNodesTexDesc.readMode = cudaReadModeElementType;
+
+		CHECK_CUDA_ERROR(cudaCreateTextureObject(&bvhNodeTex[i], &bvhNodesResDesc, &bvhNodesTexDesc, NULL));
+
+		stupidGpuSend(bvhTriangleVerticesPointers[i], bvh.triangleVerts);
+
+		// Create texture object for triangle vertices
+		CHECK_CUDA_ERROR(cudaDestroyTextureObject(bvhTriangleVerticesTex[i]));
+
+		cudaResourceDesc triVertsResDesc;
+		memset(&triVertsResDesc, 0, sizeof(cudaResourceDesc));
+		triVertsResDesc.resType = cudaResourceTypeLinear;
+		triVertsResDesc.res.linear.devPtr = bvhTriangleVerticesPointers[i];
+		triVertsResDesc.res.linear.desc.f = cudaChannelFormatKindFloat;
+		triVertsResDesc.res.linear.desc.x = 32; // bits per channel
+		triVertsResDesc.res.linear.desc.y = 32; // bits per channel
+		triVertsResDesc.res.linear.desc.z = 32; // bits per channel
+		triVertsResDesc.res.linear.desc.w = 32; // bits per channel
+		triVertsResDesc.res.linear.sizeInBytes = bvh.triangleVerts.size() * sizeof(TriangleVertices);
+
+		cudaTextureDesc triVertsTexDesc;
+		memset(&triVertsTexDesc, 0, sizeof(cudaTextureDesc));
+		triVertsTexDesc.readMode = cudaReadModeElementType;
+
+		CHECK_CUDA_ERROR(cudaCreateTextureObject(&bvhTriangleVerticesTex[i], &triVertsResDesc, &triVertsTexDesc, NULL));
+	}
+
+	stupidGpuSend(mImpl->tracerParams.dynamicBvhNodes, bvhNodePointers);
+	stupidGpuSend(mImpl->tracerParams.dynamicBvhNodesTex, bvhNodeTex);
+	stupidGpuSend(mImpl->tracerParams.dynamicTriangleDatas, bvhTriangleDataPointers);
+	stupidGpuSend(mImpl->tracerParams.dynamicTriangleVertices, bvhTriangleVerticesPointers);
+	stupidGpuSend(mImpl->tracerParams.dynamicTriangleVerticesTex, bvhTriangleVerticesTex);
+	mImpl->tracerParams.numDynBvhs = numInnerBvhs;
+//	stupidGpuSend(mImpl->tracerParams.dynamic, bvhTriangleDataTex);
 }
 
 void CudaTracerRenderer::addDynamicMesh(const RawMesh& mesh) noexcept
@@ -256,6 +345,20 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB,
 	vec2 resultRes = vec2(mTargetResolution);
 	mImpl->tracerParams.cam = generateCameraDef(mMatrices.position, mMatrices.forward, mMatrices.up,
 	                                            mMatrices.vertFovRad, resultRes);
+
+	if (objects.size() > 0) {
+		uint32_t numSubBvhs = objects.size();
+		DynArray<BVH> bvhs = DynArray<BVH>(0, numSubBvhs);
+
+		for (const DynObject& object : objects) {
+			BVH bvh = createDynamicBvh(mImpl->dynMeshes[object.meshIndex], object.transform);
+			sanitizeBVH(bvh);
+			bvhs.add(bvh);
+		}
+
+		mImpl->dynamicBvh = createOuterBvh(bvhs);
+		sendDynamicBvhToCuda();
+	}
 
 	CudaTracerParams& params = mImpl->tracerParams;
 	int32_t renderMode = mImpl->cudaRenderMode->intValue();
