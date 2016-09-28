@@ -121,7 +121,7 @@ __device__ vec3 shadeHit(const CudaTracerParams& params, curandState& randState,
 			float azimuthAngle = 2.0f * PI() * r1;
 
 			vec3 lightPosOffset = circleU * cos(azimuthAngle) * r2 +
-				circleV * sin(azimuthAngle) * r2;
+			                      circleV * sin(azimuthAngle) * r2;
 
 			vec3 offsetLightDiff = lightPos + lightPosOffset - offsetHitPos;
 			vec3 offsetLightDir = normalize(offsetLightDiff);
@@ -263,7 +263,7 @@ __global__ void cudaRayTracerKernel(CudaTracerParams params)
 		mask *= albedoColor;
 		// Temporarily amplify the ambiance effect
 		// TODO: Weigh this properly using BRDF
-		mask *= 3.0f;
+		mask *= 2.0f;
 
 		// To get ambient light, take cosine-weighted sample over the hemisphere
 		// and trace in that direction.
@@ -271,7 +271,7 @@ __global__ void cudaRayTracerKernel(CudaTracerParams params)
 		float r1 = curand_uniform(&randState);
 		float r2 = curand_uniform(&randState);
 		float azimuthAngle = 2.0f * PI() * r1;
-		float altitudeFactor = sqrtf(r2);
+		float altitudeFactor = sqrt(r2);
 
 		// Find surface vectors u and v orthogonal to normal
 		vec3 u;
@@ -284,7 +284,7 @@ __global__ void cudaRayTracerKernel(CudaTracerParams params)
 
 		rayDir = u * cos(azimuthAngle) * altitudeFactor +
 		         v * sin(azimuthAngle) * altitudeFactor +
-		         info.normal * sqrtf(1 - r2);
+		         info.normal * sqrt(1 - r2);
 		ray = Ray(offsetHitPos, rayDir);
 	}
 
