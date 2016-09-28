@@ -190,6 +190,7 @@ if(CUDA_TRACER)
 	# Source files
 	set(CUDA_TRACER_FILES
 		${CT_INCLUDE_DIR}/BVHTraversal.cuh
+		${CT_INCLUDE_DIR}/CudaArray.hpp
 		${CT_INCLUDE_DIR}/CudaBindlessTexture.hpp
 		 ${CT_SOURCE_DIR}/CudaBindlessTexture.cpp
 		${CT_INCLUDE_DIR}/CudaHelpers.hpp
