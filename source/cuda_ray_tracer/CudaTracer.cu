@@ -100,7 +100,7 @@ __device__ vec3 shadeHit(const CudaTracerParams& params, curandState& randState,
 	vec3 color = vec3(0.0f);
 
 	for (uint32_t i = 0; i < params.numStaticSphereLights; i++) {
-		const SphereLight& light = params.staticSphereLights[i];
+		SphereLight light = params.staticSphereLights[i];
 
 		if (light.staticShadows) {
 			vec3 lightPos = light.pos;
