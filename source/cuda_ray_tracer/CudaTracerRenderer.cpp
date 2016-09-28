@@ -2,12 +2,21 @@
 
 #include "CudaTracerRenderer.hpp"
 
-#include <chrono>
+#include "cuda.h"
+#include "cuda_runtime.h"
+#include "device_launch_parameters.h"
+
+#include <sfz/memory/New.hpp>
+
+#include <phantasy_engine/config/GlobalConfig.hpp>
+
+#include "CudaHelpers.hpp"
+
+/*#include <chrono>
 
 #include <sfz/gl/Program.hpp>
 #include <sfz/math/MathHelpers.hpp>
 #include <sfz/math/MatrixSupport.hpp>
-#include <sfz/memory/New.hpp>
 #include <sfz/util/IO.hpp>
 #include <sfz/geometry/AABB.hpp>
 
@@ -15,14 +24,14 @@
 #include <cuda_gl_interop.h>
 #include <cuda_runtime.h>
 
-#include <phantasy_engine/config/GlobalConfig.hpp>
 #include <phantasy_engine/RayTracerCommon.hpp>
 #include <phantasy_engine/rendering/FullscreenTriangle.hpp>
 
+#include "CudaArray.hpp"
 #include "CudaBindlessTexture.hpp"
 #include "CudaHelpers.hpp"
 #include "CudaTracer.cuh"
-#include "RayCastKernel.cuh"
+#include "RayCastKernel.cuh"*/
 
 namespace phe {
 
@@ -33,7 +42,30 @@ using namespace sfz;
 
 class CudaTracerRendererImpl final {
 public:
-	gl::Program transferShader;
+
+	// Settings
+	Setting* cudaDeviceIndex = nullptr;
+
+	// The device properties of the used CUDA device
+	cudaDeviceProp deviceProperties;
+
+	CudaTracerRendererImpl() noexcept
+	{
+		// Initialize settings
+		GlobalConfig& cfg = GlobalConfig::instance();
+		cudaDeviceIndex = cfg.sanitizeInt("CudaTracer", "deviceIndex", 0, 0, 16);
+
+		// Initialize cuda and get device properties
+		CHECK_CUDA_ERROR(cudaSetDevice(cudaDeviceIndex->intValue()));
+		CHECK_CUDA_ERROR(cudaGetDeviceProperties(&deviceProperties, cudaDeviceIndex->intValue()));
+	}
+	
+	~CudaTracerRendererImpl() noexcept
+	{
+
+	}
+
+	/*gl::Program transferShader;
 	FullscreenTriangle fullscreenTriangle;
 
 	Setting* cudaRenderMode = nullptr;
@@ -90,7 +122,7 @@ public:
 		// Temp
 		CHECK_CUDA_ERROR(cudaFree(gpuRaysBuffer));
 		CHECK_CUDA_ERROR(cudaFree(gpuRayHitsBuffer));
-	}
+	}*/
 };
 
 // CudaTracerRenderer: Constructors & destructors
@@ -100,7 +132,7 @@ CudaTracerRenderer::CudaTracerRenderer() noexcept
 {
 	mImpl = sfz_new<CudaTracerRendererImpl>();
 
-	StackString128 shadersPath;
+	/*StackString128 shadersPath;
 	shadersPath.printf("%sresources/shaders/", basePath());
 	mImpl->transferShader = gl::Program::postProcessFromFile(shadersPath.str, "cuda_transfer.frag");
 	glUseProgram(mImpl->transferShader.handle());
@@ -117,7 +149,7 @@ CudaTracerRenderer::CudaTracerRenderer() noexcept
 
 	printf("multiProcessorCount: %i\n", mImpl->deviceProperties.multiProcessorCount);
 	printf("maxThreadsPerMultiProcessor: %i\n", mImpl->deviceProperties.maxThreadsPerMultiProcessor);
-	printf("maxThreadsPerBlock: %i\n", mImpl->deviceProperties.maxThreadsPerBlock);
+	printf("maxThreadsPerBlock: %i\n", mImpl->deviceProperties.maxThreadsPerBlock);*/
 }
 
 CudaTracerRenderer::~CudaTracerRenderer() noexcept
@@ -131,7 +163,7 @@ CudaTracerRenderer::~CudaTracerRenderer() noexcept
 void CudaTracerRenderer::setMaterialsAndTextures(const DynArray<Material>& materials,
                                                  const DynArray<RawImage>& textures) noexcept
 {
-	// Copy materials to CUDA
+	/*// Copy materials to CUDA
 	Material*& gpuMaterials = mImpl->tracerParams.materials;
 	CHECK_CUDA_ERROR(cudaFree(gpuMaterials));
 	size_t numGpuMaterialBytes = materials.size() * sizeof(Material);
@@ -155,7 +187,7 @@ void CudaTracerRenderer::setMaterialsAndTextures(const DynArray<Material>& mater
 	size_t numGpuTexturesBytes = mImpl->textureObjectHandles.size() * sizeof(cudaSurfaceObject_t);
 	CHECK_CUDA_ERROR(cudaMalloc(&gpuTextures, numGpuTexturesBytes));
 	CHECK_CUDA_ERROR(cudaMemcpy(gpuTextures, mImpl->textureObjectHandles.data(), numGpuTexturesBytes, cudaMemcpyHostToDevice));
-	mImpl->tracerParams.numTextures = textures.size();
+	mImpl->tracerParams.numTextures = textures.size();*/
 }
 
 void CudaTracerRenderer::addTexture(const RawImage& texture) noexcept
@@ -170,7 +202,7 @@ void CudaTracerRenderer::addMaterial(const Material& material) noexcept
 
 void CudaTracerRenderer::setStaticScene(const StaticScene& staticScene) noexcept
 {
-	const BVH& staticBvh = staticScene.bvh;
+	/*const BVH& staticBvh = staticScene.bvh;
 
 	// Copy static BVH to GPU
 	BVHNode*& gpuBVHNodes = mImpl->tracerParams.staticBvhNodes;
@@ -241,27 +273,27 @@ void CudaTracerRenderer::setStaticScene(const StaticScene& staticScene) noexcept
 	size_t numSphereLightBytes = staticScene.sphereLights.size() * sizeof(SphereLight);
 	CHECK_CUDA_ERROR(cudaMalloc(&gpuSphereLights, numSphereLightBytes));
 	CHECK_CUDA_ERROR(cudaMemcpy(gpuSphereLights, staticScene.sphereLights.data(), numSphereLightBytes, cudaMemcpyHostToDevice));
-	mImpl->tracerParams.numStaticSphereLights = staticScene.sphereLights.size();
+	mImpl->tracerParams.numStaticSphereLights = staticScene.sphereLights.size();*/
 }
 	
 void CudaTracerRenderer::setDynamicMeshes(const DynArray<RawMesh>& meshes) noexcept
 {
-	mImpl->dynMeshes = meshes;
+	/*mImpl->dynMeshes = meshes;*/
 }
 
 template<class T>
 void stupidGpuSend(T*& gpuPtr, const DynArray<T>& cpuData) noexcept
 {
-	CHECK_CUDA_ERROR(cudaFree(gpuPtr));
+	/*CHECK_CUDA_ERROR(cudaFree(gpuPtr));
 	size_t numBytes = cpuData.size() * sizeof(T);
 	CHECK_CUDA_ERROR(cudaMalloc(&gpuPtr, numBytes));
-	CHECK_CUDA_ERROR(cudaMemcpy(gpuPtr, cpuData.data(), numBytes, cudaMemcpyHostToDevice));
+	CHECK_CUDA_ERROR(cudaMemcpy(gpuPtr, cpuData.data(), numBytes, cudaMemcpyHostToDevice));*/
 }
 
 
 void CudaTracerRenderer::sendDynamicBvhToCuda()
 {
-	//const OuterBVH
+	/*//const OuterBVH
 	OuterBVH& dynamicOuterBvh = mImpl->dynamicBvh;
 
 	// Copy dynamic BVH to GPU
@@ -329,7 +361,7 @@ void CudaTracerRenderer::sendDynamicBvhToCuda()
 	stupidGpuSend(mImpl->tracerParams.dynamicTriangleVertices, bvhTriangleVerticesPointers);
 	stupidGpuSend(mImpl->tracerParams.dynamicTriangleVerticesTex, bvhTriangleVerticesTex);
 	mImpl->tracerParams.numDynBvhs = numInnerBvhs;
-//	stupidGpuSend(mImpl->tracerParams.dynamic, bvhTriangleDataTex);
+//	stupidGpuSend(mImpl->tracerParams.dynamic, bvhTriangleDataTex);*/
 }
 
 void CudaTracerRenderer::addDynamicMesh(const RawMesh& mesh) noexcept
@@ -341,7 +373,7 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB,
                                         const DynArray<DynObject>& objects,
                                         const DynArray<SphereLight>& lights) noexcept
 {
-	// Calculate camera def in order to generate first rays
+	/*// Calculate camera def in order to generate first rays
 	vec2 resultRes = vec2(mTargetResolution);
 	mImpl->tracerParams.cam = generateCameraDef(mMatrices.position, mMatrices.forward, mMatrices.up,
 	                                            mMatrices.vertFovRad, resultRes);
@@ -415,7 +447,7 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB,
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, mImpl->glTex);
 
-	mImpl->fullscreenTriangle.render();
+	mImpl->fullscreenTriangle.render();*/
 
 	// Return result
 	RenderResult tmp;
@@ -428,7 +460,7 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB,
 
 void CudaTracerRenderer::targetResolutionUpdated() noexcept
 {
-	mImpl->tracerParams.targetRes = mTargetResolution;
+	/*mImpl->tracerParams.targetRes = mTargetResolution;
 
 	glActiveTexture(GL_TEXTURE0);
 
@@ -493,7 +525,7 @@ void CudaTracerRenderer::targetResolutionUpdated() noexcept
 
 	CHECK_CUDA_ERROR(cudaFree(mImpl->gpuRayHitsBuffer));
 	size_t numRayHitBytes = mTargetResolution.x * mTargetResolution.y * sizeof(RayHit);
-	CHECK_CUDA_ERROR(cudaMalloc(&mImpl->gpuRayHitsBuffer, numRayHitBytes));
+	CHECK_CUDA_ERROR(cudaMalloc(&mImpl->gpuRayHitsBuffer, numRayHitBytes));*/
 }
 
 } // namespace phe

@@ -40,7 +40,7 @@ struct DeviceArray final {
 	__host__ __device__ DeviceArray() noexcept;
 
 	// Implicit conversion from HostArray
-	__host__ DeviceArray(const HostArray& hostArray) noexcept;
+	__host__ DeviceArray(const HostArray<T>& hostArray) noexcept;
 };
 
 // HostArray
@@ -81,7 +81,7 @@ private:
 	// Private members
 	// --------------------------------------------------------------------------------------------
 
-	friend template<typename T> struct DeviceArray; // DeviceArray has direct access to members
+	friend struct DeviceArray<T>; // DeviceArray has direct access to members
 
 	T* mCudaPtr = nullptr;
 	uint32_t mCapacity = 0u;
@@ -100,7 +100,7 @@ __host__ __device__ DeviceArray<T>::DeviceArray() noexcept
 { }
 
 template<typename T>
-__host__ __device__ DeviceArray<T>::DeviceArray(const HostArray<T>& hostArray) noexcept
+__host__ DeviceArray<T>::DeviceArray(const HostArray<T>& hostArray) noexcept
 :
 	ptr(hostArray.mCudaPtr),
 	capacity(hostArray.mCapacity),
@@ -124,7 +124,7 @@ HostArray<T>::HostArray(HostArray&& other) noexcept
 }
 
 template<typename T>
-HostArray& HostArray<T>::operator= (HostArray&& other) noexcept
+HostArray<T>& HostArray<T>::operator= (HostArray&& other) noexcept
 {
 	this->swap(other);
 }
@@ -141,6 +141,7 @@ HostArray<T>::~HostArray() noexcept
 template<typename T>
 void HostArray<T>::create(uint32_t capacity) noexcept
 {
+	if (mCapacity != 0u) this->destroy();
 	size_t numBytes = capacity * sizeof(T);
 	CHECK_CUDA_ERROR(cudaMalloc(&mCudaPtr, numBytes));
 	mCapacity = capacity;
