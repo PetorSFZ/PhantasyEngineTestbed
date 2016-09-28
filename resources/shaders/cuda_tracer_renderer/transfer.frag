@@ -18,6 +18,5 @@ uniform sampler2D uSrcTexture;
 
 void main()
 {
-	vec3 value = texture(uSrcTexture, uvCoord).rgb;
-	outFragColor = vec4(value, 1.0);
+	outFragColor = texture(uSrcTexture, uvCoord);
 }

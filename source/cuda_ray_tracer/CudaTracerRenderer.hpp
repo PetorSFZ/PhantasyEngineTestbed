@@ -45,7 +45,6 @@ public:
 	                    const DynArray<DynObject>& objects,
 	                    const DynArray<SphereLight>& lights) noexcept override final;
 
-	void sendDynamicBvhToCuda();
 protected:
 	// Protected virtual methods from BaseRenderer interface
 	// --------------------------------------------------------------------------------------------

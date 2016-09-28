@@ -6,26 +6,33 @@
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 
+#include <sfz/containers/DynArray.hpp>
+#include <sfz/containers/StackString.hpp>
+#include <sfz/gl/IncludeOpenGL.hpp>
+#include <sfz/gl/Program.hpp>
 #include <sfz/memory/New.hpp>
+#include <sfz/util/IO.hpp>
 
 #include <phantasy_engine/config/GlobalConfig.hpp>
+#include <phantasy_engine/deferred_renderer/GLModel.hpp>
+#include <phantasy_engine/rendering/FullscreenTriangle.hpp>
 
 #include "CudaHelpers.hpp"
 
 /*#include <chrono>
 
-#include <sfz/gl/Program.hpp>
+
 #include <sfz/math/MathHelpers.hpp>
 #include <sfz/math/MatrixSupport.hpp>
 #include <sfz/util/IO.hpp>
 #include <sfz/geometry/AABB.hpp>
 
-#include <sfz/gl/IncludeOpenGL.hpp>
+
 #include <cuda_gl_interop.h>
 #include <cuda_runtime.h>
 
 #include <phantasy_engine/RayTracerCommon.hpp>
-#include <phantasy_engine/rendering/FullscreenTriangle.hpp>
+
 
 #include "CudaArray.hpp"
 #include "CudaBindlessTexture.hpp"
@@ -36,6 +43,14 @@
 namespace phe {
 
 using namespace sfz;
+using sfz::gl::Program;
+
+// Statics
+// ------------------------------------------------------------------------------------------------
+
+static const uint32_t GBUFFER_POSITION = 0u; // uv "u" coordinate stored in w
+static const uint32_t GBUFFER_NORMAL = 1u; // uv "v" coordinate stored in w
+static const uint32_t GBUFFER_MATERIAL_ID = 2u;
 
 // CudaTracerRendererImpl
 // ------------------------------------------------------------------------------------------------
@@ -49,6 +64,18 @@ public:
 	// The device properties of the used CUDA device
 	cudaDeviceProp deviceProperties;
 
+	// OpenGL FullscreenTriangle
+	FullscreenTriangle fullscreenTriangle;
+
+	// OpenGL shaders and framebuffers
+	Program gbufferGenShader, transferShader;
+	Framebuffer gbuffer;
+
+	// OpenGL models for static and dynamic scene
+	DynArray<GLModel> staticGLModels;
+	DynArray<GLModel> dynamicGLModels;
+
+
 	CudaTracerRendererImpl() noexcept
 	{
 		// Initialize settings
@@ -58,6 +85,22 @@ public:
 		// Initialize cuda and get device properties
 		CHECK_CUDA_ERROR(cudaSetDevice(cudaDeviceIndex->intValue()));
 		CHECK_CUDA_ERROR(cudaGetDeviceProperties(&deviceProperties, cudaDeviceIndex->intValue()));
+		
+		// Load OpenGL shaders
+		{
+			StackString256 shadersPath;
+			shadersPath.printf("%sresources/shaders/cuda_tracer_renderer/", basePath());
+
+			gbufferGenShader = Program::fromFile(shadersPath.str, "gbuffer_gen.vert", "gbuffer_gen.frag",
+				[](uint32_t shaderProgram) {
+				glBindAttribLocation(shaderProgram, 0, "inPosition");
+				glBindAttribLocation(shaderProgram, 1, "inNormal");
+				glBindAttribLocation(shaderProgram, 2, "inUV");
+				glBindAttribLocation(shaderProgram, 3, "inMaterialId");
+			});
+
+			transferShader = Program::postProcessFromFile(shadersPath.str, "transfer.frag");
+		}
 	}
 	
 	~CudaTracerRendererImpl() noexcept
@@ -202,6 +245,13 @@ void CudaTracerRenderer::addMaterial(const Material& material) noexcept
 
 void CudaTracerRenderer::setStaticScene(const StaticScene& staticScene) noexcept
 {
+	// Create static OpenGL models
+	DynArray<GLModel>& glModels = mImpl->staticGLModels;
+	glModels.clear();
+	for (const RawMesh& mesh : staticScene.meshes) {
+		glModels.add(GLModel(mesh));
+	}
+
 	/*const BVH& staticBvh = staticScene.bvh;
 
 	// Copy static BVH to GPU
@@ -278,6 +328,13 @@ void CudaTracerRenderer::setStaticScene(const StaticScene& staticScene) noexcept
 	
 void CudaTracerRenderer::setDynamicMeshes(const DynArray<RawMesh>& meshes) noexcept
 {
+	// Create dynamic OpenGL models
+	DynArray<GLModel>& glModels = mImpl->dynamicGLModels;
+	glModels.clear();
+	for (const RawMesh& mesh : meshes) {
+		glModels.add(GLModel(mesh));
+	}
+
 	/*mImpl->dynMeshes = meshes;*/
 }
 
@@ -291,7 +348,7 @@ void stupidGpuSend(T*& gpuPtr, const DynArray<T>& cpuData) noexcept
 }
 
 
-void CudaTracerRenderer::sendDynamicBvhToCuda()
+static void sendDynamicBvhToCuda()
 {
 	/*//const OuterBVH
 	OuterBVH& dynamicOuterBvh = mImpl->dynamicBvh;
@@ -373,6 +430,74 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB,
                                         const DynArray<DynObject>& objects,
                                         const DynArray<SphereLight>& lights) noexcept
 {
+	const mat4 viewMatrix = mMatrices.headMatrix * mMatrices.originMatrix;
+	const mat4 projMatrix = mMatrices.projMatrix;
+
+	// GBuffer generation
+	// --------------------------------------------------------------------------------------------
+
+	auto& gbuffer = mImpl->gbuffer;
+	auto& gbufferGenShader = mImpl->gbufferGenShader;
+
+	glDisable(GL_BLEND);
+	glEnable(GL_CULL_FACE);
+	glEnable(GL_DEPTH_TEST);
+	glDepthFunc(GL_GREATER); // reversed-z
+
+	gbuffer.bindViewportClearColorDepth(vec2i(0), mTargetResolution, vec4(0.0f), 0.0f);
+	gbufferGenShader.useProgram();
+
+	const mat4 modelMatrix = identityMatrix4<float>();
+	gl::setUniform(gbufferGenShader, "uProjMatrix", projMatrix);
+	gl::setUniform(gbufferGenShader, "uViewMatrix", viewMatrix);
+
+	const int modelMatrixLoc = glGetUniformLocation(gbufferGenShader.handle(), "uModelMatrix");
+	const int normalMatrixLoc = glGetUniformLocation(gbufferGenShader.handle(), "uNormalMatrix");
+
+	// For the static scene the model matrix should be identity
+	// normalMatrix = inverse(transpose(modelMatrix)) since we want worldspace normals
+	gl::setUniform(modelMatrixLoc, identityMatrix4<float>());
+	gl::setUniform(normalMatrixLoc, identityMatrix4<float>());
+
+	for (const GLModel& model : mImpl->staticGLModels) {
+		model.draw();
+	}
+
+	for (const DynObject& obj : objects) {
+		gl::setUniform(modelMatrixLoc, obj.transform);
+		gl::setUniform(normalMatrixLoc, inverse(transpose(obj.transform)));
+		const GLModel& model = mImpl->dynamicGLModels[obj.meshIndex];
+		model.draw();
+	}
+
+	// Transfer result to resultFB
+	// --------------------------------------------------------------------------------------------
+
+	glDisable(GL_BLEND);
+	glEnable(GL_CULL_FACE);
+	glDisable(GL_DEPTH_TEST);
+
+	// Copy color result to resultFB
+	resultFB.bindViewport();
+	mImpl->transferShader.useProgram();
+	gl::setUniform(mImpl->transferShader, "uSrcTexture", 0);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, gbuffer.texture(GBUFFER_NORMAL));
+	mImpl->fullscreenTriangle.render();
+
+	// Copy depth from GBuffer to resultFB
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, gbuffer.fbo());
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, resultFB.fbo());
+
+	glBlitFramebuffer(0, 0, mTargetResolution.x, mTargetResolution.y,
+	                  0, 0, mTargetResolution.x, mTargetResolution.y,
+	                  GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+
+	// Return result
+	RenderResult tmp;
+	tmp.renderedRes = mTargetResolution;
+	return tmp;
+
 	/*// Calculate camera def in order to generate first rays
 	vec2 resultRes = vec2(mTargetResolution);
 	mImpl->tracerParams.cam = generateCameraDef(mMatrices.position, mMatrices.forward, mMatrices.up,
@@ -449,10 +574,7 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB,
 
 	mImpl->fullscreenTriangle.render();*/
 
-	// Return result
-	RenderResult tmp;
-	tmp.renderedRes = mTargetResolution;
-	return tmp;
+	
 }
 
 // CudaTracerRenderer: Protected virtual methods from BaseRenderer interface
@@ -460,6 +582,16 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB,
 
 void CudaTracerRenderer::targetResolutionUpdated() noexcept
 {
+	// Update GBuffer resolution
+	// TODO: CHANGE R_INT_U8 TO R_INT_U16
+	mImpl->gbuffer = gl::FramebufferBuilder(mTargetResolution)
+	    .addDepthTexture(gl::FBDepthFormat::F32, gl::FBTextureFiltering::NEAREST)
+	    .addTexture(GBUFFER_POSITION, gl::FBTextureFormat::RGBA_F32, gl::FBTextureFiltering::NEAREST)
+	    .addTexture(GBUFFER_NORMAL, gl::FBTextureFormat::RGBA_F32, gl::FBTextureFiltering::LINEAR)
+	    .addTexture(GBUFFER_MATERIAL_ID, gl::FBTextureFormat::R_INT_U8, gl::FBTextureFiltering::NEAREST)
+	    .build();
+
+
 	/*mImpl->tracerParams.targetRes = mTargetResolution;
 
 	glActiveTexture(GL_TEXTURE0);
