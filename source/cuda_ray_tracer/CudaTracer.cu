@@ -100,7 +100,7 @@ __device__ vec3 shadeHit(const CudaTracerParams& params, curandState& randState,
 	vec3 color = vec3(0.0f);
 
 	for (uint32_t i = 0; i < params.numStaticSphereLights; i++) {
-		const SphereLight& light = params.staticSphereLights[i];
+		SphereLight light = params.staticSphereLights[i];
 
 		if (light.staticShadows) {
 			vec3 lightPos = light.pos;
@@ -121,7 +121,7 @@ __device__ vec3 shadeHit(const CudaTracerParams& params, curandState& randState,
 			float azimuthAngle = 2.0f * PI() * r1;
 
 			vec3 lightPosOffset = circleU * cos(azimuthAngle) * r2 +
-				circleV * sin(azimuthAngle) * r2;
+			                      circleV * sin(azimuthAngle) * r2;
 
 			vec3 offsetLightDiff = lightPos + lightPosOffset - offsetHitPos;
 			vec3 offsetLightDir = normalize(offsetLightDiff);
@@ -216,12 +216,24 @@ __global__ void cudaRayTracerKernel(CudaTracerParams params)
 	const uint32_t PATH_LENGTH = 2;
 	for (int pathDepth = 0; pathDepth < PATH_LENGTH; pathDepth++) {
 		RayCastResult hit = cudaCastRay(params.staticBvhNodesTex, params.staticTriangleVerticesTex, ray.origin, ray.dir);
+
 		if (hit.triangleIndex == ~0u) {
 			break;
 		}
 
 		HitInfo info = interpretHit(params.staticTriangleDatas, hit, ray);
-
+		
+		for (int i = 0; i < params.numDynBvhs; i++) {
+			RayCastResult newHit = cudaCastRay(params.dynamicBvhNodesTex[i], params.dynamicTriangleVerticesTex[i], ray.origin, ray.dir);
+			if (newHit.t < hit.t) {
+				hit = newHit;
+				if (hit.triangleIndex == ~0u) {
+					break;
+				}
+				info = interpretHit(params.dynamicTriangleDatas[i], hit, ray);
+			}
+		}
+		
 		if (info.materialIndex == UINT32_MAX) {
 			break;
 		}
@@ -263,7 +275,7 @@ __global__ void cudaRayTracerKernel(CudaTracerParams params)
 		mask *= albedoColor;
 		// Temporarily amplify the ambiance effect
 		// TODO: Weigh this properly using BRDF
-		mask *= 3.0f;
+		mask *= 2.0f;
 
 		// To get ambient light, take cosine-weighted sample over the hemisphere
 		// and trace in that direction.
@@ -271,7 +283,7 @@ __global__ void cudaRayTracerKernel(CudaTracerParams params)
 		float r1 = curand_uniform(&randState);
 		float r2 = curand_uniform(&randState);
 		float azimuthAngle = 2.0f * PI() * r1;
-		float altitudeFactor = sqrtf(r2);
+		float altitudeFactor = sqrt(r2);
 
 		// Find surface vectors u and v orthogonal to normal
 		vec3 u;
@@ -284,7 +296,7 @@ __global__ void cudaRayTracerKernel(CudaTracerParams params)
 
 		rayDir = u * cos(azimuthAngle) * altitudeFactor +
 		         v * sin(azimuthAngle) * altitudeFactor +
-		         info.normal * sqrtf(1 - r2);
+		         info.normal * sqrt(1 - r2);
 		ray = Ray(offsetHitPos, rayDir);
 	}
 
@@ -324,6 +336,11 @@ __global__ void castRayTestKernel(CudaTracerParams params)
 	Ray ray(params.cam.origin, rayDir);
 
 	RayCastResult hit = cudaCastRay(params.staticBvhNodesTex, params.staticTriangleVerticesTex, ray.origin, ray.dir);
+
+	for (int i = 0; i < params.numDynBvhs; i++) {
+		RayCastResult newHit = cudaCastRay(params.dynamicBvhNodesTex[i], params.dynamicTriangleVerticesTex[i], ray.origin, ray.dir);
+		if (newHit.t < hit.t) hit = newHit;
+	}
 
 	vec3 color;
 	if (hit.triangleIndex != UINT32_MAX) {

@@ -118,6 +118,8 @@ set(PHANTASY_ENGINE_LIB_FILES
 	 ${PH_SOURCE_DIR}/ray_tracer_common/BVHMetrics.cpp
 	${PH_INCLUDE_DIR}/ray_tracer_common/BVHNode.hpp
 	${PH_INCLUDE_DIR}/ray_tracer_common/BVHTraversal.hpp
+	${PH_INCLUDE_DIR}/ray_tracer_common/DynamicBVH.hpp
+	 ${PH_SOURCE_DIR}/ray_tracer_common/DynamicBVH.cpp
 	${PH_INCLUDE_DIR}/ray_tracer_common/GenerateRays.hpp
 	 ${PH_SOURCE_DIR}/ray_tracer_common/GenerateRays.cpp
 	${PH_INCLUDE_DIR}/ray_tracer_common/Intersection.hpp

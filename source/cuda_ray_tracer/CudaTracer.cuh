@@ -11,6 +11,8 @@
 #include <phantasy_engine/RayTracerCommon.hpp>
 #include <phantasy_engine/rendering/Material.hpp>
 
+#include "cuda_ray_tracer/CudaTracerRenderer.hpp"
+
 namespace phe {
 
 using sfz::vec2i;
@@ -45,7 +47,14 @@ struct CudaTracerParams final {
 	SphereLight* staticSphereLights = nullptr;
 	uint32_t numStaticSphereLights = ~0u;
 
-	// TODO: Dynamic geometry & dynamic light sources
+	// Dynamic Geometry
+	OuterBVHNode* dynamicOuterBvhNodes = nullptr;
+	BVHNode** dynamicBvhNodes = nullptr;
+	cudaTextureObject_t* dynamicBvhNodesTex = nullptr;
+	TriangleVertices** dynamicTriangleVertices = nullptr;
+	cudaTextureObject_t* dynamicTriangleVerticesTex = nullptr;
+	TriangleData** dynamicTriangleDatas = nullptr;
+	uint32_t numDynBvhs = 0;
 };
 
 void cudaRayTrace(const CudaTracerParams& params) noexcept;
