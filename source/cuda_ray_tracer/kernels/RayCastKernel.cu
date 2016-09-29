@@ -1,6 +1,6 @@
 // See 'LICENSE_PHANTASY_ENGINE' for copyright and contributors.
 
-#include "RayCastKernel.cuh"
+#include "RayCastKernel.hpp"
 
 #include <phantasy_engine/ray_tracer_common/BVHNode.hpp>
 #include <phantasy_engine/ray_tracer_common/Triangle.hpp>

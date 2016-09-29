@@ -19,6 +19,7 @@
 
 #include "CudaGLInterop.hpp"
 #include "CudaHelpers.hpp"
+#include "kernels/ProcessGBufferKernel.hpp"
 
 /*#include <chrono>
 
@@ -89,13 +90,19 @@ public:
 		CHECK_CUDA_ERROR(cudaSetDevice(cudaDeviceIndex->intValue()));
 		CHECK_CUDA_ERROR(cudaGetDeviceProperties(&deviceProperties, cudaDeviceIndex->intValue()));
 		
+		// Print device properties
+		printf("CUDA device properties:\n");
+		printf("multiProcessorCount: %i\n", deviceProperties.multiProcessorCount);
+		printf("maxThreadsPerMultiProcessor: %i\n", deviceProperties.maxThreadsPerMultiProcessor);
+		printf("maxThreadsPerBlock: %i\n\n", deviceProperties.maxThreadsPerBlock);
+
 		// Load OpenGL shaders
 		{
 			StackString256 shadersPath;
 			shadersPath.printf("%sresources/shaders/cuda_tracer_renderer/", basePath());
 
-			gbufferGenShader = Program::fromFile(shadersPath.str, "gbuffer_gen.vert", "gbuffer_gen.frag",
-				[](uint32_t shaderProgram) {
+			gbufferGenShader = Program::fromFile(shadersPath.str, "gbuffer_gen.vert",
+			                                     "gbuffer_gen.frag", [](uint32_t shaderProgram) {
 				glBindAttribLocation(shaderProgram, 0, "inPosition");
 				glBindAttribLocation(shaderProgram, 1, "inNormal");
 				glBindAttribLocation(shaderProgram, 2, "inUV");
@@ -111,17 +118,10 @@ public:
 
 	}
 
-	/*gl::Program transferShader;
-	FullscreenTriangle fullscreenTriangle;
-
-	Setting* cudaRenderMode = nullptr;
-	Setting* cudaDeviceIndex = nullptr;
+	/*
 	CameraDef lastCamera;
 	int32_t lastRenderMode = 0;
 	uint32_t accumulationPasses = 0;
-
-	// The device properties of the used CUDA device
-	cudaDeviceProp deviceProperties;
 
 	// Holding the OpenGL Cuda surface data, surface object is in CudaTracerParams.
 	GLuint glTex = 0;
@@ -177,30 +177,12 @@ public:
 CudaTracerRenderer::CudaTracerRenderer() noexcept
 {
 	mImpl = sfz_new<CudaTracerRendererImpl>();
-
-	/*StackString128 shadersPath;
-	shadersPath.printf("%sresources/shaders/", basePath());
-	mImpl->transferShader = gl::Program::postProcessFromFile(shadersPath.str, "cuda_transfer.frag");
-	glUseProgram(mImpl->transferShader.handle());
-	gl::setUniform(mImpl->transferShader, "uSrcTexture", 0);
-
-	GlobalConfig& cfg = GlobalConfig::instance();
-	mImpl->cudaRenderMode = cfg.sanitizeInt("CudaTracer", "cudaRenderMode", 0, 0, 3);
-	mImpl->lastRenderMode = mImpl->cudaRenderMode->intValue();
-	mImpl->cudaDeviceIndex = cfg.sanitizeInt("CudaTracer", "deviceIndex", 0, 0, 32);
-
-	// Initialize cuda and get device properties
-	CHECK_CUDA_ERROR(cudaSetDevice(mImpl->cudaDeviceIndex->intValue()));
-	CHECK_CUDA_ERROR(cudaGetDeviceProperties(&mImpl->deviceProperties, mImpl->cudaDeviceIndex->intValue()));
-
-	printf("multiProcessorCount: %i\n", mImpl->deviceProperties.multiProcessorCount);
-	printf("maxThreadsPerMultiProcessor: %i\n", mImpl->deviceProperties.maxThreadsPerMultiProcessor);
-	printf("maxThreadsPerBlock: %i\n", mImpl->deviceProperties.maxThreadsPerBlock);*/
 }
 
 CudaTracerRenderer::~CudaTracerRenderer() noexcept
 {
 	sfz_delete(mImpl);
+	cudaDeviceReset();
 }
 
 // CudaTracerRenderer: Virtual methods from BaseRenderer interface
@@ -473,6 +455,11 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB,
 		model.draw();
 	}
 
+	// Temporary cuda kernel
+	// --------------------------------------------------------------------------------------------
+
+	launchTempWriteColorKernel(mImpl->cudaResultTex.cudaSurface(), mTargetResolution);
+
 	// Transfer result to resultFB
 	// --------------------------------------------------------------------------------------------
 
@@ -480,12 +467,12 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB,
 	glEnable(GL_CULL_FACE);
 	glDisable(GL_DEPTH_TEST);
 
-	// Copy color result to resultFB
+	// Copy result to resultFB
 	resultFB.bindViewport();
 	mImpl->transferShader.useProgram();
 	gl::setUniform(mImpl->transferShader, "uSrcTexture", 0);
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, gbuffer.texture(GBUFFER_NORMAL));
+	glBindTexture(GL_TEXTURE_2D, mImpl->cudaResultTex.glTexture());
 	mImpl->fullscreenTriangle.render();
 
 	// Copy depth from GBuffer to resultFB
