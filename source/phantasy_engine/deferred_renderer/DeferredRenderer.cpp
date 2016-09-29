@@ -26,6 +26,8 @@ using gl::Program;
 static const uint32_t GBUFFER_NORMAL = 0;
 static const uint32_t GBUFFER_ALBEDO = 1;
 static const uint32_t GBUFFER_MATERIAL = 2;
+static const uint32_t GBUFFER_MATERIAL_ID = 3;
+static const uint32_t GBUFFER_UV = 4;
 
 struct CompactMaterial final {
 	vec4i textureIndices; // [albedoTexIndex, roughnessTexIndex, metallicTexIndex, padding]
@@ -63,7 +65,7 @@ CompactMaterial compact(const Material& m) noexcept
 class DeferredRendererImpl final {
 public:
 	// Shaders
-	Program gbufferGenShader, shadingShader;
+	Program gbufferGenShader, gbufferMaterialGenShader, shadingShader;
 	
 	// Framebuffers
 	Framebuffer gbuffer;
@@ -106,6 +108,8 @@ DeferredRenderer::DeferredRenderer() noexcept
 		glBindAttribLocation(shaderProgram, 2, "inUV");
 		glBindAttribLocation(shaderProgram, 3, "inMaterialId");
 	});
+
+	mImpl->gbufferMaterialGenShader = Program::postProcessFromFile(shadersPath.str, "gbuffer_material_gen.frag");
 
 	mImpl->shadingShader = Program::postProcessFromFile(shadersPath.str, "shading.frag");
 }
@@ -206,6 +210,7 @@ RenderResult DeferredRenderer::render(Framebuffer& resultFB,
                                       const DynArray<SphereLight>& lights) noexcept
 {
 	auto& gbufferGenShader = mImpl->gbufferGenShader;
+	auto& gbufferMaterialGenShader = mImpl->gbufferMaterialGenShader;
 	auto& shadingShader = mImpl->shadingShader;
 	auto& gbuffer = mImpl->gbuffer;
 
@@ -228,10 +233,6 @@ RenderResult DeferredRenderer::render(Framebuffer& resultFB,
 	gl::setUniform(gbufferGenShader, "uProjMatrix", projMatrix);
 	gl::setUniform(gbufferGenShader, "uViewMatrix", viewMatrix);
 
-	// Bind SSBOs
-	mImpl->materialSSBO.bind(0);
-	mImpl->texturesSSBO.bind(1);
-
 	const int modelMatrixLoc = glGetUniformLocation(gbufferGenShader.handle(), "uModelMatrix");
 	const int normalMatrixLoc = glGetUniformLocation(gbufferGenShader.handle(), "uNormalMatrix");
 
@@ -250,10 +251,31 @@ RenderResult DeferredRenderer::render(Framebuffer& resultFB,
 		model.draw();
 	}
 
+	// End of geometry pass
+
+	// Material pass
+	glDisable(GL_BLEND);
+	glEnable(GL_CULL_FACE);
+	glDisable(GL_DEPTH_TEST);
+
+	gbufferMaterialGenShader.useProgram();
+
+	// Bind SSBOs
+	mImpl->materialSSBO.bind(0);
+	mImpl->texturesSSBO.bind(1);
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, gbuffer.texture(GBUFFER_MATERIAL_ID));
+	gl::setUniform(gbufferMaterialGenShader, "uMaterialIdTex", 0);
+
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, gbuffer.texture(GBUFFER_UV));
+	gl::setUniform(gbufferMaterialGenShader, "uUvTex", 1);
+
+	mImpl->fullscreenTriangle.render();
+
 	// Shading
 	// --------------------------------------------------------------------------------------------
-
-	glDisable(GL_BLEND);
 	glEnable(GL_CULL_FACE);
 	glDisable(GL_DEPTH_TEST);
 
@@ -332,10 +354,12 @@ void DeferredRenderer::targetResolutionUpdated() noexcept
 	using gl::FramebufferBuilder;
 
 	mImpl->gbuffer = FramebufferBuilder(mTargetResolution)
-	    .addDepthTexture(FBDepthFormat::F32, FBTextureFiltering::NEAREST)
-	    .addTexture(GBUFFER_NORMAL, FBTextureFormat::RGB_F16, FBTextureFiltering::LINEAR)
-	    .addTexture(GBUFFER_ALBEDO, FBTextureFormat::RGB_U8, FBTextureFiltering::LINEAR)
-	    .addTexture(GBUFFER_MATERIAL, FBTextureFormat::RG_U8, FBTextureFiltering::LINEAR) // Roughness, metallic
+		.addDepthTexture(FBDepthFormat::F32, FBTextureFiltering::NEAREST)
+		.addTexture(GBUFFER_NORMAL, FBTextureFormat::RGB_F16, FBTextureFiltering::LINEAR)
+		.addTexture(GBUFFER_ALBEDO, FBTextureFormat::RGB_U8, FBTextureFiltering::LINEAR)
+		.addTexture(GBUFFER_MATERIAL, FBTextureFormat::RG_U8, FBTextureFiltering::LINEAR) // Roughness, metallic
+		.addTexture(GBUFFER_MATERIAL_ID, FBTextureFormat::R_INT_U16, FBTextureFiltering::NEAREST)
+		.addTexture(GBUFFER_UV, FBTextureFormat::RG_F32, FBTextureFiltering::LINEAR)
 	    .build();
 }
 
