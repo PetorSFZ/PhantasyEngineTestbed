@@ -12,6 +12,7 @@ namespace phe {
 
 using sfz::vec2i;
 
-void launchTempWriteColorKernel(cudaSurfaceObject_t surface, vec2i res) noexcept;
+void launchTempWriteColorKernel(cudaSurfaceObject_t surface, vec2i res, 
+                                cudaSurfaceObject_t normalTex) noexcept;
 
 } // namespace phe

@@ -22,17 +22,26 @@ public:
 	// Constructors & destructors
 	// --------------------------------------------------------------------------------------------
 
-	CudaGLGBuffer() = delete;
+	CudaGLGBuffer() noexcept = default;
 	CudaGLGBuffer(const CudaGLGBuffer&) = delete;
 	CudaGLGBuffer& operator= (const CudaGLGBuffer&) = delete;
-	CudaGLGBuffer(CudaGLGBuffer&&) = delete;
-	CudaGLGBuffer& operator= (CudaGLGBuffer&&) = delete;
-
+	
 	CudaGLGBuffer(vec2i resolution) noexcept;
+	CudaGLGBuffer(CudaGLGBuffer&& other) noexcept;
+	CudaGLGBuffer& operator= (CudaGLGBuffer&& other) noexcept;
 	~CudaGLGBuffer() noexcept;
+
+	// Methods
+	// --------------------------------------------------------------------------------------------
+
+	void bindViewportClearColorDepth() noexcept;
 
 	// Getters
 	// --------------------------------------------------------------------------------------------
+
+	inline vec2i resolution() const noexcept { return mFramebuffer.dimensions(); }
+
+	uint32_t fbo() const noexcept { return mFramebuffer.fbo(); }
 
 	uint32_t depthTextureGL() const noexcept;
 	uint32_t positionTextureGL() const noexcept;
@@ -49,9 +58,13 @@ private:
 
 	Framebuffer mFramebuffer;
 
-	cudaSurfaceObject_t mPosTexSurface = 0u;
-	cudaSurfaceObject_t mNormalTexSurface = 0u;
-	cudaSurfaceObject_t mMaterialIdTexSurface = 0u;
+	cudaGraphicsResource_t mPosResource = 0;
+	cudaGraphicsResource_t mNormalResource = 0;
+	cudaGraphicsResource_t mMaterialIdResource = 0;
+
+	cudaSurfaceObject_t mPosSurface = 0;
+	cudaSurfaceObject_t mNormalSurface = 0;
+	cudaSurfaceObject_t mMaterialIdSurface = 0;
 };
 
 // CudaGLTexture

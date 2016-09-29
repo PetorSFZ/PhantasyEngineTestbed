@@ -47,13 +47,6 @@ namespace phe {
 using namespace sfz;
 using sfz::gl::Program;
 
-// Statics
-// ------------------------------------------------------------------------------------------------
-
-static const uint32_t GBUFFER_POSITION = 0u; // uv "u" coordinate stored in w
-static const uint32_t GBUFFER_NORMAL = 1u; // uv "v" coordinate stored in w
-static const uint32_t GBUFFER_MATERIAL_ID = 2u;
-
 // CudaTracerRendererImpl
 // ------------------------------------------------------------------------------------------------
 
@@ -73,7 +66,7 @@ public:
 	Program gbufferGenShader, transferShader;
 
 	// Cuda OpenGL interop textures and framebuffers
-	Framebuffer gbuffer;
+	CudaGLGBuffer gbuffer;
 	CudaGLTexture cudaResultTex;
 
 	// OpenGL models for static and dynamic scene
@@ -429,7 +422,7 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB,
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_GREATER); // reversed-z
 
-	gbuffer.bindViewportClearColorDepth(vec2i(0), mTargetResolution, vec4(0.0f), 0.0f);
+	gbuffer.bindViewportClearColorDepth();
 	gbufferGenShader.useProgram();
 
 	const mat4 modelMatrix = identityMatrix4<float>();
@@ -458,7 +451,8 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB,
 	// Temporary cuda kernel
 	// --------------------------------------------------------------------------------------------
 
-	launchTempWriteColorKernel(mImpl->cudaResultTex.cudaSurface(), mTargetResolution);
+	launchTempWriteColorKernel(mImpl->cudaResultTex.cudaSurface(), mTargetResolution,
+	                           mImpl->gbuffer.normalSurfaceCuda());
 
 	// Transfer result to resultFB
 	// --------------------------------------------------------------------------------------------
@@ -573,13 +567,7 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB,
 void CudaTracerRenderer::targetResolutionUpdated() noexcept
 {
 	// Update GBuffer resolution
-	// TODO: CHANGE R_INT_U8 TO R_INT_U16
-	mImpl->gbuffer = gl::FramebufferBuilder(mTargetResolution)
-	    .addDepthTexture(gl::FBDepthFormat::F32, gl::FBTextureFiltering::NEAREST)
-	    .addTexture(GBUFFER_POSITION, gl::FBTextureFormat::RGBA_F32, gl::FBTextureFiltering::NEAREST)
-	    .addTexture(GBUFFER_NORMAL, gl::FBTextureFormat::RGBA_F32, gl::FBTextureFiltering::LINEAR)
-	    .addTexture(GBUFFER_MATERIAL_ID, gl::FBTextureFormat::R_INT_U16, gl::FBTextureFiltering::NEAREST)
-	    .build();
+	mImpl->gbuffer = CudaGLGBuffer(mTargetResolution);
 
 	// Allocate new result texture
 	mImpl->cudaResultTex = CudaGLTexture(mTargetResolution);
