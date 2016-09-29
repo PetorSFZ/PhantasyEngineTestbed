@@ -72,6 +72,21 @@ bool ViewFrustum::isVisible(const ViewFrustum& viewFrustum) const noexcept
 // ViewFrustum: Setters
 // ------------------------------------------------------------------------------------------------
 
+mat4 ViewFrustum::viewMatrix() const noexcept {
+	return viewMatrixGL(mPos, mDir, mUp);
+}
+
+mat4 ViewFrustum::projMatrix(vec2i resolution) const noexcept {
+	mat4 result = reverseInfinitePerspectiveProjectionVkD3d(mVerticalFovDeg, mAspectRatio, mNear);
+
+	// Apply pixel offset
+	vec2 projPixelOffset = mPixelOffset / vec2(resolution);
+	mat4 pixelOffsetTranslation = translationMatrix(vec3(projPixelOffset, 0.0f));
+	result = pixelOffsetTranslation * result;
+
+	return result;
+}
+
 void ViewFrustum::setPos(vec3 position) noexcept
 {
 	mPos = position;
@@ -127,19 +142,16 @@ void ViewFrustum::set(vec3 position, vec3 direction, vec3 up, float verticalFovD
 	update();
 }
 
+void ViewFrustum::setPixelOffset(vec2 offset) noexcept {
+	mPixelOffset = offset;
+}
+
 // ViewFrustum: Private methods
 // ------------------------------------------------------------------------------------------------
 
 void ViewFrustum::update() noexcept
 {
-	updateMatrices();
 	updatePlanes();
-}
-
-void ViewFrustum::updateMatrices() noexcept
-{
-	mViewMatrix = viewMatrixGL(mPos, mDir, mUp);
-	mProjMatrix = reverseInfinitePerspectiveProjectionVkD3d(mVerticalFovDeg, mAspectRatio, mNear);
 }
 
 void ViewFrustum::updatePlanes() noexcept

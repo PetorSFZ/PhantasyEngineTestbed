@@ -343,8 +343,8 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB,
 {
 	// Calculate camera def in order to generate first rays
 	vec2 resultRes = vec2(mTargetResolution);
-	mImpl->tracerParams.cam = generateCameraDef(mMatrices.position, mMatrices.forward, mMatrices.up,
-	                                            mMatrices.vertFovRad, resultRes);
+	mImpl->tracerParams.cam = generateCameraDef(mCamera.pos(), mCamera.dir(), mCamera.up(),
+	                                            DEG_TO_RAD() * mCamera.verticalFov(), resultRes);
 
 	if (objects.size() > 0) {
 		uint32_t numSubBvhs = objects.size();

@@ -19,6 +19,8 @@ using sfz::OBB;
 using sfz::Plane;
 using sfz::Sphere;
 using sfz::mat4;
+using sfz::vec2;
+using sfz::vec2i;
 using sfz::vec3;
 
 class ViewFrustum final {
@@ -51,8 +53,8 @@ public:
 	inline float aspectRatio() const noexcept { return mAspectRatio; }
 	inline float near() const noexcept { return mNear; }
 	inline float far() const noexcept { return mFar; }
-	inline const mat4& viewMatrix() const noexcept { return mViewMatrix; }
-	inline const mat4& projMatrix() const noexcept { return mProjMatrix; }
+	mat4 viewMatrix() const noexcept;
+	mat4 projMatrix(vec2i resolution) const noexcept;
 
 	// Setters
 	// --------------------------------------------------------------------------------------------
@@ -65,13 +67,13 @@ public:
 	void setClipDist(float near, float far) noexcept;
 	void set(vec3 position, vec3 direction, vec3 up, float verticalFovDeg, float aspect, float near,
 	         float far) noexcept;
+	void setPixelOffset(vec2 offset) noexcept;
 
 private:
 	// Private methods
 	// --------------------------------------------------------------------------------------------
 
 	void update() noexcept;
-	void updateMatrices() noexcept;
 	void updatePlanes() noexcept;
 
 	// Private members
@@ -79,7 +81,7 @@ private:
 
 	vec3 mPos, mDir, mUp;
 	float mVerticalFovDeg, mAspectRatio, mNear, mFar;
-	mat4 mViewMatrix, mProjMatrix;
+	vec2 mPixelOffset = vec2(0.0f);
 	Plane mNearPlane, mFarPlane, mUpPlane, mDownPlane, mLeftPlane, mRightPlane;
 };
 

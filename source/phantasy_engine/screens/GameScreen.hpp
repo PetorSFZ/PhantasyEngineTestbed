@@ -86,7 +86,7 @@ private:
 	Program mScalingShader, mGammaCorrectionShader;
 	FullscreenTriangle mFullscreenTriangle;
 
-	CameraMatrices mMatrices;
+	ViewFrustum mCamera;
 };
 
 } // namespace phe
