@@ -2,9 +2,9 @@
 
 #include "CudaTracerRenderer.hpp"
 
-#include "cuda.h"
-#include "cuda_runtime.h"
-#include "device_launch_parameters.h"
+#include <cuda.h>
+#include <cuda_runtime.h>
+#include <device_launch_parameters.h>
 
 #include <sfz/containers/DynArray.hpp>
 #include <sfz/containers/StackString.hpp>
@@ -17,6 +17,7 @@
 #include <phantasy_engine/deferred_renderer/GLModel.hpp>
 #include <phantasy_engine/rendering/FullscreenTriangle.hpp>
 
+#include "CudaGLInterop.hpp"
 #include "CudaHelpers.hpp"
 
 /*#include <chrono>
@@ -67,14 +68,16 @@ public:
 	// OpenGL FullscreenTriangle
 	FullscreenTriangle fullscreenTriangle;
 
-	// OpenGL shaders and framebuffers
+	// OpenGL shaders
 	Program gbufferGenShader, transferShader;
+
+	// Cuda OpenGL interop textures and framebuffers
 	Framebuffer gbuffer;
+	CudaGLTexture cudaResultTex;
 
 	// OpenGL models for static and dynamic scene
 	DynArray<GLModel> staticGLModels;
 	DynArray<GLModel> dynamicGLModels;
-
 
 	CudaTracerRendererImpl() noexcept
 	{
@@ -588,9 +591,11 @@ void CudaTracerRenderer::targetResolutionUpdated() noexcept
 	    .addDepthTexture(gl::FBDepthFormat::F32, gl::FBTextureFiltering::NEAREST)
 	    .addTexture(GBUFFER_POSITION, gl::FBTextureFormat::RGBA_F32, gl::FBTextureFiltering::NEAREST)
 	    .addTexture(GBUFFER_NORMAL, gl::FBTextureFormat::RGBA_F32, gl::FBTextureFiltering::LINEAR)
-	    .addTexture(GBUFFER_MATERIAL_ID, gl::FBTextureFormat::R_INT_U8, gl::FBTextureFiltering::NEAREST)
+	    .addTexture(GBUFFER_MATERIAL_ID, gl::FBTextureFormat::R_INT_U16, gl::FBTextureFiltering::NEAREST)
 	    .build();
 
+	// Allocate new result texture
+	mImpl->cudaResultTex = CudaGLTexture(mTargetResolution);
 
 	/*mImpl->tracerParams.targetRes = mTargetResolution;
 
