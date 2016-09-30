@@ -53,21 +53,21 @@ UpdateOp TestbedLogic::update(GameScreen& screen, UpdateState& state) noexcept
 				if (mCurrentRenderer != 0) {
 					renderingBackendSetting->setInt(0);
 					mCurrentRenderer = 0;
-					screen.renderer = mRenderers[mCurrentRenderer].renderer;
+					screen.setRenderer(mRenderers[mCurrentRenderer].renderer);
 				}
 				break;
 			case SDLK_F2:
 				if (mCurrentRenderer != 1) {
 					renderingBackendSetting->setInt(1);
 					mCurrentRenderer = 1;
-					screen.renderer = mRenderers[mCurrentRenderer].renderer;
+					screen.setRenderer(mRenderers[mCurrentRenderer].renderer);
 				}
 				break;
 			case SDLK_F3:
 				if (mCurrentRenderer != 2) {
 					renderingBackendSetting->setInt(2);
 					mCurrentRenderer = 2;
-					screen.renderer = mRenderers[mCurrentRenderer].renderer;
+					screen.setRenderer(mRenderers[mCurrentRenderer].renderer);
 				}
 				break;
 

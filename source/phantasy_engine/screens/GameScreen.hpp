@@ -71,7 +71,12 @@ public:
 	virtual UpdateOp update(UpdateState& state) override final;
 	virtual void render(UpdateState& state) override final;
 
-private:
+	// Public methods
+	// --------------------------------------------------------------------------------------------
+
+	void setRenderer(const SharedPtr<BaseRenderer>& shared) noexcept;
+
+	private:
 	// Private methods
 	// --------------------------------------------------------------------------------------------
 
@@ -82,11 +87,17 @@ private:
 	// Private members
 	// --------------------------------------------------------------------------------------------
 
-	Framebuffer mResultFB, mGammaCorrectedFB;
-	Program mScalingShader, mGammaCorrectionShader;
-	FullscreenTriangle mFullscreenTriangle;
+	Framebuffer mResultFB[2];
+	Framebuffer mGammaCorrectedFB;
+	Framebuffer mVelocityFB[2];
+	Framebuffer mTaaFB[2];
+	uint32_t mFBIndex = 0;
+	uint32_t mHaltonIndex = 0;
+	ViewFrustum mPreviousCamera;
 
-	ViewFrustum mCamera;
+	Program mScalingShader, mGammaCorrectionShader, mVelocityShader, mTaaShader;
+
+	FullscreenTriangle mFullscreenTriangle;
 };
 
 } // namespace phe
