@@ -31,6 +31,7 @@ static void setGraphicsCfg(GlobalConfig& g, GraphicsConfig& cfg) noexcept
 {
 	cfg.useNativeTargetResolution = g.sanitizeBool("Graphics", "useNativeTargetResolution", true);
 	cfg.targetResolutionHeight = g.sanitizeInt("Graphics", "targetResolutionHeight", 720, 16, 4320);
+	cfg.taa = g.sanitizeBool("Graphics", "taa", false);
 }
 
 static void setDebugCfg(GlobalConfig& g, DebugConfig& cfg) noexcept
@@ -107,6 +108,7 @@ GraphicsConfigValues GraphicsConfig::getValues() const noexcept
 	GraphicsConfigValues tmp;
 	tmp.useNativeTargetResolution = this->useNativeTargetResolution->boolValue();
 	tmp.targetResolutionHeight = this->targetResolutionHeight->intValue();
+	tmp.taa = this->taa->boolValue();
 	return tmp;
 }
 
@@ -114,6 +116,7 @@ void GraphicsConfig::setValues(const GraphicsConfigValues& values) noexcept
 {
 	this->useNativeTargetResolution->setBool(values.useNativeTargetResolution);
 	this->targetResolutionHeight->setInt(values.targetResolutionHeight);
+	this->taa->setBool(values.taa);
 }
 
 bool operator== (const DebugConfigValues& lhs, const DebugConfigValues& rhs) noexcept
