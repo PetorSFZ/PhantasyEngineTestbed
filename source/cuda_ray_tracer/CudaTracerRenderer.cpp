@@ -37,7 +37,6 @@ public:
 	FullscreenTriangle fullscreenTriangle;
 
 	Setting* cudaRenderMode = nullptr;
-	Setting* cudaDeviceIndex = nullptr;
 	CameraDef lastCamera;
 	int32_t lastRenderMode = 0;
 
@@ -108,11 +107,16 @@ CudaTracerRenderer::CudaTracerRenderer() noexcept
 	GlobalConfig& cfg = GlobalConfig::instance();
 	mImpl->cudaRenderMode = cfg.sanitizeInt("CudaTracer", "cudaRenderMode", 0, 0, 3);
 	mImpl->lastRenderMode = mImpl->cudaRenderMode->intValue();
-	mImpl->cudaDeviceIndex = cfg.sanitizeInt("CudaTracer", "deviceIndex", 0, 0, 32);
 
-	// Initialize cuda and get device properties
-	CHECK_CUDA_ERROR(cudaSetDevice(mImpl->cudaDeviceIndex->intValue()));
-	CHECK_CUDA_ERROR(cudaGetDeviceProperties(&mImpl->deviceProperties, mImpl->cudaDeviceIndex->intValue()));
+	// Use same device for CUDA as is bound to OpenGL context
+	unsigned int deviceCount = 0;
+	int devices[1];
+	CHECK_CUDA_ERROR(cudaGLGetDevices(&deviceCount, devices, 1, cudaGLDeviceListCurrentFrame));
+	int deviceIndex = devices[0];
+	CHECK_CUDA_ERROR(cudaSetDevice(deviceIndex));
+
+	// Get device properties
+	CHECK_CUDA_ERROR(cudaGetDeviceProperties(&mImpl->deviceProperties, deviceIndex));
 
 	printf("multiProcessorCount: %i\n", mImpl->deviceProperties.multiProcessorCount);
 	printf("maxThreadsPerMultiProcessor: %i\n", mImpl->deviceProperties.maxThreadsPerMultiProcessor);
