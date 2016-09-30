@@ -300,7 +300,7 @@ __global__ void cudaRayTracerKernel(CudaTracerParams params)
 		ray = Ray(offsetHitPos, rayDir);
 	}
 
-	addToSurface(params.targetSurface, loc, vec4(color, 1.0));
+	writeToSurface(params.targetSurface, loc, vec4(color, 1.0));
 
 	// Copy back updated RNG state
 	params.curandStates[id] = randState;

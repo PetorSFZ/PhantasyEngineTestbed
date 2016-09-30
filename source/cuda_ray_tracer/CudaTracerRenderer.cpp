@@ -40,7 +40,6 @@ public:
 	Setting* cudaDeviceIndex = nullptr;
 	CameraDef lastCamera;
 	int32_t lastRenderMode = 0;
-	uint32_t accumulationPasses = 0;
 
 	// The device properties of the used CUDA device
 	cudaDeviceProp deviceProperties;
@@ -102,7 +101,7 @@ CudaTracerRenderer::CudaTracerRenderer() noexcept
 
 	StackString128 shadersPath;
 	shadersPath.printf("%sresources/shaders/", basePath());
-	mImpl->transferShader = gl::Program::postProcessFromFile(shadersPath.str, "cuda_transfer.frag");
+	mImpl->transferShader = gl::Program::postProcessFromFile(shadersPath.str, "transfer.frag");
 	glUseProgram(mImpl->transferShader.handle());
 	gl::setUniform(mImpl->transferShader, "uSrcTexture", 0);
 
@@ -363,25 +362,10 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB,
 	CudaTracerParams& params = mImpl->tracerParams;
 	int32_t renderMode = mImpl->cudaRenderMode->intValue();
 
-	// Check if accumulated color should be reset
-	if (!approxEqual(mImpl->lastCamera.origin, params.cam.origin) ||
-	    !approxEqual(mImpl->lastCamera.dir, params.cam.dir) ||
-	    renderMode == 0 && mImpl->lastRenderMode != 0) {
-		// Reset color buffer through GL command
-		static const float BLACK[]{0.0f, 0.0f, 0.0f, 0.0f};
-		glClearTexImage(mImpl->glTex, 0, GL_RGBA, GL_FLOAT, BLACK);
-
-		glFinish(); // Potentially stalls GPU more than necessary
-
-		mImpl->accumulationPasses = 0;
-		mImpl->lastCamera = params.cam;
-	}
-
 	// Run CUDA ray tracer
 	switch (renderMode) {
 	case 0:
 		cudaRayTrace(params);
-		mImpl->accumulationPasses++;
 		break;
 	case 1:
 		cudaHeatmapTrace(params);
@@ -400,17 +384,12 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB,
 		break;
 	}
 
-	if (renderMode != 0) {
-		mImpl->accumulationPasses = 1;
-	}
-
 	mImpl->lastRenderMode = renderMode;
 
 	// Transfer result from Cuda texture to result framebuffer
 	glUseProgram(mImpl->transferShader.handle());
-	gl::setUniform(mImpl->transferShader, "uAccumulationPasses", float(mImpl->accumulationPasses));
 
-	resultFB.bindViewportClearColorDepth(vec4(0.0f, 0.0f, 0.0f, 0.0f), 0.0f);
+	resultFB.bindViewport();
 
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, mImpl->glTex);
@@ -451,12 +430,6 @@ void CudaTracerRenderer::targetResolutionUpdated() noexcept
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
-
-	// Clear texture
-	static const float BLACK[]{ 0.0f, 0.0f, 0.0f, 0.0f };
-	glClearTexImage(mImpl->glTex, 0, GL_RGBA, GL_FLOAT, BLACK);
-	glFinish();
-	mImpl->accumulationPasses = 0;
 
 	// https://github.com/nvpro-samples/gl_cuda_interop_pingpong_st
 	cudaGraphicsResource_t& resource = mImpl->cudaResource;
