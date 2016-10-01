@@ -6,9 +6,11 @@
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 
+#include <sfz/gl/IncludeOpenGL.hpp>
+#include <cuda_gl_interop.h>
+
 #include <sfz/containers/DynArray.hpp>
 #include <sfz/containers/StackString.hpp>
-#include <sfz/gl/IncludeOpenGL.hpp>
 #include <sfz/gl/Program.hpp>
 #include <sfz/memory/New.hpp>
 #include <sfz/util/IO.hpp>
@@ -52,10 +54,6 @@ using sfz::gl::Program;
 
 class CudaTracerRendererImpl final {
 public:
-
-	// Settings
-	Setting* cudaDeviceIndex = nullptr;
-
 	// The device properties of the used CUDA device
 	cudaDeviceProp deviceProperties;
 
@@ -77,12 +75,17 @@ public:
 	{
 		// Initialize settings
 		GlobalConfig& cfg = GlobalConfig::instance();
-		cudaDeviceIndex = cfg.sanitizeInt("CudaTracer", "deviceIndex", 0, 0, 16);
+		// TODO: All eventual cuda settings should be initialized here, section = "CudaTracer"
 
-		// Initialize cuda and get device properties
-		CHECK_CUDA_ERROR(cudaSetDevice(cudaDeviceIndex->intValue()));
-		CHECK_CUDA_ERROR(cudaGetDeviceProperties(&deviceProperties, cudaDeviceIndex->intValue()));
-		
+		// Initialize cuda with the same device that is bound to the OpenGL context
+		unsigned int deviceCount = 0;
+		int deviceIndex;
+		CHECK_CUDA_ERROR(cudaGLGetDevices(&deviceCount, &deviceIndex, 1, cudaGLDeviceListCurrentFrame));
+		CHECK_CUDA_ERROR(cudaSetDevice(deviceIndex));
+
+		// Get device properties 
+		CHECK_CUDA_ERROR(cudaGetDeviceProperties(&deviceProperties, deviceIndex));
+
 		// Print device properties
 		printf("CUDA device properties:\n");
 		printf("multiProcessorCount: %i\n", deviceProperties.multiProcessorCount);
