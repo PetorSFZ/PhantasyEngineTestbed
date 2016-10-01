@@ -54,6 +54,8 @@ GameScreen::GameScreen(SharedPtr<GameLogic> gameLogicIn, SharedPtr<Level> levelI
 	                  normalize(vec3(0.0f, 1.0f, 0.0)), 60.0f, 1.0f, 0.01f, 10000.0f);
 	mPreviousCamera = cam;
 
+	mPreviousGraphicsConfig = cfg.graphcisCfg().getValues();
+
 	// Load shaders
 	StackString192 shadersPath;
 	shadersPath.printf("%sresources/shaders/", basePath());
@@ -152,6 +154,7 @@ UpdateOp GameScreen::update(UpdateState& state)
 void GameScreen::render(UpdateState& state)
 {
 	auto& cfg = GlobalConfig::instance();
+	GraphicsConfigValues graphicsConfig = cfg.graphcisCfg().getValues();
 
 	bool showDebugUI = cfg.debugCfg().showDebugUI->boolValue();
 
@@ -176,6 +179,11 @@ void GameScreen::render(UpdateState& state)
 	}
 
 	bool taaEnabled = cfg.graphcisCfg().taa->boolValue();
+
+	if (!mPreviousGraphicsConfig.taa && taaEnabled) {
+		resetTAA();
+	}
+
 	if (taaEnabled) {
 		vec2 pixelOffset = HALTON_SEQ[mHaltonIndex] - vec2(0.5f);
 		mHaltonIndex = (mHaltonIndex + 1) % HALTON_LENGTH;
@@ -266,6 +274,7 @@ void GameScreen::render(UpdateState& state)
 
 	mFBIndex = (mFBIndex + 1) % 2;
 	mPreviousCamera = cam;
+	mPreviousGraphicsConfig = graphicsConfig;
 
 	SDL_GL_SwapWindow(state.window.ptr());
 }
@@ -274,10 +283,7 @@ void GameScreen::setRenderer(const SharedPtr<BaseRenderer>& renderer) noexcept
 {
 	this->renderer = renderer;
 
-	for (int i = 0; i < 2; i++) {
-		// Clear TAA history
-		mTaaFB[i].bindViewportClearColor();
-	}
+	resetTAA();
 }
 
 // GameScreen: Private methods
@@ -348,6 +354,17 @@ void GameScreen::reloadShaders() noexcept
 	if (mGammaCorrectionShader.isValid()) {
 		glUseProgram(mGammaCorrectionShader.handle());
 		gl::setUniform(mGammaCorrectionShader, "uLinearTexture", 0);
+	}
+}
+
+void GameScreen::resetTAA() noexcept {
+	// Clear velocity
+	for (int i = 0; i < 2; i++) {
+		mVelocityFB[i].bindViewportClearColor();
+	}
+	// Clear TAA history
+	for (int i = 0; i < 2; i++) {
+		mTaaFB[i].bindViewportClearColor();
 	}
 }
 

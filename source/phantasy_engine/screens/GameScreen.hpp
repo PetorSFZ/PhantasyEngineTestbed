@@ -5,6 +5,7 @@
 #include <sfz/gl/Program.hpp>
 #include <sfz/screens/BaseScreen.hpp>
 
+#include "phantasy_engine/config/GlobalConfig.hpp"
 #include "phantasy_engine/level/Level.hpp"
 #include "phantasy_engine/rendering/BaseRenderer.hpp"
 #include "phantasy_engine/rendering/ViewFrustum.hpp"
@@ -82,6 +83,7 @@ public:
 
 	void reloadFramebuffers(vec2i maxResolution) noexcept;
 	void reloadShaders() noexcept;
+	void resetTAA() noexcept;
 	void renderDebugUI() const noexcept;
 
 	// Private members
@@ -91,11 +93,14 @@ public:
 	Framebuffer mGammaCorrectedFB;
 	Framebuffer mVelocityFB[2];
 	Framebuffer mTaaFB[2];
-	uint32_t mFBIndex = 0;
-	uint32_t mHaltonIndex = 0;
-	ViewFrustum mPreviousCamera;
 
 	Program mScalingShader, mGammaCorrectionShader, mVelocityShader, mTaaShader;
+
+	uint32_t mFBIndex = 0;
+	uint32_t mHaltonIndex = 0;
+
+	ViewFrustum mPreviousCamera;
+	GraphicsConfigValues mPreviousGraphicsConfig;
 
 	FullscreenTriangle mFullscreenTriangle;
 };
