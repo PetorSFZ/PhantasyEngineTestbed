@@ -79,9 +79,9 @@ mat4 ViewFrustum::viewMatrix() const noexcept {
 mat4 ViewFrustum::projMatrix(vec2i resolution) const noexcept {
 	mat4 result = reverseInfinitePerspectiveProjectionVkD3d(mVerticalFovDeg, mAspectRatio, mNear);
 
-	// Apply pixel offset
-	vec2 projPixelOffset = mPixelOffset / vec2(resolution);
-	mat4 pixelOffsetTranslation = translationMatrix(vec3(projPixelOffset, 0.0f));
+	// Apply pixel offset by adding x,y translation in clip space ([-1,1])
+	vec2 clipPixelOffset = 2.0f * mPixelOffset / vec2(resolution);
+	mat4 pixelOffsetTranslation = translationMatrix(vec3(clipPixelOffset, 0.0f));
 	result = pixelOffsetTranslation * result;
 
 	return result;

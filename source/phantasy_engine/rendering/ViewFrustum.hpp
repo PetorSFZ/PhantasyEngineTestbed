@@ -53,6 +53,7 @@ public:
 	inline float aspectRatio() const noexcept { return mAspectRatio; }
 	inline float near() const noexcept { return mNear; }
 	inline float far() const noexcept { return mFar; }
+	inline vec2 pixelOffset() const noexcept { return mPixelOffset; }
 	mat4 viewMatrix() const noexcept;
 	mat4 projMatrix(vec2i resolution) const noexcept;
 
@@ -67,6 +68,9 @@ public:
 	void setClipDist(float near, float far) noexcept;
 	void set(vec3 position, vec3 direction, vec3 up, float verticalFovDeg, float aspect, float near,
 	         float far) noexcept;
+
+	/// Set screen space offset. The offset is applied in the projection transform. It default to
+	/// the zero vector.
 	void setPixelOffset(vec2 offset) noexcept;
 
 private:
