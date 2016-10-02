@@ -413,8 +413,7 @@ static __global__ void rayCastKernel(cudaTextureObject_t bvhNodes, cudaTextureOb
 // RayCastKernel launch function
 // ------------------------------------------------------------------------------------------------
 
-void launchRayCastKernel(cudaTextureObject_t bvhNodes, cudaTextureObject_t triangleVerts,
-                         const RayIn* rays, RayHit* rayHits, uint32_t numRays,
+void launchRayCastKernel(const RayCastKernelInput& input, RayHit* rayResults,
                          const cudaDeviceProp& deviceProperties) noexcept
 {
 	uint32_t numSM = deviceProperties.multiProcessorCount;
@@ -434,7 +433,8 @@ void launchRayCastKernel(cudaTextureObject_t bvhNodes, cudaTextureObject_t trian
 	sfz_assert_debug(blockDims.y <= RAY_CAST_KERNEL_MAX_BLOCK_HEIGHT);
 	blockDims.z = RAY_CAST_KERNEL_BLOCK_DEPTH;
 
-	rayCastKernel<<<numBlocks, blockDims>>>(bvhNodes, triangleVerts, rays, rayHits, numRays);
+	rayCastKernel<<<numBlocks, blockDims>>>(input.bvhNodes, input.triangleVerts, input.rays,
+	                                        rayResults, input.numRays);
 	CHECK_CUDA_ERROR(cudaGetLastError());
 	CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 

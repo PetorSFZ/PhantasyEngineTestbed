@@ -336,8 +336,27 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB,
 	// Temporary cuda kernel
 	// --------------------------------------------------------------------------------------------
 
-	launchTempWriteColorKernel(mImpl->cudaResultTex.cudaSurface(), mTargetResolution,
-	                           mImpl->gbuffer.normalSurfaceCuda());
+	CreateReflectRaysInput reflectRaysInput;
+	reflectRaysInput.camPos = mMatrices.position;
+	reflectRaysInput.res = mTargetResolution;
+	reflectRaysInput.posTex = mImpl->gbuffer.positionSurfaceCuda();
+	reflectRaysInput.normalTex = mImpl->gbuffer.normalSurfaceCuda();
+	reflectRaysInput.materialIdTex = mImpl->gbuffer.materialIdSurfaceCuda();
+	launchCreateReflectRaysKernel(reflectRaysInput, mImpl->rayBuffer.cudaPtr());
+	
+	//CameraDef camDef = generateCameraDef(mMatrices.position, mMatrices.forward, mMatrices.up,
+	//                                     mMatrices.vertFovRad, vec2(mTargetResolution));
+	//launchGenPrimaryRaysKernel(mImpl->rayBuffer.cudaPtr(), camDef, mTargetResolution);
+	
+	RayCastKernelInput rayCastInput;
+	rayCastInput.bvhNodes = mImpl->staticBvhNodes.cudaTexture();
+	rayCastInput.triangleVerts = mImpl->staticTriangleVertices.cudaTexture();
+	rayCastInput.numRays = mTargetResolution.x * mTargetResolution.y;
+	rayCastInput.rays = mImpl->rayBuffer.cudaPtr();
+	launchRayCastKernel(rayCastInput, mImpl->rayResultBuffer.cudaPtr(), mImpl->glDeviceProperties);
+
+	launchWriteRayHitsToScreenKernel(mImpl->cudaResultTex.cudaSurface(), mTargetResolution,
+	                                 mImpl->rayResultBuffer.cudaPtr());
 
 	// Transfer result to resultFB
 	// --------------------------------------------------------------------------------------------

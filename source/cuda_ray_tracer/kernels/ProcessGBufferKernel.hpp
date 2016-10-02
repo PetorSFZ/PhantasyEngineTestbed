@@ -8,11 +8,24 @@
 
 #include <sfz/math/Vector.hpp>
 
+#include "kernels/RayCastKernel.hpp"
+
 namespace phe {
 
 using sfz::vec2i;
+using sfz::vec3;
 
-void launchTempWriteColorKernel(cudaSurfaceObject_t surface, vec2i res, 
-                                cudaSurfaceObject_t normalTex) noexcept;
+struct CreateReflectRaysInput final {
+	// Camera info
+	vec3 camPos;
+	
+	// GBuffer
+	vec2i res;
+	cudaSurfaceObject_t posTex;
+	cudaSurfaceObject_t normalTex;
+	cudaSurfaceObject_t materialIdTex;
+};
+
+void launchCreateReflectRaysKernel(const CreateReflectRaysInput& input, RayIn* raysOut) noexcept;
 
 } // namespace phe
