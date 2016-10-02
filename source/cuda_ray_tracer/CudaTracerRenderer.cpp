@@ -55,7 +55,8 @@ using sfz::gl::Program;
 class CudaTracerRendererImpl final {
 public:
 	// The device properties of the used CUDA device
-	cudaDeviceProp deviceProperties;
+	int glDeviceIndex;
+	cudaDeviceProp glDeviceProperties;
 
 	// OpenGL FullscreenTriangle
 	FullscreenTriangle fullscreenTriangle;
@@ -79,18 +80,17 @@ public:
 
 		// Initialize cuda with the same device that is bound to the OpenGL context
 		unsigned int deviceCount = 0;
-		int deviceIndex;
-		CHECK_CUDA_ERROR(cudaGLGetDevices(&deviceCount, &deviceIndex, 1, cudaGLDeviceListCurrentFrame));
-		CHECK_CUDA_ERROR(cudaSetDevice(deviceIndex));
+		CHECK_CUDA_ERROR(cudaGLGetDevices(&deviceCount, &glDeviceIndex, 1, cudaGLDeviceListCurrentFrame));
+		CHECK_CUDA_ERROR(cudaSetDevice(glDeviceIndex));
 
 		// Get device properties 
-		CHECK_CUDA_ERROR(cudaGetDeviceProperties(&deviceProperties, deviceIndex));
+		CHECK_CUDA_ERROR(cudaGetDeviceProperties(&glDeviceProperties, glDeviceIndex));
 
 		// Print device properties
-		printf("CUDA device properties:\n");
-		printf("multiProcessorCount: %i\n", deviceProperties.multiProcessorCount);
-		printf("maxThreadsPerMultiProcessor: %i\n", deviceProperties.maxThreadsPerMultiProcessor);
-		printf("maxThreadsPerBlock: %i\n\n", deviceProperties.maxThreadsPerBlock);
+		printf("CUDA device index %i, properties:\n", glDeviceIndex);
+		printf("multiProcessorCount: %i\n", glDeviceProperties.multiProcessorCount);
+		printf("maxThreadsPerMultiProcessor: %i\n", glDeviceProperties.maxThreadsPerMultiProcessor);
+		printf("maxThreadsPerBlock: %i\n\n", glDeviceProperties.maxThreadsPerBlock);
 
 		// Load OpenGL shaders
 		{
