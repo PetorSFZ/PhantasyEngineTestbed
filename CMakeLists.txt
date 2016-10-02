@@ -201,13 +201,14 @@ if(CUDA_TRACER)
 		${CT_INCLUDE_DIR}/kernels/RayCastKernel.hpp
 		 ${CT_SOURCE_DIR}/kernels/RayCastKernel.cu
 
-		${CT_INCLUDE_DIR}/CudaArray.hpp
 		${CT_INCLUDE_DIR}/CudaBindlessTexture.hpp
 		 ${CT_SOURCE_DIR}/CudaBindlessTexture.cpp
+		${CT_INCLUDE_DIR}/CudaBuffer.hpp
 		${CT_INCLUDE_DIR}/CudaGLInterop.hpp
 		 ${CT_SOURCE_DIR}/CudaGLInterop.cpp
 		${CT_INCLUDE_DIR}/CudaHelpers.hpp
 		${CT_INCLUDE_DIR}/CudaSfzVectorCompatibility.cuh
+		${CT_INCLUDE_DIR}/CudaTextureBuffer.hpp
 		${CT_INCLUDE_DIR}/CudaTracerRenderer.hpp
 		 ${CT_SOURCE_DIR}/CudaTracerRenderer.cpp
 		${CT_INCLUDE_DIR}/Morton.cuh
