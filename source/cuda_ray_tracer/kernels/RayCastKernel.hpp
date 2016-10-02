@@ -46,6 +46,16 @@ static_assert(sizeof(RayHit) == 16, "RayHitOut is padded");
 // RayCastKernel launch function
 // ------------------------------------------------------------------------------------------------
 
+struct RayCastKernelInput final {
+	cudaTextureObject_t bvhNodes;
+	cudaTextureObject_t triangleVerts;
+	uint32_t numRays;
+	const RayIn* rays;
+};
+
+void launchRayCastKernel(const RayCastKernelInput& input, RayHit* rayResults,
+                         const cudaDeviceProp& deviceProperties) noexcept;
+
 void launchRayCastKernel(cudaTextureObject_t bvhNodes, cudaTextureObject_t triangleVerts,
                          const RayIn* rays, RayHit* rayHits, uint32_t numRays,
                          const cudaDeviceProp& deviceProperties) noexcept;

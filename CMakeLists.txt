@@ -191,19 +191,27 @@ if(CUDA_TRACER)
 
 	# Source files
 	set(CUDA_TRACER_FILES
-		${CT_INCLUDE_DIR}/BVHTraversal.cuh
-		${CT_INCLUDE_DIR}/CudaArray.hpp
+		
+		${CT_INCLUDE_DIR}/deprecated/BVHTraversal.cuh
+		${CT_INCLUDE_DIR}/deprecated/CudaTracer.cuh
+		 ${CT_SOURCE_DIR}/deprecated/CudaTracer.cu
+
+		${CT_INCLUDE_DIR}/kernels/ProcessGBufferKernel.hpp
+		 ${CT_SOURCE_DIR}/kernels/ProcessGBufferKernel.cu
+		${CT_INCLUDE_DIR}/kernels/RayCastKernel.hpp
+		 ${CT_SOURCE_DIR}/kernels/RayCastKernel.cu
+
 		${CT_INCLUDE_DIR}/CudaBindlessTexture.hpp
 		 ${CT_SOURCE_DIR}/CudaBindlessTexture.cpp
+		${CT_INCLUDE_DIR}/CudaBuffer.hpp
+		${CT_INCLUDE_DIR}/CudaGLInterop.hpp
+		 ${CT_SOURCE_DIR}/CudaGLInterop.cpp
 		${CT_INCLUDE_DIR}/CudaHelpers.hpp
 		${CT_INCLUDE_DIR}/CudaSfzVectorCompatibility.cuh
-		${CT_INCLUDE_DIR}/CudaTracer.cuh
-		 ${CT_SOURCE_DIR}/CudaTracer.cu
+		${CT_INCLUDE_DIR}/CudaTextureBuffer.hpp
 		${CT_INCLUDE_DIR}/CudaTracerRenderer.hpp
 		 ${CT_SOURCE_DIR}/CudaTracerRenderer.cpp
 		${CT_INCLUDE_DIR}/Morton.cuh
-		${CT_INCLUDE_DIR}/RayCastKernel.cuh
-		 ${CT_SOURCE_DIR}/RayCastKernel.cu
 	)
 	set_directory_source_group(${CUDA_TRACER_FILES})
 

@@ -33,7 +33,7 @@ struct CompactMaterial final {
 	vec4 materialValue; // [roughnessValue, metallicValue, padding, padding]
 };
 
-int32_t glslifyTextureIndex(uint32_t textureIndex) noexcept
+static int32_t glslifyTextureIndex(uint32_t textureIndex) noexcept
 {
 	return (textureIndex == ~0u) ? -1 : int32_t(textureIndex);
 }
