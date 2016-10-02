@@ -209,8 +209,8 @@ RenderResult DeferredRenderer::render(Framebuffer& resultFB,
 	auto& shadingShader = mImpl->shadingShader;
 	auto& gbuffer = mImpl->gbuffer;
 
-	const mat4 viewMatrix = mMatrices.headMatrix * mMatrices.originMatrix;
-	const mat4 projMatrix = mMatrices.projMatrix;
+	const mat4 viewMatrix = mCamera.viewMatrix();
+	const mat4 projMatrix = mCamera.projMatrix(mTargetResolution);
 	const mat4 invProjMatrix = inverse(projMatrix);
 
 	// GBuffer generation

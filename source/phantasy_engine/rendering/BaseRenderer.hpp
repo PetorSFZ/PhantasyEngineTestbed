@@ -12,6 +12,7 @@
 #include "phantasy_engine/level/SphereLight.hpp"
 #include "phantasy_engine/rendering/Material.hpp"
 #include "phantasy_engine/rendering/RawImage.hpp"
+#include "phantasy_engine/rendering/ViewFrustum.hpp"
 
 namespace phe {
 
@@ -24,37 +25,6 @@ using sfz::identityMatrix4;
 
 // Helper structs
 // ------------------------------------------------------------------------------------------------
-
-/// Struct holding all the camera matrices needed for rendering
-///
-/// originMatrix: the matrix defining the space the camera's location is defined in, in particular
-/// this is the conversion from world space to room space in a vr context.
-/// headMatrix: the conversion from room space to head space (or view space in a non-VR context).
-/// eyeMatrixVR[eye]: the conversion from head space to eye space (only used for VR)
-///
-/// This means that in a non-VR context the complete viewMatrix is:
-/// viewMatrix = headMatrix * originMatrix
-///
-/// When performing vr rendering we also need to take into account the eye's locations relative
-/// to the head, so the complete viewMatrix for a given eye would be:
-/// viewMatrix[eye] = eyeMatrixVR[eye] * headMatrix * originMatrix
-struct CameraMatrices final {
-	// Shared matrices for both non-vr and vr rendering
-	mat4 originMatrix = identityMatrix4<float>();
-	mat4 headMatrix = identityMatrix4<float>();
-
-	// Non-vr projection matrices
-	mat4 projMatrix = identityMatrix4<float>();
-
-	// VR only matrices
-	mat4 eyeMatrixVR[2] = { identityMatrix4<float>(), identityMatrix4<float>() };
-	mat4 projMatrixVR[2] = { identityMatrix4<float>(), identityMatrix4<float>() };
-
-	vec3 position{ 0.0f };
-	vec3 forward{ 0.0f };
-	vec3 up{ 0.0f };
-	float vertFovRad;
-};
 
 struct RenderResult final {
 	vec2i renderedRes = vec2i(0);
@@ -96,7 +66,7 @@ public:
 	// Non-virtual methods
 	// --------------------------------------------------------------------------------------------
 
-	inline void updateMatrices(const CameraMatrices& matrices) noexcept { mMatrices = matrices; }
+	inline void updateCamera(const ViewFrustum& camera) noexcept { mCamera = camera; }
 
 	inline vec2i targetResolution() const noexcept { return mTargetResolution; }
 	inline void setTargetResolution(vec2i targetResolution) noexcept
@@ -116,7 +86,7 @@ protected:
 	// Protected members
 	// --------------------------------------------------------------------------------------------
 
-	CameraMatrices mMatrices;
+	ViewFrustum mCamera;
 	vec2i mTargetResolution = vec2i(0, 0);
 };
 

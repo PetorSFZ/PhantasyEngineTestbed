@@ -72,8 +72,8 @@ RenderResult CPURayTracerRenderer::render(Framebuffer& resultFB,
 {
 	// Calculate camera def in order to generate first rays
 	vec2 resultRes = vec2(mTargetResolution);
-	CameraDef cam = generateCameraDef(mMatrices.position, mMatrices.forward, mMatrices.up,
-	                                  mMatrices.vertFovRad, resultRes);
+	CameraDef cam = generateCameraDef(mCamera.pos(), mCamera.dir(), mCamera.up(),
+	                                  DEG_TO_RAD() * mCamera.verticalFov(), resultRes);
 
 	int nThreads = 10;
 	int rowsPerThread = mTargetResolution.y / nThreads;

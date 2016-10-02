@@ -5,6 +5,7 @@
 #include <sfz/gl/Program.hpp>
 #include <sfz/screens/BaseScreen.hpp>
 
+#include "phantasy_engine/config/GlobalConfig.hpp"
 #include "phantasy_engine/level/Level.hpp"
 #include "phantasy_engine/rendering/BaseRenderer.hpp"
 #include "phantasy_engine/rendering/ViewFrustum.hpp"
@@ -71,22 +72,37 @@ public:
 	virtual UpdateOp update(UpdateState& state) override final;
 	virtual void render(UpdateState& state) override final;
 
-private:
+	// Public methods
+	// --------------------------------------------------------------------------------------------
+
+	void setRenderer(const SharedPtr<BaseRenderer>& shared) noexcept;
+
+	private:
 	// Private methods
 	// --------------------------------------------------------------------------------------------
 
 	void reloadFramebuffers(vec2i maxResolution) noexcept;
 	void reloadShaders() noexcept;
+	void resetTAA() noexcept;
 	void renderDebugUI() const noexcept;
 
 	// Private members
 	// --------------------------------------------------------------------------------------------
 
-	Framebuffer mResultFB, mGammaCorrectedFB;
-	Program mScalingShader, mGammaCorrectionShader;
-	FullscreenTriangle mFullscreenTriangle;
+	Framebuffer mResultFB[2];
+	Framebuffer mGammaCorrectedFB;
+	Framebuffer mVelocityFB[2];
+	Framebuffer mTaaFB[2];
 
-	CameraMatrices mMatrices;
+	Program mScalingShader, mGammaCorrectionShader, mVelocityShader, mTaaShader;
+
+	uint32_t mFBIndex = 0;
+	uint32_t mHaltonIndex = 0;
+
+	ViewFrustum mPreviousCamera;
+	GraphicsConfigValues mPreviousGraphicsConfig;
+
+	FullscreenTriangle mFullscreenTriangle;
 };
 
 } // namespace phe

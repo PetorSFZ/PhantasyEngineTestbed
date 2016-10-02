@@ -293,8 +293,8 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB,
                                         const DynArray<DynObject>& objects,
                                         const DynArray<SphereLight>& lights) noexcept
 {
-	const mat4 viewMatrix = mMatrices.headMatrix * mMatrices.originMatrix;
-	const mat4 projMatrix = mMatrices.projMatrix;
+	const mat4 viewMatrix = mCamera.viewMatrix();
+	const mat4 projMatrix = mCamera.projMatrix(mTargetResolution);
 
 	// GBuffer generation
 	// --------------------------------------------------------------------------------------------
@@ -337,7 +337,7 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB,
 	// --------------------------------------------------------------------------------------------
 
 	CreateReflectRaysInput reflectRaysInput;
-	reflectRaysInput.camPos = mMatrices.position;
+	reflectRaysInput.camPos = mCamera.pos();
 	reflectRaysInput.res = mTargetResolution;
 	reflectRaysInput.posTex = mImpl->gbuffer.positionSurfaceCuda();
 	reflectRaysInput.normalTex = mImpl->gbuffer.normalSurfaceCuda();

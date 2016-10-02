@@ -47,6 +47,7 @@ struct WindowConfig final {
 struct GraphicsConfigValues {
 	bool useNativeTargetResolution;
 	int32_t targetResolutionHeight;
+	bool taa;
 };
 
 bool operator== (const GraphicsConfigValues& lhs, const GraphicsConfigValues& rhs) noexcept;
@@ -55,6 +56,7 @@ bool operator!= (const GraphicsConfigValues& lhs, const GraphicsConfigValues& rh
 struct GraphicsConfig final {
 	Setting* useNativeTargetResolution = nullptr;
 	Setting* targetResolutionHeight = nullptr;
+	Setting* taa = nullptr;
 
 	/// Helper function that retrieves the target resolution
 	/// Makes use of 'useNativeTargetResolution' and 'targetResolutionHeight' settings in
