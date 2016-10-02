@@ -59,11 +59,12 @@ private:
 	Framebuffer mFramebuffer;
 
 	cudaGraphicsResource_t mPosResource = 0;
-	cudaGraphicsResource_t mNormalResource = 0;
-	cudaGraphicsResource_t mMaterialIdResource = 0;
-
 	cudaSurfaceObject_t mPosSurface = 0;
+
+	cudaGraphicsResource_t mNormalResource = 0;
 	cudaSurfaceObject_t mNormalSurface = 0;
+	
+	cudaGraphicsResource_t mMaterialIdResource = 0;
 	cudaSurfaceObject_t mMaterialIdSurface = 0;
 };
 

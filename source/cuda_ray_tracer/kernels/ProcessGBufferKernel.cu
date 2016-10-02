@@ -17,7 +17,7 @@ static __global__ void tempWriteColorKernel(cudaSurfaceObject_t surface, vec2i r
 	                  blockIdx.y * blockDim.y + threadIdx.y);
 	if (loc.x >= res.x || loc.y >= res.y) return;
 	
-	float4 tmp = surf2Dread<float4>(normalTex, loc.x, loc.y);
+	float4 tmp = surf2Dread<float4>(normalTex, loc.x * sizeof(float4), loc.y);
 	vec4 color = vec4(1.0f, 0.0f, 0.0f, 1.0f);
 	//surf2Dwrite(toFloat4(color), surface, loc.x * sizeof(float4), loc.y)
 	surf2Dwrite(tmp, surface, loc.x * sizeof(float4), loc.y);

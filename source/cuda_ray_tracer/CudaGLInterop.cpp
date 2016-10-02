@@ -37,7 +37,7 @@ CudaGLGBuffer::CudaGLGBuffer(vec2i resolution) noexcept
 	// https://github.com/nvpro-samples/gl_cuda_interop_pingpong_st
 	CHECK_CUDA_ERROR(cudaGraphicsGLRegisterImage(
 	    &mPosResource, mFramebuffer.texture(GBUFFER_POSITION), GL_TEXTURE_2D,
-	    cudaGraphicsRegisterFlagsSurfaceLoadStore));
+	    cudaGraphicsRegisterFlagsReadOnly));
 	CHECK_CUDA_ERROR(cudaGraphicsMapResources(1, &mPosResource, 0));
 	cudaArray_t posCudaArray = 0;
 	CHECK_CUDA_ERROR(cudaGraphicsSubResourceGetMappedArray(&posCudaArray, mPosResource, 0, 0));
@@ -55,7 +55,7 @@ CudaGLGBuffer::CudaGLGBuffer(vec2i resolution) noexcept
 	// https://github.com/nvpro-samples/gl_cuda_interop_pingpong_st
 	CHECK_CUDA_ERROR(cudaGraphicsGLRegisterImage(
 	    &mNormalResource, mFramebuffer.texture(GBUFFER_NORMAL), GL_TEXTURE_2D,
-	    cudaGraphicsRegisterFlagsSurfaceLoadStore));
+	    cudaGraphicsRegisterFlagsReadOnly));
 	CHECK_CUDA_ERROR(cudaGraphicsMapResources(1, &mNormalResource, 0));
 	cudaArray_t normalCudaArray = 0;
 	CHECK_CUDA_ERROR(cudaGraphicsSubResourceGetMappedArray(&normalCudaArray, mNormalResource, 0, 0));
@@ -73,7 +73,7 @@ CudaGLGBuffer::CudaGLGBuffer(vec2i resolution) noexcept
 	// https://github.com/nvpro-samples/gl_cuda_interop_pingpong_st
 	CHECK_CUDA_ERROR(cudaGraphicsGLRegisterImage(
 	    &mMaterialIdResource, mFramebuffer.texture(GBUFFER_MATERIAL_ID), GL_TEXTURE_2D,
-	    cudaGraphicsRegisterFlagsSurfaceLoadStore));
+	    cudaGraphicsRegisterFlagsReadOnly));
 	CHECK_CUDA_ERROR(cudaGraphicsMapResources(1, &mMaterialIdResource, 0));
 	cudaArray_t matCudaArray = 0;
 	CHECK_CUDA_ERROR(cudaGraphicsSubResourceGetMappedArray(&matCudaArray, mMaterialIdResource, 0, 0));
@@ -92,11 +92,12 @@ CudaGLGBuffer::CudaGLGBuffer(CudaGLGBuffer&& other) noexcept
 	std::swap(this->mFramebuffer, other.mFramebuffer);
 
 	std::swap(this->mPosResource, other.mPosResource);
-	std::swap(this->mNormalResource, other.mNormalResource);
-	std::swap(this->mMaterialIdResource, other.mMaterialIdResource);
-
 	std::swap(this->mPosSurface, other.mPosSurface);
+	
+	std::swap(this->mNormalResource, other.mNormalResource);
 	std::swap(this->mNormalSurface, other.mNormalSurface);
+
+	std::swap(this->mMaterialIdResource, other.mMaterialIdResource);
 	std::swap(this->mMaterialIdSurface, other.mMaterialIdSurface);
 }
 
@@ -105,11 +106,12 @@ CudaGLGBuffer& CudaGLGBuffer::operator= (CudaGLGBuffer&& other) noexcept
 	std::swap(this->mFramebuffer, other.mFramebuffer);
 
 	std::swap(this->mPosResource, other.mPosResource);
-	std::swap(this->mNormalResource, other.mNormalResource);
-	std::swap(this->mMaterialIdResource, other.mMaterialIdResource);
-
 	std::swap(this->mPosSurface, other.mPosSurface);
+
+	std::swap(this->mNormalResource, other.mNormalResource);
 	std::swap(this->mNormalSurface, other.mNormalSurface);
+
+	std::swap(this->mMaterialIdResource, other.mMaterialIdResource);
 	std::swap(this->mMaterialIdSurface, other.mMaterialIdSurface);
 
 	return *this;
