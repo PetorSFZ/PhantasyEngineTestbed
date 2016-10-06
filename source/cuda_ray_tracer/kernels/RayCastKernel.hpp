@@ -27,10 +27,10 @@ struct RayIn final {
 	SFZ_CUDA_CALLABLE float maxDist() const noexcept { return data[0].w; }
 	SFZ_CUDA_CALLABLE bool noResultOnlyHit() const noexcept { return (data[1].w < 0.0f); }
 
-	SFZ_CUDA_CALLABLE vec3 setOrigin(const vec3& origin) noexcept { data[0].xyz = origin; }
-	SFZ_CUDA_CALLABLE vec3 setDir(const vec3& dir) noexcept { data[1].xyz = dir; }
-	SFZ_CUDA_CALLABLE float setMaxDist(float dist) noexcept { data[0].w = dist; }
-	SFZ_CUDA_CALLABLE bool setNoResultOnlyHit(bool val) noexcept { data[1].w = val ? -1.0f : 1.0f; }
+	SFZ_CUDA_CALLABLE void setOrigin(const vec3& origin) noexcept { data[0].xyz = origin; }
+	SFZ_CUDA_CALLABLE void setDir(const vec3& dir) noexcept { data[1].xyz = dir; }
+	SFZ_CUDA_CALLABLE void setMaxDist(float dist) noexcept { data[0].w = dist; }
+	SFZ_CUDA_CALLABLE void setNoResultOnlyHit(bool val) noexcept { data[1].w = val ? -1.0f : 1.0f; }
 };
 
 static_assert(sizeof(RayIn) == 32, "RayIn is padded");
