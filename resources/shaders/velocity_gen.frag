@@ -29,12 +29,12 @@ vec3 getVSPosition(float depth, vec2 coord, mat4 invProjMatrix)
 	return posTmp.xyz;
 }
 
-vec3 getUVCoordAndDepth(mat4 projMatrix, vec3 vsPos)
+vec3 toUVDepthCoord(mat4 projMatrix, vec3 vsPos)
 {
 	vec4 projPos = projMatrix * vec4(vsPos, 1.0);
 	projPos.xyz /= projPos.w;
 	vec4 clipSpacePos = vec4((projPos.xy + 1.0) / 2, projPos.z, 1.0);
-	clipSpacePos.y = 1.0 - clipSpacePos.y; // Need to convert coord from D3D to GL clip space
+	clipSpacePos.y = 1.0 - clipSpacePos.y; // Need to convert coord from GL to D3D clip space
 	return clipSpacePos.xyz;
 }
 
@@ -49,8 +49,8 @@ void main()
 	vec3 oldVSPos = (uPrevViewMatrix * worldPos).xyz;
 
 	vec3 uvDepthInCurr = vec3(uvCoord, depth);
-	vec3 uvDepthInPrev = getUVCoordAndDepth(uPrevProjMatrix, oldVSPos);
-	vec2 uvInPrev = uvDepthInPrev.xy;
+	vec3 uvDepthInPrev = toUVDepthCoord(uPrevProjMatrix, oldVSPos);
+
 	vec3 uvDepthDiff = uvDepthInCurr - uvDepthInPrev;
 	outFragColor = vec4(uvDepthDiff, 1.0);
 }
