@@ -56,14 +56,13 @@ struct RayCastKernelInput final {
 void launchRayCastKernel(const RayCastKernelInput& input, RayHit* rayResults,
                          const cudaDeviceProp& deviceProperties) noexcept;
 
-void launchRayCastKernel(cudaTextureObject_t bvhNodes, cudaTextureObject_t triangleVerts,
-                         const RayIn* rays, RayHit* rayHits, uint32_t numRays,
-                         const cudaDeviceProp& deviceProperties) noexcept;
-
 // Secondary helper kernels (for debugging and profiling)
 // ------------------------------------------------------------------------------------------------
 
 void launchGenPrimaryRaysKernel(RayIn* rays, const CameraDef& cam, vec2i res) noexcept;
+
+void launchGenSecondaryRaysKernel(RayIn* rays, vec3 camPos, vec2i res, cudaSurfaceObject_t posTex,
+                                  cudaSurfaceObject_t normalTex) noexcept;
 
 void launchWriteRayHitsToScreenKernel(cudaSurfaceObject_t surface, vec2i res, const RayHit* rayHits) noexcept;
 

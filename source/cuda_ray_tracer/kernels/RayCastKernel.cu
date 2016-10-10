@@ -477,6 +477,43 @@ static __global__ void genPrimaryRaysKernel(RayIn* rays, CameraDef cam, vec2i re
 	rays[id] = ray;
 }
 
+// Assumes both parameters are normalized
+static __device__ vec3 reflect(vec3 in, vec3 normal) noexcept
+{
+	return in - 2.0f * dot(normal, in) * normal;
+}
+
+static __global__ void genSecondaryRaysKernel(RayIn* rays, vec3 camPos, vec2i res,
+                                              cudaSurfaceObject_t posTex,
+                                              cudaSurfaceObject_t normalTex)
+{
+	// Calculate surface coordinates
+	vec2i loc = vec2i(blockIdx.x * blockDim.x + threadIdx.x,
+	                  blockIdx.y * blockDim.y + threadIdx.y);
+	if (loc.x >= res.x || loc.y >= res.y) return;
+
+	// Read GBuffer
+	float4 posTmp = surf2Dread<float4>(posTex, loc.x * sizeof(float4), loc.y);
+	float4 normalTmp = surf2Dread<float4>(normalTex, loc.x * sizeof(float4), loc.y);
+	vec3 pos = vec3(posTmp.x, posTmp.y, posTmp.z);
+	vec3 normal = vec3(normalTmp.x, normalTmp.y, normalTmp.z);
+
+	// Calculate reflect direction
+	vec3 camDir = normalize(pos - camPos);
+	vec3 reflected = reflect(camDir, normal);
+
+	// Create ray
+	RayIn ray;
+	ray.setDir(reflected);
+	ray.setOrigin(pos);
+	ray.setNoResultOnlyHit(false);
+	ray.setMaxDist(FLT_MAX);
+
+	// Write ray to array
+	uint32_t id = loc.y * res.x + loc.x;
+	rays[id] = ray;
+}
+
 static __global__ void writeRayHitsToScreenKernel(cudaSurfaceObject_t surface, vec2i res, const RayHit* rayHits)
 {
 	static_assert(sizeof(RayHit) == 16, "RayHitOut is padded");
@@ -503,6 +540,21 @@ void launchGenPrimaryRaysKernel(RayIn* rays, const CameraDef& cam, vec2i res) no
 
 	// Run cuda ray tracer kernel
 	genPrimaryRaysKernel<<<numBlocks, threadsPerBlock>>>(rays, cam, res);
+	CHECK_CUDA_ERROR(cudaGetLastError());
+	CHECK_CUDA_ERROR(cudaDeviceSynchronize());
+}
+
+void launchGenSecondaryRaysKernel(RayIn* rays, vec3 camPos, vec2i res, cudaSurfaceObject_t posTex,
+                                  cudaSurfaceObject_t normalTex) noexcept
+{
+	// Calculate number of threads and blocks to run
+	dim3 threadsPerBlock(8, 8);
+	dim3 numBlocks((res.x + threadsPerBlock.x - 1) / threadsPerBlock.x,
+	               (res.y + threadsPerBlock.y - 1) / threadsPerBlock.y);
+
+	// Run cuda ray tracer kernel
+	genSecondaryRaysKernel<<<numBlocks, threadsPerBlock>>>(rays, camPos, res, posTex, normalTex);
+
 	CHECK_CUDA_ERROR(cudaGetLastError());
 	CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 }

@@ -39,6 +39,11 @@ using sfz::gl::Program;
 
 class CudaTracerRendererImpl final {
 public:
+	// Settings
+	Setting* rayCastPerfTest;
+	Setting* rayCastPerfTestPrimaryRays;
+	Setting* rayCastPerfTestPersistentThreads;
+
 	// The device properties of the used CUDA device
 	int glDeviceIndex;
 	cudaDeviceProp glDeviceProperties;
@@ -84,7 +89,9 @@ public:
 	{
 		// Initialize settings
 		GlobalConfig& cfg = GlobalConfig::instance();
-		// TODO: All eventual cuda settings should be initialized here, section = "CudaTracer"
+		rayCastPerfTest = cfg.sanitizeBool("CudaTracer", "rayCastPerfTest", false);
+		rayCastPerfTestPrimaryRays = cfg.sanitizeBool("CudaTracer", "rayCastPerfTestPrimaryRays", false);
+		rayCastPerfTestPersistentThreads = cfg.sanitizeBool("CudaTracer", "rayCastPerfTestPersistentThreads", true);
 
 		// Initialize cuda with the same device that is bound to the OpenGL context
 		unsigned int deviceCount = 0;
@@ -375,28 +382,62 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB,
 	// Temporary cuda kernel
 	// --------------------------------------------------------------------------------------------
 
-	CreateReflectRaysInput reflectRaysInput;
-	reflectRaysInput.camPos = mCamera.pos();
-	reflectRaysInput.res = mTargetResolution;
-	reflectRaysInput.posTex = mImpl->gbuffer.positionSurfaceCuda();
-	reflectRaysInput.normalTex = mImpl->gbuffer.normalSurfaceCuda();
-	reflectRaysInput.albedoTex = mImpl->gbuffer.albedoSurfaceCuda();
-	reflectRaysInput.materialTex = mImpl->gbuffer.materialSurfaceCuda();
-	launchCreateReflectRaysKernel(reflectRaysInput, mImpl->rayBuffer.cudaPtr());
-	
-	//CameraDef camDef = generateCameraDef(mMatrices.position, mMatrices.forward, mMatrices.up,
-	//                                     mMatrices.vertFovRad, vec2(mTargetResolution));
-	//launchGenPrimaryRaysKernel(mImpl->rayBuffer.cudaPtr(), camDef, mTargetResolution);
-	
-	RayCastKernelInput rayCastInput;
-	rayCastInput.bvhNodes = mImpl->staticBvhNodes.cudaTexture();
-	rayCastInput.triangleVerts = mImpl->staticTriangleVertices.cudaTexture();
-	rayCastInput.numRays = mTargetResolution.x * mTargetResolution.y;
-	rayCastInput.rays = mImpl->rayBuffer.cudaPtr();
-	launchRayCastKernel(rayCastInput, mImpl->rayResultBuffer.cudaPtr(), mImpl->glDeviceProperties);
+	// Ray cast performance test (don't touch)
+	if (mImpl->rayCastPerfTest->boolValue()) {
+		
+		// Whether to generate primary or secondary rays for the test
+		if (mImpl->rayCastPerfTestPrimaryRays->boolValue()) {
+			CameraDef camDef = generateCameraDef(mCamera.pos(), mCamera.dir(), mCamera.up(),
+			                                     mCamera.verticalFov() * DEG_TO_RAD(),
+			                                     vec2(mTargetResolution));
+			launchGenPrimaryRaysKernel(mImpl->rayBuffer.cudaPtr(), camDef, mTargetResolution);
+		}
+		else {
+			launchGenSecondaryRaysKernel(mImpl->rayBuffer.cudaPtr(), mCamera.pos(),
+			                             mTargetResolution, mImpl->gbuffer.positionSurfaceCuda(),
+			                             mImpl->gbuffer.normalSurfaceCuda());
+		}
 
-	launchWriteRayHitsToScreenKernel(mImpl->cudaResultTex.cudaSurface(), mTargetResolution,
-	                                 mImpl->rayResultBuffer.cudaPtr());
+		RayCastKernelInput rayCastInput;
+		rayCastInput.bvhNodes = mImpl->staticBvhNodes.cudaTexture();
+		rayCastInput.triangleVerts = mImpl->staticTriangleVertices.cudaTexture();
+		rayCastInput.numRays = mTargetResolution.x * mTargetResolution.y;
+		rayCastInput.rays = mImpl->rayBuffer.cudaPtr();
+
+		// TODO: Select kernel version here
+		launchRayCastKernel(rayCastInput, mImpl->rayResultBuffer.cudaPtr(), mImpl->glDeviceProperties);
+
+		// Write hits to screen
+		launchWriteRayHitsToScreenKernel(mImpl->cudaResultTex.cudaSurface(), mTargetResolution,
+		                                 mImpl->rayResultBuffer.cudaPtr());
+	}
+
+	// Normal path
+	else {
+		// Feel free to change ANYTHING here, except for "launchWriteRayHitsToScreenKernel()"
+		// which is actually a debug function for profiling the ray cast kernel. Ideally it
+		// should not be used for this path at all.
+
+		CreateReflectRaysInput reflectRaysInput;
+		reflectRaysInput.camPos = mCamera.pos();
+		reflectRaysInput.res = mTargetResolution;
+		reflectRaysInput.posTex = mImpl->gbuffer.positionSurfaceCuda();
+		reflectRaysInput.normalTex = mImpl->gbuffer.normalSurfaceCuda();
+		reflectRaysInput.albedoTex = mImpl->gbuffer.albedoSurfaceCuda();
+		reflectRaysInput.materialTex = mImpl->gbuffer.materialSurfaceCuda();
+		launchCreateReflectRaysKernel(reflectRaysInput, mImpl->rayBuffer.cudaPtr());
+	
+		RayCastKernelInput rayCastInput;
+		rayCastInput.bvhNodes = mImpl->staticBvhNodes.cudaTexture();
+		rayCastInput.triangleVerts = mImpl->staticTriangleVertices.cudaTexture();
+		rayCastInput.numRays = mTargetResolution.x * mTargetResolution.y;
+		rayCastInput.rays = mImpl->rayBuffer.cudaPtr();
+		launchRayCastKernel(rayCastInput, mImpl->rayResultBuffer.cudaPtr(), mImpl->glDeviceProperties);
+
+		// TODO: This function should really not be used here, only in ray cast profiling
+		launchWriteRayHitsToScreenKernel(mImpl->cudaResultTex.cudaSurface(), mTargetResolution,
+		                                 mImpl->rayResultBuffer.cudaPtr());
+	}
 
 	// Transfer result to resultFB
 	// --------------------------------------------------------------------------------------------
