@@ -53,6 +53,14 @@ uint32_t loadDynObject(const char* basePath, const char* fileName, Level& level,
 		return -1;
 	}
 
+	uint32_t materialIndex = level.materials.size();
+
+	Material material;
+	material.setAlbedoValue(vec4(100 / 255.0f, 149 / 255.0f, 237 / 255.0f, 1.0f));
+	material.setMetallicValue(1.0f);
+	material.setRoughnessValue(0.5f);
+	level.materials.add(material);
+
 	const mat4 normalMatrix = inverse(transpose(modelMatrix));
 
 	RawMesh mesh;
@@ -79,9 +87,9 @@ uint32_t loadDynObject(const char* basePath, const char* fileName, Level& level,
 			else {
 				v.uv = vec2(0.0f);
 			}
-			mesh.materialIndices.add(0);
-			mesh.materialIndices.add(0);
-			mesh.materialIndices.add(0);
+			mesh.materialIndices.add(materialIndex);
+			mesh.materialIndices.add(materialIndex);
+			mesh.materialIndices.add(materialIndex);
 		}
 
 		// Fill geometry with indices
