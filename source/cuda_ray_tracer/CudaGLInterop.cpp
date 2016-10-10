@@ -14,9 +14,10 @@ namespace phe {
 // Statics
 // ------------------------------------------------------------------------------------------------
 
-static const uint32_t GBUFFER_POSITION = 0u; // uv "u" coordinate stored in w
-static const uint32_t GBUFFER_NORMAL = 1u; // uv "v" coordinate stored in w
-static const uint32_t GBUFFER_MATERIAL_ID = 2u;
+static const uint32_t GBUFFER_POSITION = 0u;
+static const uint32_t GBUFFER_NORMAL = 1u;
+static const uint32_t GBUFFER_ALBEDO = 2u;
+static const uint32_t GBUFFER_MATERIAL = 3u;
 
 // CudaGLGBuffer: Constructors & destructors
 // ------------------------------------------------------------------------------------------------
@@ -29,7 +30,8 @@ CudaGLGBuffer::CudaGLGBuffer(vec2i resolution) noexcept
 	    .addDepthTexture(FBDepthFormat::F32, FBTextureFiltering::NEAREST)
 	    .addTexture(GBUFFER_POSITION, FBTextureFormat::RGBA_F32, FBTextureFiltering::NEAREST)
 	    .addTexture(GBUFFER_NORMAL, FBTextureFormat::RGBA_F32, FBTextureFiltering::LINEAR)
-	    .addTexture(GBUFFER_MATERIAL_ID, FBTextureFormat::R_INT_U16, FBTextureFiltering::NEAREST)
+	    .addTexture(GBUFFER_ALBEDO, FBTextureFormat::RGBA_U8, FBTextureFiltering::LINEAR)
+	    .addTexture(GBUFFER_MATERIAL, FBTextureFormat::RGBA_F32, FBTextureFiltering::LINEAR)
 	    .build();
 
 	// Position texture
@@ -68,23 +70,41 @@ CudaGLGBuffer::CudaGLGBuffer(vec2i resolution) noexcept
 	normalResDesc.res.array.array = normalCudaArray;
 	CHECK_CUDA_ERROR(cudaCreateSurfaceObject(&mNormalSurface, &normalResDesc));
 
+	// Albedo texture
+
+	// https://github.com/nvpro-samples/gl_cuda_interop_pingpong_st
+	CHECK_CUDA_ERROR(cudaGraphicsGLRegisterImage(
+	    &mAlbedoResource, mFramebuffer.texture(GBUFFER_ALBEDO), GL_TEXTURE_2D,
+	    cudaGraphicsRegisterFlagsReadOnly));
+	CHECK_CUDA_ERROR(cudaGraphicsMapResources(1, &mAlbedoResource, 0));
+	cudaArray_t albedoCudaArray = 0;
+	CHECK_CUDA_ERROR(cudaGraphicsSubResourceGetMappedArray(&albedoCudaArray, mAlbedoResource, 0, 0));
+	CHECK_CUDA_ERROR(cudaGraphicsUnmapResources(1, &mAlbedoResource, 0));
+
+	// Create cuda surface object from binding
+	cudaResourceDesc albedoResDesc;
+	memset(&albedoResDesc, 0, sizeof(cudaResourceDesc));
+	albedoResDesc.resType = cudaResourceTypeArray;
+	albedoResDesc.res.array.array = albedoCudaArray;
+	CHECK_CUDA_ERROR(cudaCreateSurfaceObject(&mAlbedoSurface, &albedoResDesc));
+
 	// Material id texture
 
 	// https://github.com/nvpro-samples/gl_cuda_interop_pingpong_st
 	CHECK_CUDA_ERROR(cudaGraphicsGLRegisterImage(
-	    &mMaterialIdResource, mFramebuffer.texture(GBUFFER_MATERIAL_ID), GL_TEXTURE_2D,
+	    &mMaterialResource, mFramebuffer.texture(GBUFFER_MATERIAL), GL_TEXTURE_2D,
 	    cudaGraphicsRegisterFlagsReadOnly));
-	CHECK_CUDA_ERROR(cudaGraphicsMapResources(1, &mMaterialIdResource, 0));
+	CHECK_CUDA_ERROR(cudaGraphicsMapResources(1, &mMaterialResource, 0));
 	cudaArray_t matCudaArray = 0;
-	CHECK_CUDA_ERROR(cudaGraphicsSubResourceGetMappedArray(&matCudaArray, mMaterialIdResource, 0, 0));
-	CHECK_CUDA_ERROR(cudaGraphicsUnmapResources(1, &mMaterialIdResource, 0));
+	CHECK_CUDA_ERROR(cudaGraphicsSubResourceGetMappedArray(&matCudaArray, mMaterialResource, 0, 0));
+	CHECK_CUDA_ERROR(cudaGraphicsUnmapResources(1, &mMaterialResource, 0));
 
 	// Create cuda surface object from binding
 	cudaResourceDesc matResDesc;
 	memset(&matResDesc, 0, sizeof(cudaResourceDesc));
 	matResDesc.resType = cudaResourceTypeArray;
 	matResDesc.res.array.array = matCudaArray;
-	CHECK_CUDA_ERROR(cudaCreateSurfaceObject(&mMaterialIdSurface, &matResDesc));
+	CHECK_CUDA_ERROR(cudaCreateSurfaceObject(&mMaterialSurface, &matResDesc));
 }
 
 CudaGLGBuffer::CudaGLGBuffer(CudaGLGBuffer&& other) noexcept
@@ -97,8 +117,11 @@ CudaGLGBuffer::CudaGLGBuffer(CudaGLGBuffer&& other) noexcept
 	std::swap(this->mNormalResource, other.mNormalResource);
 	std::swap(this->mNormalSurface, other.mNormalSurface);
 
-	std::swap(this->mMaterialIdResource, other.mMaterialIdResource);
-	std::swap(this->mMaterialIdSurface, other.mMaterialIdSurface);
+	std::swap(this->mAlbedoResource, other.mAlbedoResource);
+	std::swap(this->mAlbedoSurface, other.mAlbedoSurface);
+
+	std::swap(this->mMaterialResource, other.mMaterialResource);
+	std::swap(this->mMaterialSurface, other.mMaterialSurface);
 }
 
 CudaGLGBuffer& CudaGLGBuffer::operator= (CudaGLGBuffer&& other) noexcept
@@ -111,8 +134,11 @@ CudaGLGBuffer& CudaGLGBuffer::operator= (CudaGLGBuffer&& other) noexcept
 	std::swap(this->mNormalResource, other.mNormalResource);
 	std::swap(this->mNormalSurface, other.mNormalSurface);
 
-	std::swap(this->mMaterialIdResource, other.mMaterialIdResource);
-	std::swap(this->mMaterialIdSurface, other.mMaterialIdSurface);
+	std::swap(this->mAlbedoResource, other.mAlbedoResource);
+	std::swap(this->mAlbedoSurface, other.mAlbedoSurface);
+
+	std::swap(this->mMaterialResource, other.mMaterialResource);
+	std::swap(this->mMaterialSurface, other.mMaterialSurface);
 
 	return *this;
 }
@@ -139,15 +165,25 @@ CudaGLGBuffer::~CudaGLGBuffer() noexcept
 	mNormalResource = 0;
 	mNormalSurface = 0;
 
-	// Material id texture
-	if (mMaterialIdSurface != 0) {
-		CHECK_CUDA_ERROR(cudaDestroySurfaceObject(mMaterialIdSurface));
+	// Albedo texture
+	if (mAlbedoSurface != 0) {
+		CHECK_CUDA_ERROR(cudaDestroySurfaceObject(mAlbedoSurface));
 	}
-	if (mMaterialIdResource != 0) {
-		CHECK_CUDA_ERROR(cudaGraphicsUnregisterResource(mMaterialIdResource));
+	if (mAlbedoResource != 0) {
+		CHECK_CUDA_ERROR(cudaGraphicsUnregisterResource(mAlbedoResource));
 	}
-	mMaterialIdResource = 0;
-	mMaterialIdSurface = 0;
+	mAlbedoResource = 0;
+	mAlbedoSurface = 0;
+
+	// Material texture
+	if (mMaterialSurface != 0) {
+		CHECK_CUDA_ERROR(cudaDestroySurfaceObject(mMaterialSurface));
+	}
+	if (mMaterialResource != 0) {
+		CHECK_CUDA_ERROR(cudaGraphicsUnregisterResource(mMaterialResource));
+	}
+	mMaterialResource = 0;
+	mMaterialSurface = 0;
 }
 
 // CudaGLGBuffer: Methods
@@ -177,9 +213,14 @@ uint32_t CudaGLGBuffer::normalTextureGL() const noexcept
 	return mFramebuffer.texture(GBUFFER_NORMAL);
 }
 
-uint32_t CudaGLGBuffer::materialIdTextureGL() const noexcept
+uint32_t CudaGLGBuffer::albedoTextureGL() const noexcept
 {
-	return mFramebuffer.texture(GBUFFER_MATERIAL_ID);
+	return mFramebuffer.texture(GBUFFER_ALBEDO);
+}
+
+uint32_t CudaGLGBuffer::materialTextureGL() const noexcept
+{
+	return mFramebuffer.texture(GBUFFER_MATERIAL);
 }
 
 cudaSurfaceObject_t CudaGLGBuffer::positionSurfaceCuda() const noexcept
@@ -192,9 +233,14 @@ cudaSurfaceObject_t CudaGLGBuffer::normalSurfaceCuda() const noexcept
 	return mNormalSurface;
 }
 
-cudaSurfaceObject_t CudaGLGBuffer::materialIdSurfaceCuda() const noexcept
+cudaSurfaceObject_t CudaGLGBuffer::albedoSurfaceCuda() const noexcept
 {
-	return mMaterialIdSurface;
+	return mAlbedoSurface;
+}
+
+cudaSurfaceObject_t CudaGLGBuffer::materialSurfaceCuda() const noexcept
+{
+	return mMaterialSurface;
 }
 
 // CudaGLTexture: Constructors & destructors

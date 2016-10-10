@@ -15,6 +15,8 @@
 #include <sfz/memory/New.hpp>
 #include <sfz/util/IO.hpp>
 
+#include <phantasy_engine/deferred_renderer/GLTexture.hpp>
+#include <phantasy_engine/deferred_renderer/SSBO.hpp>
 #include <phantasy_engine/config/GlobalConfig.hpp>
 #include <phantasy_engine/deferred_renderer/GLModel.hpp>
 #include <phantasy_engine/rendering/FullscreenTriangle.hpp>
@@ -55,10 +57,15 @@ public:
 	DynArray<GLModel> staticGLModels;
 	DynArray<GLModel> dynamicGLModels;
 
+	// OpenGL materials & textures
+	DynArray<GLTexture> glTextures;
+	SSBO texturesSSBO;
+	SSBO materialsSSBO;
+
 	// Cuda materials & textures
 	CudaBuffer<Material> materials;
 	DynArray<CudaBindlessTexture> textureWrappers;
-	CudaBuffer<cudaTextureObject_t> textures;
+	CudaBuffer<cudaTextureObject_t> cudaTextures;
 
 	// Cuda static geometry
 	CudaTextureBuffer<BVHNode> staticBvhNodes;
@@ -136,6 +143,31 @@ CudaTracerRenderer::~CudaTracerRenderer() noexcept
 void CudaTracerRenderer::setMaterialsAndTextures(const DynArray<Material>& materials,
                                                  const DynArray<RawImage>& textures) noexcept
 {
+	// Destroy old values
+	mImpl->glTextures.clear();
+	mImpl->texturesSSBO.destroy();
+	mImpl->materialsSSBO.destroy();
+
+	// Allocate SSBO memory and upload compact materials
+	uint32_t numMaterialBytes = materials.size() * sizeof(Material);
+	mImpl->materialsSSBO.create(numMaterialBytes);
+	mImpl->materialsSSBO.uploadData(materials.data(), numMaterialBytes);
+
+	// Create GLTextures
+	DynArray<uint64_t> tmpBindlessTextureHandles;
+	tmpBindlessTextureHandles.setCapacity(textures.size());
+	mImpl->glTextures.setCapacity(textures.size());
+	for (const RawImage& img : textures) {
+		mImpl->glTextures.add(GLTexture(img));
+		tmpBindlessTextureHandles.add(mImpl->glTextures.last().bindlessHandle());
+	}
+
+	// Allocate SSBO memory and upload bindless texture handles
+	uint32_t numBindlessTextureHandleBytes = tmpBindlessTextureHandles.size() * sizeof(uint64_t);
+	mImpl->texturesSSBO.create(numBindlessTextureHandleBytes);
+	mImpl->texturesSSBO.uploadData(tmpBindlessTextureHandles.data(), numBindlessTextureHandleBytes);
+
+
 	// Copy materials to Cuda
 	mImpl->materials = CudaBuffer<Material>(materials.data(), materials.size());
 
@@ -153,8 +185,8 @@ void CudaTracerRenderer::setMaterialsAndTextures(const DynArray<Material>& mater
 	}
 
 	// Upload texture handles to Cuda
-	mImpl->textures = CudaBuffer<cudaTextureObject_t>(tmpTextureHandles.data(),
-	                                                  tmpTextureHandles.size());
+	mImpl->cudaTextures = CudaBuffer<cudaTextureObject_t>(tmpTextureHandles.data(),
+	                                                      tmpTextureHandles.size());
 }
 
 void CudaTracerRenderer::addTexture(const RawImage& texture) noexcept
@@ -314,6 +346,10 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB,
 	gl::setUniform(gbufferGenShader, "uProjMatrix", projMatrix);
 	gl::setUniform(gbufferGenShader, "uViewMatrix", viewMatrix);
 
+	// Bind SSBOs
+	mImpl->materialsSSBO.bind(0);
+	mImpl->texturesSSBO.bind(1);
+
 	const int modelMatrixLoc = glGetUniformLocation(gbufferGenShader.handle(), "uModelMatrix");
 	const int normalMatrixLoc = glGetUniformLocation(gbufferGenShader.handle(), "uNormalMatrix");
 
@@ -336,7 +372,7 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB,
 	// Temporary cuda kernel
 	// --------------------------------------------------------------------------------------------
 
-	CreateReflectRaysInput reflectRaysInput;
+	/*CreateReflectRaysInput reflectRaysInput;
 	reflectRaysInput.camPos = mCamera.pos();
 	reflectRaysInput.res = mTargetResolution;
 	reflectRaysInput.posTex = mImpl->gbuffer.positionSurfaceCuda();
@@ -356,7 +392,7 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB,
 	launchRayCastKernel(rayCastInput, mImpl->rayResultBuffer.cudaPtr(), mImpl->glDeviceProperties);
 
 	launchWriteRayHitsToScreenKernel(mImpl->cudaResultTex.cudaSurface(), mTargetResolution,
-	                                 mImpl->rayResultBuffer.cudaPtr());
+	                                 mImpl->rayResultBuffer.cudaPtr());*/
 
 	// Transfer result to resultFB
 	// --------------------------------------------------------------------------------------------
@@ -370,7 +406,8 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB,
 	mImpl->transferShader.useProgram();
 	gl::setUniform(mImpl->transferShader, "uSrcTexture", 0);
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, mImpl->cudaResultTex.glTexture());
+	//glBindTexture(GL_TEXTURE_2D, mImpl->cudaResultTex.glTexture());
+	glBindTexture(GL_TEXTURE_2D, mImpl->gbuffer.materialTextureGL());
 	mImpl->fullscreenTriangle.render();
 
 	// Copy depth from GBuffer to resultFB

@@ -46,11 +46,13 @@ public:
 	uint32_t depthTextureGL() const noexcept;
 	uint32_t positionTextureGL() const noexcept;
 	uint32_t normalTextureGL() const noexcept;
-	uint32_t materialIdTextureGL() const noexcept;
-
+	uint32_t albedoTextureGL() const noexcept;
+	uint32_t materialTextureGL() const noexcept;
+	
 	cudaSurfaceObject_t positionSurfaceCuda() const noexcept;
 	cudaSurfaceObject_t normalSurfaceCuda() const noexcept;
-	cudaSurfaceObject_t materialIdSurfaceCuda() const noexcept;
+	cudaSurfaceObject_t albedoSurfaceCuda() const noexcept;
+	cudaSurfaceObject_t materialSurfaceCuda() const noexcept;
 
 private:
 	// Private members
@@ -64,8 +66,11 @@ private:
 	cudaGraphicsResource_t mNormalResource = 0;
 	cudaSurfaceObject_t mNormalSurface = 0;
 	
-	cudaGraphicsResource_t mMaterialIdResource = 0;
-	cudaSurfaceObject_t mMaterialIdSurface = 0;
+	cudaGraphicsResource_t mAlbedoResource = 0;
+	cudaSurfaceObject_t mAlbedoSurface = 0;
+
+	cudaGraphicsResource_t mMaterialResource = 0;
+	cudaSurfaceObject_t mMaterialSurface = 0;
 };
 
 // CudaGLTexture
