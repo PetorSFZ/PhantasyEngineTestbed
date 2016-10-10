@@ -190,7 +190,7 @@ vec4 CPURayTracerRenderer::shadeHit(const Ray& ray, const RayCastResult& hit, co
 
 	vec3 albedoColor = material.albedoValue().xyz;
 
-	if (material.albedoTexIndex() > 0) {
+	if (material.albedoTexIndex() >= 0) {
 		const RawImage& albedoImage = images[material.albedoTexIndex()];
 		if (albedoImage.bytesPerPixel == 3 ||
 			albedoImage.bytesPerPixel == 4) {
@@ -206,12 +206,12 @@ vec4 CPURayTracerRenderer::shadeHit(const Ray& ray, const RayCastResult& hit, co
 	float roughness = material.roughnessValue();
 	float metallic = material.metallicValue();
 
-	if (material.roughnessTexIndex() > 0) {
+	if (material.roughnessTexIndex() >= 0) {
 		const RawImage& image = images[material.roughnessTexIndex()];
 		uint8_t intColor = sampleImage(image, info.uv)[0];
 		roughness = intColor / 255.0f;
 	}
-	if (material.metallicTexIndex() > 0) {
+	if (material.metallicTexIndex() >= 0) {
 		const RawImage& image = images[material.metallicTexIndex()];
 		uint8_t intColor = sampleImage(image, info.uv)[0];
 		metallic = intColor / 255.0f;

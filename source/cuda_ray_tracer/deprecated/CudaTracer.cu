@@ -239,24 +239,24 @@ __global__ void cudaRayTracerKernel(CudaTracerParams params)
 		}
 
 		const Material& material = params.materials[info.materialIndex];
-		vec4 albedoValue = material.albedoValue;
-		if (params.materials[info.materialIndex].albedoIndex != UINT32_MAX) {
-			cudaTextureObject_t albedoTexture = params.textures[material.albedoIndex];
+		vec4 albedoValue = material.albedoValue();
+		if (params.materials[info.materialIndex].albedoTexIndex() >= 0) {
+			cudaTextureObject_t albedoTexture = params.textures[material.albedoTexIndex()];
 			albedoValue = readMaterialTextureRGBA(albedoTexture, info.uv);
 		}
 		vec3 albedoColor = albedoValue.xyz;
 		albedoColor = linearize(albedoColor);
 
-		float metallic = material.metallicValue;
-		if (params.materials[info.materialIndex].metallicIndex != UINT32_MAX) {
-			cudaTextureObject_t metallicTexture = params.textures[material.metallicIndex];
+		float metallic = material.metallicValue();
+		if (params.materials[info.materialIndex].metallicTexIndex() >= 0) {
+			cudaTextureObject_t metallicTexture = params.textures[material.metallicTexIndex()];
 			metallic = readMaterialTextureGray(metallicTexture, info.uv);
 		}
 		metallic = linearize(metallic);
 
-		float roughness = material.roughnessValue;
-		if (params.materials[info.materialIndex].roughnessIndex != UINT32_MAX) {
-			cudaTextureObject_t roughnessTexture = params.textures[material.roughnessIndex];
+		float roughness = material.roughnessValue();
+		if (params.materials[info.materialIndex].roughnessTexIndex() >= 0) {
+			cudaTextureObject_t roughnessTexture = params.textures[material.roughnessTexIndex()];
 			roughness = readMaterialTextureGray(roughnessTexture, info.uv);
 		}
 		roughness = linearize(roughness);
