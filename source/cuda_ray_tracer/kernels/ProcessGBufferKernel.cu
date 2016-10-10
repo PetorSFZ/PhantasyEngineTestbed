@@ -16,24 +16,28 @@ using sfz::vec4;
 struct GBufferValue final {
 	vec3 pos;
 	vec3 normal;
-	vec2 uv;
-	uint16_t materialId;
+	vec3 albedo;
+	float roughness;
+	float metallic;
 };
 
 static __device__ GBufferValue readGBuffer(cudaSurfaceObject_t posTex,
                                            cudaSurfaceObject_t normalTex,
-                                           cudaSurfaceObject_t materialIdTex,
+                                           cudaSurfaceObject_t albedoTex,
+                                           cudaSurfaceObject_t materialTex,
                                            vec2i loc) noexcept
 {
 	float4 posTmp = surf2Dread<float4>(posTex, loc.x * sizeof(float4), loc.y);
 	float4 normalTmp = surf2Dread<float4>(normalTex, loc.x * sizeof(float4), loc.y);
-	ushort1 materialId = surf2Dread<ushort1>(materialIdTex, loc.x * sizeof(ushort1), loc.y);
+	uchar4 albedoTmp = surf2Dread<uchar4>(albedoTex, loc.x * sizeof(uchar4), loc.y);
+	float4 materialTmp = surf2Dread<float4>(materialTex, loc.x * sizeof(float4), loc.y);
 
 	GBufferValue tmp;
 	tmp.pos = vec3(posTmp.x, posTmp.y, posTmp.z);
 	tmp.normal = vec3(normalTmp.x, normalTmp.y, normalTmp.z);
-	tmp.uv = vec2(posTmp.w, normalTmp.w);
-	tmp.materialId = materialId.x;
+	tmp.albedo = vec3(albedoTmp.x, albedoTmp.y, albedoTmp.z);
+	tmp.roughness = materialTmp.x;
+	tmp.metallic = materialTmp.y;
 	return tmp;
 }
 
@@ -63,7 +67,8 @@ static __global__ void tempWriteColorKernel(cudaSurfaceObject_t surface, vec2i r
 static __global__ void createReflectRaysKernel(vec3 camPos, vec2i res,
                                                cudaSurfaceObject_t posTex,
                                                cudaSurfaceObject_t normalTex,
-                                               cudaSurfaceObject_t materialIdTex,
+                                               cudaSurfaceObject_t albedoTex,
+                                               cudaSurfaceObject_t materialTex,
                                                RayIn* raysOut)
 {
 	// Calculate surface coordinates
@@ -72,7 +77,7 @@ static __global__ void createReflectRaysKernel(vec3 camPos, vec2i res,
 	if (loc.x >= res.x || loc.y >= res.y) return;
 
 	// Read GBuffer
-	GBufferValue pixelVal = readGBuffer(posTex, normalTex, materialIdTex, loc);
+	GBufferValue pixelVal = readGBuffer(posTex, normalTex, albedoTex, materialTex, loc);
 
 	// Calculate reflect direction
 	vec3 camDir = normalize(pixelVal.pos - camPos);
@@ -103,7 +108,8 @@ void launchCreateReflectRaysKernel(const CreateReflectRaysInput& input, RayIn* r
 	// Run cuda ray tracer kernel
 	createReflectRaysKernel<<<numBlocks, threadsPerBlock>>>(input.camPos, input.res,
 	                                                        input.posTex, input.normalTex,
-	                                                        input.materialIdTex, raysOut);
+	                                                        input.albedoTex, input.materialTex,
+	                                                        raysOut);
 	CHECK_CUDA_ERROR(cudaGetLastError());
 	CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 }

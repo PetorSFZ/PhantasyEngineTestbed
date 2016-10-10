@@ -369,15 +369,19 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB,
 		model.draw();
 	}
 
+	// Wait for OpenGL to finish rendering GBuffer before we start using it in Cuda
+	glFinish();
+
 	// Temporary cuda kernel
 	// --------------------------------------------------------------------------------------------
 
-	/*CreateReflectRaysInput reflectRaysInput;
+	CreateReflectRaysInput reflectRaysInput;
 	reflectRaysInput.camPos = mCamera.pos();
 	reflectRaysInput.res = mTargetResolution;
 	reflectRaysInput.posTex = mImpl->gbuffer.positionSurfaceCuda();
 	reflectRaysInput.normalTex = mImpl->gbuffer.normalSurfaceCuda();
-	reflectRaysInput.materialIdTex = mImpl->gbuffer.materialIdSurfaceCuda();
+	reflectRaysInput.albedoTex = mImpl->gbuffer.albedoSurfaceCuda();
+	reflectRaysInput.materialTex = mImpl->gbuffer.materialSurfaceCuda();
 	launchCreateReflectRaysKernel(reflectRaysInput, mImpl->rayBuffer.cudaPtr());
 	
 	//CameraDef camDef = generateCameraDef(mMatrices.position, mMatrices.forward, mMatrices.up,
@@ -392,7 +396,7 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB,
 	launchRayCastKernel(rayCastInput, mImpl->rayResultBuffer.cudaPtr(), mImpl->glDeviceProperties);
 
 	launchWriteRayHitsToScreenKernel(mImpl->cudaResultTex.cudaSurface(), mTargetResolution,
-	                                 mImpl->rayResultBuffer.cudaPtr());*/
+	                                 mImpl->rayResultBuffer.cudaPtr());
 
 	// Transfer result to resultFB
 	// --------------------------------------------------------------------------------------------
@@ -406,8 +410,7 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB,
 	mImpl->transferShader.useProgram();
 	gl::setUniform(mImpl->transferShader, "uSrcTexture", 0);
 	glActiveTexture(GL_TEXTURE0);
-	//glBindTexture(GL_TEXTURE_2D, mImpl->cudaResultTex.glTexture());
-	glBindTexture(GL_TEXTURE_2D, mImpl->gbuffer.materialTextureGL());
+	glBindTexture(GL_TEXTURE_2D, mImpl->cudaResultTex.glTexture());
 	mImpl->fullscreenTriangle.render();
 
 	// Copy depth from GBuffer to resultFB

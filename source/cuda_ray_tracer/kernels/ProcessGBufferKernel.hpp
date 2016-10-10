@@ -23,7 +23,8 @@ struct CreateReflectRaysInput final {
 	vec2i res;
 	cudaSurfaceObject_t posTex;
 	cudaSurfaceObject_t normalTex;
-	cudaSurfaceObject_t materialIdTex;
+	cudaSurfaceObject_t albedoTex;
+	cudaSurfaceObject_t materialTex;
 };
 
 void launchCreateReflectRaysKernel(const CreateReflectRaysInput& input, RayIn* raysOut) noexcept;
