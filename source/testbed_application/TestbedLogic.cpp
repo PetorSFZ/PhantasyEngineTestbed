@@ -34,6 +34,8 @@ TestbedLogic::TestbedLogic(DynArray<RendererAndStatus>&& renderers, uint32_t ren
 // TestbedLogic: Overriden methods from GameLogic
 // ------------------------------------------------------------------------------------------------
 
+static float accumulatedTime = 0;
+
 UpdateOp TestbedLogic::update(GameScreen& screen, UpdateState& state) noexcept
 {
 	using sdl::GameController;
@@ -41,6 +43,17 @@ UpdateOp TestbedLogic::update(GameScreen& screen, UpdateState& state) noexcept
 
 	auto& cfg = phe::GlobalConfig::instance();
 	phe::Setting* renderingBackendSetting = cfg.getSetting("PhantasyEngineTestbed", "renderingBackend");
+
+	accumulatedTime += 10 * state.delta;
+	if (accumulatedTime > 2 * PI()) accumulatedTime -= 2 * PI();
+
+	// Move balls
+	for (uint32_t handle : instanceHandles) {
+		vec3& pos = objectPositions[handle];
+		vec3 velocity = vec3(0.0f, 0.0f, sin(accumulatedTime) * 10 * state.delta);
+		pos += velocity;
+		screen.level->objects[handle].transform = translationMatrix(pos);
+	}
 
 	// Handle input
 	for (const SDL_Event& event : state.events) {
@@ -146,8 +159,10 @@ UpdateOp TestbedLogic::update(GameScreen& screen, UpdateState& state) noexcept
 
 	// Face buttons
 	if (ctrl.y == ButtonState::DOWN) {
-		spawnObjectInstance(triangleObjectHandle, *screen.level, translationMatrix(screen.cam.pos()));
-		spawnObjectInstance(triangleObjectHandle, *screen.level, translationMatrix(screen.cam.pos()));
+		vec3 pos = screen.cam.pos();
+		uint32_t handle = spawnObjectInstance(triangleObjectHandle, *screen.level, translationMatrix(pos));
+		instanceHandles.add(handle);
+		objectPositions.put(handle, pos);
 	}
 	if (ctrl.x == ButtonState::DOWN) {
 	}
