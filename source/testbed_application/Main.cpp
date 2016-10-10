@@ -9,6 +9,7 @@
 #include <phantasy_engine/PhantasyEngine.hpp>
 #include <phantasy_engine/Config.hpp>
 #include <phantasy_engine/level/SponzaLoader.hpp>
+#include <phantasy_engine/level/ObjectLoader.hpp>
 #include <phantasy_engine/ray_tracer_common/StaticBVHBuilder.hpp>
 
 #include "Helpers.hpp"
@@ -27,39 +28,6 @@ static void ensureIniDirectoryExists()
 	tmp.printf("%sPhantasyEngineTestbed", sfz::gameBaseFolderPath());
 	sfz::createDirectory(sfz::gameBaseFolderPath());
 	sfz::createDirectory(tmp.str);
-}
-
-static uint32_t loadModel(const char* basePath, const char* fileName, phe::Level& level,
-                          const mat4& modelMatrix) noexcept
-{
-	phe::RawMesh mesh;
-	phe::Vertex v0, v1, v2;
-	v0.pos = vec3(0.0f, 0.0f, 0.0f);
-	v1.pos = vec3(0.0f, 1.0f, 0.0f);
-	v2.pos = vec3(1.0f, 1.0f, 0.0f);
-	v0.normal = vec3(0.0f, 0.0f, 1.0f);
-	v1.normal = vec3(0.0f, 0.0f, 1.0f);
-	v2.normal = vec3(0.0f, 0.0f, 1.0f);
-	v0.uv = vec2(0.0f, 0.0f);
-	v1.uv = vec2(0.0f, 1.0f);
-	v2.uv = vec2(1.0f, 1.0f);
-	mesh.vertices.add(v0);
-	mesh.vertices.add(v1);
-	mesh.vertices.add(v2);
-
-	mesh.materialIndices.add(0);
-	mesh.materialIndices.add(0);
-	mesh.materialIndices.add(0);
-
-	mesh.indices.add(0);
-	mesh.indices.add(1);
-	mesh.indices.add(2);
-	mesh.indices.add(2);
-	mesh.indices.add(1);
-	mesh.indices.add(0);
-
-	level.meshes.add(mesh);
-	return level.meshes.size() - 1u;
 }
 
 // Main
@@ -108,8 +76,9 @@ int main(int, char**)
 	auto renderers = createRenderers(rendererIndex);
 	SharedPtr<BaseRenderer> initialRenderer = renderers[rendererIndex].renderer;
 
-	// Load level
 	StackString192 modelsPath;
+
+	// Load level
 	modelsPath.printf("%sresources/models/", basePath());
 	
 	SharedPtr<Level> level = makeShared<Level>();
@@ -210,7 +179,7 @@ int main(int, char**)
 	level->staticScene.sphereLights.add(std::move(sunlight));
 
 	// Add triangle mesh to scene
-	loadModel(nullptr, nullptr, *level, mat4());
+	loadDynObject(modelsPath.str, "sphere.obj", *level);
 
 	// Run gameloop
 	sfz::runGameLoop(engine.window(), SharedPtr<BaseScreen>(sfz_new<GameScreen>(

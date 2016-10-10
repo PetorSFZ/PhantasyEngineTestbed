@@ -4,17 +4,21 @@
 
 #include <phantasy_engine/screens/GameScreen.hpp>
 #include <phantasy_engine/level/Level.hpp>
+#include <sfz/containers/HashMap.hpp>
+#include <sfz/math/Vector.hpp>
 
 #include "Helpers.hpp"
 
 using phe::GameLogic;
 using phe::GameScreen;
 using sfz::DynArray;
+using sfz::HashMap;
 using sfz::sdl::ButtonState;
 using sfz::sdl::Mouse;
 using sfz::UpdateOp;
 using sfz::UpdateOpType;
 using sfz::UpdateState;
+using sfz::vec3;
 
 // TestbedLogic
 // ------------------------------------------------------------------------------------------------
@@ -59,4 +63,6 @@ private:
 	uint32_t mCurrentRenderer;
 
 	uint32_t triangleObjectHandle;
+	DynArray<uint32_t> instanceHandles;
+	HashMap<uint32_t, vec3> objectPositions;
 };
