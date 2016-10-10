@@ -7,24 +7,14 @@
 // Input
 in vec3 normal;
 in vec2 uv;
-flat in uint materialId;
+flat in ivec4 textureIndices;
+flat in vec4 albedoValue;
+flat in vec4 materialValue;
 
 // Output
 layout(location = 0) out vec4 outFragNormal;
 layout(location = 1) out vec4 outFragAlbedo;
 layout(location = 2) out vec4 outFragMaterial;
-
-// Shader Storage Buffer Objects
-struct CompactMaterial {
-	ivec4 textureIndices; // [albedoTexIndex, roughnessTexIndex, metallicTexIndex, padding]
-	vec4 albedoValue;
-	vec4 materialValue; // [roughnessValue, metallicValue, padding, padding]
-};
-
-layout(std430, binding = 0) buffer MaterialSSBO
-{
-	CompactMaterial materials[];
-};
 
 layout(std430, binding = 1) buffer TextureSSBO
 {
@@ -36,14 +26,12 @@ layout(std430, binding = 1) buffer TextureSSBO
 
 void main()
 {
-	CompactMaterial mat = materials[materialId];
-
 	// TODO: Normal mapping
 	outFragNormal = vec4(normalize(normal), 1.0);
 
 	// Albedo
-	int albedoIndex = mat.textureIndices.x;
-	vec4 albedo = mat.albedoValue;
+	int albedoIndex = textureIndices.x;
+	vec4 albedo = albedoValue;
 	if (albedoIndex >= 0) {
 		albedo = texture(textures[albedoIndex], uv);
 
@@ -55,14 +43,14 @@ void main()
 	outFragAlbedo = vec4(albedo.rgb, 1.0);
 
 	// Material
-	int roughnessIndex = mat.textureIndices.y;
-	float roughness = mat.materialValue.x;
+	int roughnessIndex = textureIndices.y;
+	float roughness = materialValue.x;
 	if (roughnessIndex >= 0) {
 		roughness = texture(textures[roughnessIndex], uv).r;
 	}
 
-	int metallicIndex = mat.textureIndices.z;
-	float metallic = mat.materialValue.y;
+	int metallicIndex = textureIndices.z;
+	float metallic = materialValue.y;
 	if (metallicIndex >= 0) {
 		metallic = texture(textures[metallicIndex], uv).r;
 	}
