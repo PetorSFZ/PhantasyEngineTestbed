@@ -45,12 +45,12 @@ UpdateOp TestbedLogic::update(GameScreen& screen, UpdateState& state) noexcept
 	phe::Setting* renderingBackendSetting = cfg.getSetting("PhantasyEngineTestbed", "renderingBackend");
 
 	accumulatedTime += 10 * state.delta;
-	if (accumulatedTime > 2 * PI()) accumulatedTime -= 2 * PI();
+	if (accumulatedTime > 200 * PI()) accumulatedTime -= 200 * PI();
 
 	// Move balls
 	for (uint32_t handle : instanceHandles) {
 		vec3& pos = objectPositions[handle];
-		vec3 velocity = vec3(0.0f, cos(accumulatedTime) * 5 * state.delta, sin(accumulatedTime) * 10 * state.delta);
+		vec3 velocity = vec3(0.0f, cos(accumulatedTime), (sin(accumulatedTime) - cos(accumulatedTime/4))) * 10.0f * state.delta;
 		pos += velocity;
 		screen.level->objects[handle].transform = translationMatrix(pos);
 	}
