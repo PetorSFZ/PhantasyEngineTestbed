@@ -27,36 +27,6 @@ static const uint32_t GBUFFER_NORMAL = 0;
 static const uint32_t GBUFFER_ALBEDO = 1;
 static const uint32_t GBUFFER_MATERIAL = 2;
 
-struct CompactMaterial final {
-	vec4i textureIndices; // [albedoTexIndex, roughnessTexIndex, metallicTexIndex, padding]
-	vec4 albedoValue;
-	vec4 materialValue; // [roughnessValue, metallicValue, padding, padding]
-};
-
-static int32_t glslifyTextureIndex(uint32_t textureIndex) noexcept
-{
-	return (textureIndex == ~0u) ? -1 : int32_t(textureIndex);
-}
-
-CompactMaterial compact(const Material& m) noexcept
-{
-	CompactMaterial tmp;
-	
-	tmp.textureIndices.x = glslifyTextureIndex(m.albedoIndex);
-	tmp.textureIndices.y = glslifyTextureIndex(m.roughnessIndex);
-	tmp.textureIndices.z = glslifyTextureIndex(m.metallicIndex);
-	tmp.textureIndices.w = 0; // padding
-
-	tmp.albedoValue = m.albedoValue;
-
-	tmp.materialValue.x = m.roughnessValue;
-	tmp.materialValue.y = m.metallicValue;
-	tmp.materialValue.z = 0.0f; // padding
-	tmp.materialValue.w = 0.0f; // padding
-
-	return tmp;
-}
-
 // DeferredRendererImpl
 // ------------------------------------------------------------------------------------------------
 
@@ -137,17 +107,10 @@ void DeferredRenderer::setMaterialsAndTextures(const DynArray<Material>& materia
 	mImpl->texturesSSBO.destroy();
 	mImpl->materialSSBO.destroy();
 
-	// Create compact materials from material list
-	DynArray<CompactMaterial> tmpCompactMaterials;
-	tmpCompactMaterials.setCapacity(materials.size());
-	for (const Material& m : materials) {
-		tmpCompactMaterials.add(compact(m));
-	}
-
 	// Allocate SSBO memory and upload compact materials
-	uint32_t numCompactMaterialBytes = tmpCompactMaterials.size() * sizeof(CompactMaterial);
-	mImpl->materialSSBO.create(numCompactMaterialBytes);
-	mImpl->materialSSBO.uploadData(tmpCompactMaterials.data(), numCompactMaterialBytes);
+	uint32_t numMaterialBytes = materials.size() * sizeof(Material);
+	mImpl->materialSSBO.create(numMaterialBytes);
+	mImpl->materialSSBO.uploadData(materials.data(), numMaterialBytes);
 
 	// Create GLTextures
 	DynArray<uint64_t> tmpBindlessTextureHandles;

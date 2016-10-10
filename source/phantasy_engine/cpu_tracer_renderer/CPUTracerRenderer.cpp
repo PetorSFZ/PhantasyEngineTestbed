@@ -188,10 +188,10 @@ vec4 CPURayTracerRenderer::shadeHit(const Ray& ray, const RayCastResult& hit, co
 
 	const Material& material = materials[data.materialIndex];
 
-	vec3 albedoColor = material.albedoValue.xyz;
+	vec3 albedoColor = material.albedoValue().xyz;
 
-	if (material.albedoIndex != UINT32_MAX) {
-		const RawImage& albedoImage = images[material.albedoIndex];
+	if (material.albedoTexIndex() > 0) {
+		const RawImage& albedoImage = images[material.albedoTexIndex()];
 		if (albedoImage.bytesPerPixel == 3 ||
 			albedoImage.bytesPerPixel == 4) {
 			Vector<uint8_t, 3> intColor = Vector<uint8_t, 3>(sampleImage(albedoImage, info.uv));
@@ -203,16 +203,16 @@ vec4 CPURayTracerRenderer::shadeHit(const Ray& ray, const RayCastResult& hit, co
 	albedoColor.y = std::pow(albedoColor.y, 2.2);
 	albedoColor.z = std::pow(albedoColor.z, 2.2);
 
-	float roughness = material.roughnessValue;
-	float metallic = material.metallicValue;
+	float roughness = material.roughnessValue();
+	float metallic = material.metallicValue();
 
-	if (material.roughnessIndex != UINT32_MAX) {
-		const RawImage& image = images[material.roughnessIndex];
+	if (material.roughnessTexIndex() > 0) {
+		const RawImage& image = images[material.roughnessTexIndex()];
 		uint8_t intColor = sampleImage(image, info.uv)[0];
 		roughness = intColor / 255.0f;
 	}
-	if (material.metallicIndex != UINT32_MAX) {
-		const RawImage& image = images[material.metallicIndex];
+	if (material.metallicTexIndex() > 0) {
+		const RawImage& image = images[material.metallicTexIndex()];
 		uint8_t intColor = sampleImage(image, info.uv)[0];
 		metallic = intColor / 255.0f;
 	}

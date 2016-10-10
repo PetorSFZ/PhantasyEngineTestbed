@@ -78,7 +78,7 @@ static void processNode(const char* basePath, Level& level, sfz::HashMap<std::st
 
 				level.textures.add(loadImage(basePath, convertToOSPath(tmpPath.C_Str()).str()));
 			}
-			materialTmp.albedoIndex = *indexPtr;
+			materialTmp.setAlbedoTexIndex(*indexPtr);
 		}
 
 		// Roughness (stored in map_Ns, specular highlight component)
@@ -98,7 +98,7 @@ static void processNode(const char* basePath, Level& level, sfz::HashMap<std::st
 
 				level.textures.add(loadImage(basePath, convertToOSPath(tmpPath.C_Str()).str()));
 			}
-			materialTmp.roughnessIndex = *indexPtr;
+			materialTmp.setRoughnessTexIndex(*indexPtr);
 		}
 
 		// Metallic (stored in map_Ka, ambient texture map)
@@ -118,7 +118,7 @@ static void processNode(const char* basePath, Level& level, sfz::HashMap<std::st
 
 				level.textures.add(loadImage(basePath, convertToOSPath(tmpPath.C_Str()).str()));
 			}
-			materialTmp.metallicIndex = *indexPtr;
+			materialTmp.setMetallicTexIndex(*indexPtr);
 		}
 
 		// Add material index
