@@ -42,7 +42,6 @@ public:
 	// Settings
 	Setting* rayCastPerfTest;
 	Setting* rayCastPerfTestPrimaryRays;
-	Setting* rayCastPerfTestPersistentThreads;
 
 	// The device properties of the used CUDA device
 	int glDeviceIndex;
@@ -91,7 +90,6 @@ public:
 		GlobalConfig& cfg = GlobalConfig::instance();
 		rayCastPerfTest = cfg.sanitizeBool("CudaTracer", "rayCastPerfTest", false);
 		rayCastPerfTestPrimaryRays = cfg.sanitizeBool("CudaTracer", "rayCastPerfTestPrimaryRays", false);
-		rayCastPerfTestPersistentThreads = cfg.sanitizeBool("CudaTracer", "rayCastPerfTestPersistentThreads", true);
 
 		// Initialize cuda with the same device that is bound to the OpenGL context
 		unsigned int deviceCount = 0;
@@ -365,15 +363,19 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB,
 	gl::setUniform(modelMatrixLoc, identityMatrix4<float>());
 	gl::setUniform(normalMatrixLoc, identityMatrix4<float>());
 
-	for (const GLModel& model : mImpl->staticGLModels) {
-		model.draw();
-	}
+	// Simply skip the draw calls if we are performance testing the ray cast kernel with primary rays
+	if (!(mImpl->rayCastPerfTest->boolValue() && mImpl->rayCastPerfTestPrimaryRays->boolValue())) {
+		
+		for (const GLModel& model : mImpl->staticGLModels) {
+			model.draw();
+		}
 
-	for (const DynObject& obj : objects) {
-		gl::setUniform(modelMatrixLoc, obj.transform);
-		gl::setUniform(normalMatrixLoc, inverse(transpose(obj.transform)));
-		const GLModel& model = mImpl->dynamicGLModels[obj.meshIndex];
-		model.draw();
+		for (const DynObject& obj : objects) {
+			gl::setUniform(modelMatrixLoc, obj.transform);
+			gl::setUniform(normalMatrixLoc, inverse(transpose(obj.transform)));
+			const GLModel& model = mImpl->dynamicGLModels[obj.meshIndex];
+			model.draw();
+		}
 	}
 
 	// Wait for OpenGL to finish rendering GBuffer before we start using it in Cuda
@@ -403,8 +405,6 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB,
 		rayCastInput.triangleVerts = mImpl->staticTriangleVertices.cudaTexture();
 		rayCastInput.numRays = mTargetResolution.x * mTargetResolution.y;
 		rayCastInput.rays = mImpl->rayBuffer.cudaPtr();
-
-		// TODO: Select kernel version here
 		launchRayCastKernel(rayCastInput, mImpl->rayResultBuffer.cudaPtr(), mImpl->glDeviceProperties);
 
 		// Write hits to screen
