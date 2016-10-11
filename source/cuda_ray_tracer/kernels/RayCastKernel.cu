@@ -175,7 +175,7 @@ static __global__ void zeroNextGlobalRayIndexKernel()
 }
 
 static __global__ void rayCastKernel(cudaTextureObject_t bvhNodes, cudaTextureObject_t triangleVerts,
-                                     const RayIn* __restrict__ rays, RayHit* rayHits, uint32_t numRays)
+                                     const RayIn* __restrict__ rays, RayHit* __restrict__ rayHits, uint32_t numRays)
 {
 	static_assert(sizeof(RayIn) == 32, "RayIn is padded");
 	static_assert(sizeof(RayHit) == 16, "RayHitOut is padded");
@@ -405,7 +405,7 @@ static __global__ void rayCastKernel(cudaTextureObject_t bvhNodes, cudaTextureOb
 
 static __global__ void rayCastNoPersistenceKernel(cudaTextureObject_t bvhNodes,
                                                   cudaTextureObject_t triangleVerts,
-                                                  const RayIn* __restrict__ rays, RayHit* rayHits, uint32_t numRays)
+                                                  const RayIn* __restrict__ rays, RayHit* __restrict__ rayHits, uint32_t numRays)
 {
 	static_assert(sizeof(RayIn) == 32, "RayIn is padded");
 	static_assert(sizeof(RayHit) == 16, "RayHitOut is padded");
