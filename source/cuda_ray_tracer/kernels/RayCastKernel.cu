@@ -68,7 +68,7 @@ struct AABBIsect final {
 	float tOut;
 };
 
-static __device__ AABBIsect rayVsAaabb(const vec3& invDir, const vec3& originDivDir, const vec3& min, const vec3& max, float tCurrMin, float tCurrMax)
+static __device__ AABBIsect rayVsAabb(const vec3& invDir, const vec3& originDivDir, const vec3& min, const vec3& max, float tCurrMin, float tCurrMax)
 {
 	//vec3 lo = (min - ray.origin) * ray.invDir;
 	//vec3 hi = (max - ray.origin) * ray.invDir;
@@ -287,9 +287,9 @@ static __global__ void rayCastKernel(cudaTextureObject_t bvhNodes, cudaTextureOb
 				BVHNode node = loadBvhNode(bvhNodes, currentNodeIndex);
 
 				// Perform AABB intersection tests and figure out which children we want to visit
-				AABBIsect lcHit = rayVsAaabb(invDir, originDivDir, node.leftChildAABBMin(),
+				AABBIsect lcHit = rayVsAabb(invDir, originDivDir, node.leftChildAABBMin(),
 				                             node.leftChildAABBMax(), tMin, resHitT);
-				AABBIsect rcHit = rayVsAaabb(invDir, originDivDir, node.rightChildAABBMin(),
+				AABBIsect rcHit = rayVsAabb(invDir, originDivDir, node.rightChildAABBMin(),
 				                             node.rightChildAABBMax(), tMin, resHitT);
 
 				bool visitLC = lcHit.tIn <= lcHit.tOut;
@@ -466,9 +466,9 @@ static __global__ void rayCastNoPersistenceKernel(cudaTextureObject_t bvhNodes,
 			BVHNode node = loadBvhNode(bvhNodes, currentNodeIndex);
 
 			// Perform AABB intersection tests and figure out which children we want to visit
-			AABBIsect lcHit = rayVsAaabb(invDir, originDivDir, node.leftChildAABBMin(),
+			AABBIsect lcHit = rayVsAabb(invDir, originDivDir, node.leftChildAABBMin(),
 				                            node.leftChildAABBMax(), tMin, resHitT);
-			AABBIsect rcHit = rayVsAaabb(invDir, originDivDir, node.rightChildAABBMin(),
+			AABBIsect rcHit = rayVsAabb(invDir, originDivDir, node.rightChildAABBMin(),
 				                            node.rightChildAABBMax(), tMin, resHitT);
 
 			bool visitLC = lcHit.tIn <= lcHit.tOut;
