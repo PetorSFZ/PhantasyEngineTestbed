@@ -209,7 +209,8 @@ static __global__ void rayCastKernel(cudaTextureObject_t bvhNodes, cudaTextureOb
 	uint32_t globalRayIndex;
 
 	// Temporary to store the final result in
-	RayHit resHit;
+	uint32_t resHitTriIndex;
+	float resHitT;
 
 	// Ray information
 	vec3 origin, dir, invDir, originDivDir;
@@ -270,8 +271,8 @@ static __global__ void rayCastKernel(cudaTextureObject_t bvhNodes, cudaTextureOb
 			currentNodeIndex = 0;
 
 			// Reset temporary
-			resHit.triangleIndex = ~0u;
-			resHit.t = ray.maxDist();
+			resHitTriIndex = ~0u;
+			resHitT = ray.maxDist();
 		}
 
 		// Traverse through the tree
@@ -287,9 +288,9 @@ static __global__ void rayCastKernel(cudaTextureObject_t bvhNodes, cudaTextureOb
 
 				// Perform AABB intersection tests and figure out which children we want to visit
 				AABBIsect lcHit = rayVsAaabb(invDir, originDivDir, node.leftChildAABBMin(),
-				                             node.leftChildAABBMax(), tMin, resHit.t);
+				                             node.leftChildAABBMax(), tMin, resHitT);
 				AABBIsect rcHit = rayVsAaabb(invDir, originDivDir, node.rightChildAABBMin(),
-				                             node.rightChildAABBMax(), tMin, resHit.t);
+				                             node.rightChildAABBMax(), tMin, resHitT);
 
 				bool visitLC = lcHit.tIn <= lcHit.tOut;
 				bool visitRC = rcHit.tIn <= rcHit.tOut;
@@ -355,11 +356,10 @@ static __global__ void rayCastKernel(cudaTextureObject_t bvhNodes, cudaTextureOb
 					float t, u, v;
 					rayVsTriangle(tri, origin, dir, t, u, v);
 
-					if (tMin <= t && t < resHit.t) {
-						resHit.t = t;
-						resHit.u = u;
-						resHit.v = v;
-
+					if (tMin <= t && t < resHitT) {
+						resHitTriIndex = uint32_t(triIndex);
+						resHitT = t;
+						
 						if (noResultOnlyHit) {
 							currentNodeIndex = SENTINEL;
 							break;
@@ -396,7 +396,20 @@ static __global__ void rayCastKernel(cudaTextureObject_t bvhNodes, cudaTextureOb
 		}
 
 		// Store rayhit in output array
-		rayHits[globalRayIndex] = resHit;
+		if (currentNodeIndex == SENTINEL) {
+
+			// Perform ray vs triangle test again, we "forgot" the uv coordinates in order to save
+			// some registers
+			TriangleVertices tri = loadTriangle(triangleVerts, resHitTriIndex);
+			RayHit hit;
+			hit.triangleIndex = resHitTriIndex;
+			hit.t = resHitT;
+			if (hit.triangleIndex != ~0u) {
+				rayVsTriangle(tri, origin, dir, hit.t, hit.u, hit.v);
+			}
+	
+			rayHits[globalRayIndex] = hit;
+		}
 	}
 }
 
@@ -438,9 +451,8 @@ static __global__ void rayCastNoPersistenceKernel(cudaTextureObject_t bvhNodes,
 	bool noResultOnlyHit = ray.noResultOnlyHit();
 
 	// Temporary to store the final result in
-	RayHit resHit;
-	resHit.triangleIndex = ~0u;
-	resHit.t = ray.maxDist();
+	uint32_t resHitTriIndex = ~0u;
+	float resHitT = ray.maxDist();
 
 	// Traverse through the tree
 	while (currentNodeIndex != SENTINEL) {
@@ -455,9 +467,9 @@ static __global__ void rayCastNoPersistenceKernel(cudaTextureObject_t bvhNodes,
 
 			// Perform AABB intersection tests and figure out which children we want to visit
 			AABBIsect lcHit = rayVsAaabb(invDir, originDivDir, node.leftChildAABBMin(),
-				                            node.leftChildAABBMax(), tMin, resHit.t);
+				                            node.leftChildAABBMax(), tMin, resHitT);
 			AABBIsect rcHit = rayVsAaabb(invDir, originDivDir, node.rightChildAABBMin(),
-				                            node.rightChildAABBMax(), tMin, resHit.t);
+				                            node.rightChildAABBMax(), tMin, resHitT);
 
 			bool visitLC = lcHit.tIn <= lcHit.tOut;
 			bool visitRC = rcHit.tIn <= rcHit.tOut;
@@ -523,11 +535,10 @@ static __global__ void rayCastNoPersistenceKernel(cudaTextureObject_t bvhNodes,
 				float t, u, v;
 				rayVsTriangle(tri, origin, dir, t, u, v);
 
-				if (tMin <= t && t < resHit.t) {
-					resHit.t = t;
-					resHit.u = u;
-					resHit.v = v;
-
+				if (tMin <= t && t < resHitT) {
+					resHitTriIndex = uint32_t(triIndex);
+					resHitT = t;
+					
 					if (noResultOnlyHit) {
 						currentNodeIndex = SENTINEL;
 						break;
@@ -554,8 +565,18 @@ static __global__ void rayCastNoPersistenceKernel(cudaTextureObject_t bvhNodes,
 		}
 	}
 
+	// Perform ray vs triangle test again, we "forgot" the uv coordinates in order to save
+	// some registers
+	TriangleVertices tri = loadTriangle(triangleVerts, resHitTriIndex);
+	RayHit hit;
+	hit.triangleIndex = resHitTriIndex;
+	hit.t = resHitT;
+	if (hit.triangleIndex != ~0u) {
+		rayVsTriangle(tri, origin, dir, hit.t, hit.u, hit.v);
+	}
+
 	// Store rayhit in output array
-	rayHits[rayIdx] = resHit;
+	rayHits[rayIdx] = hit;
 }
 
 // RayCastKernel launch function
