@@ -8,6 +8,8 @@
 #include "CudaHelpers.hpp"
 #include "CudaSfzVectorCompatibility.cuh"
 
+#include "math_constants.h"
+
 namespace phe {
 
 using sfz::vec2;
@@ -88,16 +90,9 @@ static __device__ AABBIsect rayVsAaabb(const vec3& invDir, const vec3& originDiv
 // Line vs triangle intersection test
 // ------------------------------------------------------------------------------------------------
 
-struct TriangleHit final {
-	bool hit;
-	float t, u, v;
-};
-
 // See page 750 in Real-Time Rendering 3
-static __device__ TriangleHit rayVsTriangle(const TriangleVertices& tri, const vec3& origin, const vec3& dir) noexcept
+static __device__ void rayVsTriangle(const TriangleVertices& tri, const vec3& origin, const vec3& dir, float& t, float& u, float& v) noexcept
 {
-	TriangleHit result;
-
 	const float EPS = 0.00001f;
 	vec3 p0 = tri.v0.xyz;
 	vec3 p1 = tri.v1.xyz;
@@ -108,8 +103,8 @@ static __device__ TriangleHit rayVsTriangle(const TriangleVertices& tri, const v
 	vec3 q = cross(dir, e2);
 	float a = dot(e1, q);
 	if (-EPS < a && a < EPS) {
-		result.hit = false;
-		return result;
+		t = CUDART_INF_F;
+		return;
 	}
 
 	// Backface culling here?
@@ -117,26 +112,20 @@ static __device__ TriangleHit rayVsTriangle(const TriangleVertices& tri, const v
 
 	float f = 1.0f / a;
 	vec3 s = origin - p0;
-	float u = f * dot(s, q);
+	u = f * dot(s, q);
 	if (u < 0.0f) {
-		result.hit = false;
-		return result;
+		t = CUDART_INF_F;
+		return;
 	}
 
 	vec3 r = cross(s, e1);
-	float v = f * dot(dir, r);
+	v = f * dot(dir, r);
 	if (v < 0.0f || (u + v) > 1.0f) {
-		result.hit = false;
-		return result;
+		t = CUDART_INF_F;
+		return;
 	}
 
-	float t = f * dot(e2, r);
-
-	result.hit = true;
-	result.t = t;
-	result.u = u;
-	result.v = v;
-	return result;
+	t = f * dot(e2, r);
 }
 
 // Helper functions
@@ -362,13 +351,14 @@ static __global__ void rayCastKernel(cudaTextureObject_t bvhNodes, cudaTextureOb
 				int32_t triIndex = ~leafIndex; // Get actual index
 				while (true) {
 					TriangleVertices tri = loadTriangle(triangleVerts, triIndex);
-					TriangleHit hit = rayVsTriangle(tri, origin, dir);
 
-					if (hit.hit && hit.t < resHit.t && tMin <= hit.t) {
-						resHit.triangleIndex = uint32_t(triIndex);
-						resHit.t = hit.t;
-						resHit.u = hit.u;
-						resHit.v = hit.v;
+					float t, u, v;
+					rayVsTriangle(tri, origin, dir, t, u, v);
+
+					if (tMin <= t && t < resHit.t) {
+						resHit.t = t;
+						resHit.u = u;
+						resHit.v = v;
 
 						if (noResultOnlyHit) {
 							currentNodeIndex = SENTINEL;
