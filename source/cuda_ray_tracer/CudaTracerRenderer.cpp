@@ -42,6 +42,7 @@ public:
 	// Settings
 	Setting* rayCastPerfTest;
 	Setting* rayCastPerfTestPrimaryRays;
+	Setting* rayCastPerfTestPersistentThreads;
 
 	// The device properties of the used CUDA device
 	int glDeviceIndex;
@@ -90,6 +91,7 @@ public:
 		GlobalConfig& cfg = GlobalConfig::instance();
 		rayCastPerfTest = cfg.sanitizeBool("CudaTracer", "rayCastPerfTest", false);
 		rayCastPerfTestPrimaryRays = cfg.sanitizeBool("CudaTracer", "rayCastPerfTestPrimaryRays", false);
+		rayCastPerfTestPersistentThreads = cfg.sanitizeBool("CudaTracer", "rayCastPerfTesetPersistentThreads", true);
 
 		// Initialize cuda with the same device that is bound to the OpenGL context
 		unsigned int deviceCount = 0;
@@ -405,7 +407,12 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB,
 		rayCastInput.triangleVerts = mImpl->staticTriangleVertices.cudaTexture();
 		rayCastInput.numRays = mTargetResolution.x * mTargetResolution.y;
 		rayCastInput.rays = mImpl->rayBuffer.cudaPtr();
-		launchRayCastKernel(rayCastInput, mImpl->rayResultBuffer.cudaPtr(), mImpl->glDeviceProperties);
+
+		if (mImpl->rayCastPerfTestPersistentThreads->boolValue()) {
+			launchRayCastKernel(rayCastInput, mImpl->rayResultBuffer.cudaPtr(), mImpl->glDeviceProperties);
+		} else {
+			launchRayCastNoPersistenceKernel(rayCastInput, mImpl->rayResultBuffer.cudaPtr(), mImpl->glDeviceProperties);
+		}
 
 		// Write hits to screen
 		launchWriteRayHitsToScreenKernel(mImpl->cudaResultTex.cudaSurface(), mTargetResolution,

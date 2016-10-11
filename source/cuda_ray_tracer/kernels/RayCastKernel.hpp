@@ -56,6 +56,9 @@ struct RayCastKernelInput final {
 void launchRayCastKernel(const RayCastKernelInput& input, RayHit* rayResults,
                          const cudaDeviceProp& deviceProperties) noexcept;
 
+void launchRayCastNoPersistenceKernel(const RayCastKernelInput& input, RayHit* rayResults,
+                                      const cudaDeviceProp& deviceProperties) noexcept;
+
 // Secondary helper kernels (for debugging and profiling)
 // ------------------------------------------------------------------------------------------------
 

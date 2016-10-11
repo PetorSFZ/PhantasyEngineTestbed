@@ -175,7 +175,7 @@ static __global__ void zeroNextGlobalRayIndexKernel()
 }
 
 static __global__ void rayCastKernel(cudaTextureObject_t bvhNodes, cudaTextureObject_t triangleVerts,
-                              const RayIn* rays, RayHit* rayHits, uint32_t numRays)
+                                     const RayIn* rays, RayHit* rayHits, uint32_t numRays)
 {
 	static_assert(sizeof(RayIn) == 32, "RayIn is padded");
 	static_assert(sizeof(RayHit) == 16, "RayHitOut is padded");
@@ -400,6 +400,164 @@ static __global__ void rayCastKernel(cudaTextureObject_t bvhNodes, cudaTextureOb
 	}
 }
 
+// RayCastKernel without thread persistence
+// ------------------------------------------------------------------------------------------------
+
+static __global__ void rayCastNoPersistenceKernel(cudaTextureObject_t bvhNodes,
+                                                  cudaTextureObject_t triangleVerts,
+                                                  const RayIn* rays, RayHit* rayHits, uint32_t numRays)
+{
+	static_assert(sizeof(RayIn) == 32, "RayIn is padded");
+	static_assert(sizeof(RayHit) == 16, "RayHitOut is padded");
+	
+
+	// Constants
+	const int32_t SENTINEL = int32_t(0x7FFFFFFF);
+
+	// Calculate ray index in array
+	uint32_t rayIdx = blockDim.x * blockIdx.x + threadIdx.x;
+	if (rayIdx >= numRays) return;
+
+	// Stack holding node indices
+	int32_t nodeIndexStack[RAY_CAST_KERNEL_STACK_SIZE];
+	nodeIndexStack[0] = SENTINEL;
+
+	// Index to the current topmost element in the stack
+	int32_t stackTopIndex = 0;
+	
+	// Holds the index to the current node to check out
+	int32_t currentNodeIndex = 0;
+
+	// Retrieve ray
+	const RayIn ray = rays[rayIdx];
+	vec3 origin = ray.origin();
+	vec3 dir = ray.dir();
+	vec3 invDir = vec3(1.0f) / dir;
+	vec3 originDivDir = origin * invDir;
+	float tMin = 0.0001f;
+	bool noResultOnlyHit = ray.noResultOnlyHit();
+
+	// Temporary to store the final result in
+	RayHit resHit;
+	resHit.triangleIndex = ~0u;
+	resHit.t = ray.maxDist();
+
+	// Traverse through the tree
+	while (currentNodeIndex != SENTINEL) {
+		
+		// Traverse nodes until all threads in warp have found leaf
+		int32_t leafIndex = 1; // Positive, so not a leaf
+		// If currentIndex is negative we have a leaf node
+		while (currentNodeIndex != SENTINEL && currentNodeIndex >= 0) {
+			
+			// Load inner node pointed at by currentIndex
+			BVHNode node = loadBvhNode(bvhNodes, currentNodeIndex);
+
+			// Perform AABB intersection tests and figure out which children we want to visit
+			AABBIsect lcHit = rayVsAaabb(invDir, originDivDir, node.leftChildAABBMin(),
+				                            node.leftChildAABBMax(), tMin, resHit.t);
+			AABBIsect rcHit = rayVsAaabb(invDir, originDivDir, node.rightChildAABBMin(),
+				                            node.rightChildAABBMax(), tMin, resHit.t);
+
+			bool visitLC = lcHit.tIn <= lcHit.tOut;
+			bool visitRC = rcHit.tIn <= rcHit.tOut;
+
+			// If we don't need to visit any children we simply pop a new index from the stack
+			if (!visitLC && !visitRC) {
+				currentNodeIndex = nodeIndexStack[stackTopIndex];
+				stackTopIndex -= 1;
+			}
+
+			// If we need to visit at least one child
+			else {
+				int32_t lcIndex = node.leftChildIndexRaw();
+				int32_t rcIndex = node.rightChildIndexRaw();
+
+				// Put left child in currentIndex if we need to visit it, otherwise right child
+				currentNodeIndex = visitLC ? lcIndex : rcIndex;
+
+				// If we need to visit both children we push the furthest one away to the stack
+				if (visitLC && visitRC) {
+					stackTopIndex += 1;
+					if (lcHit.tIn > rcHit.tIn) {
+						nodeIndexStack[stackTopIndex] = lcIndex;
+						currentNodeIndex = rcIndex;
+					} else {
+						nodeIndexStack[stackTopIndex] = rcIndex;
+					}
+				}
+			}
+
+			// If currentIndex is a leaf and we have not yet found a leaf index
+			if (currentNodeIndex < 0 && leafIndex >= 0) {
+				leafIndex = currentNodeIndex; // Store leaf index for later processing
+
+				// Pop index from stack
+				// If this is also a leaf index we will process it together with leafIndex later
+				currentNodeIndex = nodeIndexStack[stackTopIndex];
+				stackTopIndex -= 1;
+			}
+
+			// Exit loop if all threads in warp have found at least one triangle
+			//	if (!__any(leafIndex < 0)) break;
+			// Equivalent inline ptx:
+			unsigned int mask;
+			asm(R"({
+			.reg .pred p;
+			setp.ge.s32 p, %1, 0;
+			vote.ballot.b32 %0, p;
+			})"
+			: "=r"(mask)
+			: "r"(leafIndex));
+			if (!mask) break;
+		}
+
+		// Process leafs found
+		while (leafIndex < 0) {
+
+			// Go through all triangles in leaf
+			int32_t triIndex = ~leafIndex; // Get actual index
+			while (true) {
+				TriangleVertices tri = loadTriangle(triangleVerts, triIndex);
+
+				float t, u, v;
+				rayVsTriangle(tri, origin, dir, t, u, v);
+
+				if (tMin <= t && t < resHit.t) {
+					resHit.t = t;
+					resHit.u = u;
+					resHit.v = v;
+
+					if (noResultOnlyHit) {
+						currentNodeIndex = SENTINEL;
+						break;
+					}
+				}
+
+				// Check if triangle was marked as last one
+				if (tri.v0.w < 0) {
+					break;
+				}
+				triIndex += 1;
+			}
+
+			// currentIndex could potentially contain another leaf we want to process,
+			// otherwise this will end the loop
+			leafIndex = currentNodeIndex;
+
+			// If currentIndex contained a leaf it will be processed, so we pop a new element
+			// from the stack into it
+			if (currentNodeIndex < 0) {
+				currentNodeIndex = nodeIndexStack[stackTopIndex];
+				stackTopIndex -= 1;
+			}
+		}
+	}
+
+	// Store rayhit in output array
+	rayHits[rayIdx] = resHit;
+}
+
 // RayCastKernel launch function
 // ------------------------------------------------------------------------------------------------
 
@@ -433,6 +591,18 @@ void launchRayCastKernel(const RayCastKernelInput& input, RayHit* rayResults,
 	// Probably not necessary to synchronize here
 	//CHECK_CUDA_ERROR(cudaGetLastError());
 	//CHECK_CUDA_ERROR(cudaDeviceSynchronize());
+}
+
+void launchRayCastNoPersistenceKernel(const RayCastKernelInput& input, RayHit* rayResults,
+                                      const cudaDeviceProp& deviceProperties) noexcept
+{
+	uint32_t raysPerBlock = 256;
+	uint32_t numBlocks = (input.numRays / raysPerBlock) + 1;
+
+	rayCastNoPersistenceKernel<<<numBlocks, raysPerBlock>>>(input.bvhNodes, input.triangleVerts,
+	                                                        input.rays, rayResults, input.numRays);
+	CHECK_CUDA_ERROR(cudaGetLastError());
+	CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 }
 
 // Secondary helper kernels (for debugging and profiling)
