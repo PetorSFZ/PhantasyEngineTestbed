@@ -91,7 +91,7 @@ public:
 		GlobalConfig& cfg = GlobalConfig::instance();
 		rayCastPerfTest = cfg.sanitizeBool("CudaTracer", "rayCastPerfTest", false);
 		rayCastPerfTestPrimaryRays = cfg.sanitizeBool("CudaTracer", "rayCastPerfTestPrimaryRays", false);
-		rayCastPerfTestPersistentThreads = cfg.sanitizeBool("CudaTracer", "rayCastPerfTesetPersistentThreads", true);
+		rayCastPerfTestPersistentThreads = cfg.sanitizeBool("CudaTracer", "rayCastPerfTestPersistentThreads", true);
 
 		// Initialize cuda with the same device that is bound to the OpenGL context
 		unsigned int deviceCount = 0;
@@ -385,6 +385,9 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB,
 
 	// Temporary cuda kernel
 	// --------------------------------------------------------------------------------------------
+
+	sfz_assert_release((mTargetResolution.x % 8) == 0);
+	sfz_assert_release((mTargetResolution.y % 8) == 0);
 
 	// Ray cast performance test (don't touch)
 	if (mImpl->rayCastPerfTest->boolValue()) {
