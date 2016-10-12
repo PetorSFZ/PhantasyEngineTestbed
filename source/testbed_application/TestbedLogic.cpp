@@ -29,6 +29,8 @@ TestbedLogic::TestbedLogic(DynArray<RendererAndStatus>&& renderers, uint32_t ren
 	mCurrentRenderer(rendererIndex)
 {
 	triangleObjectHandle = 0;
+	instanceHandles.add(spawnObjectInstance(1, level, identityMatrix4<float>()));
+	objectPositions.put(0, vec3(0, 0, 0));
 }
 
 // TestbedLogic: Overriden methods from GameLogic

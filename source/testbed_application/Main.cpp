@@ -180,6 +180,7 @@ int main(int, char**)
 
 	// Add triangle mesh to scene
 	loadDynObject(modelsPath.str, "sphere.obj", *level);
+	loadDynObject(modelsPath.str, "skysphere/skysphere.obj", *level, scalingMatrix4(10.0f));
 
 	// Run gameloop
 	sfz::runGameLoop(engine.window(), SharedPtr<BaseScreen>(sfz_new<GameScreen>(
