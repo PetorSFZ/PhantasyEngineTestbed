@@ -22,7 +22,6 @@ static __device__ vec3 linearize(vec3 rgbGamma) noexcept
 	return rgbGamma;
 }
 
-
 struct GBufferValue final {
 	vec3 pos;
 	vec3 normal;

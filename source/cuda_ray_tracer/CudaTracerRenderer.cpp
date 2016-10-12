@@ -29,6 +29,7 @@
 #include "kernels/PetorShading.hpp"
 #include "kernels/ProcessGBufferKernel.hpp"
 #include "kernels/RayCastKernel.hpp"
+#include "kernels/MaterialKernel.hpp"
 
 namespace phe {
 
@@ -86,6 +87,7 @@ public:
 	const uint32_t NUM_RAYS_PER_PIXEL_PER_BATCH = 8u;
 	CudaBuffer<RayIn> rayBuffer;
 	CudaBuffer<RayHit> rayResultBuffer;
+	CudaBuffer<PathState> pathStates;
 
 	CudaTracerRendererImpl() noexcept
 	{
@@ -94,7 +96,7 @@ public:
 		rayCastPerfTest = cfg.sanitizeBool("CudaTracer", "rayCastPerfTest", false);
 		rayCastPerfTestPrimaryRays = cfg.sanitizeBool("CudaTracer", "rayCastPerfTestPrimaryRays", false);
 		rayCastPerfTestPersistentThreads = cfg.sanitizeBool("CudaTracer", "rayCastPerfTestPersistentThreads", true);
-		petorShading = cfg.sanitizeBool("CudaTracer", "petorShading", true);
+		petorShading = cfg.sanitizeBool("CudaTracer", "petorShading", false);
 
 		// Initialize cuda with the same device that is bound to the OpenGL context
 		unsigned int deviceCount = 0;
@@ -459,29 +461,34 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB,
 
 	// Normal path
 	else {
-		// Feel free to change ANYTHING here, except for "launchWriteRayHitsToScreenKernel()"
-		// which is actually a debug function for profiling the ray cast kernel. Ideally it
-		// should not be used for this path at all.
+		launchInitPathStatesKernel(mTargetResolution, mImpl->pathStates.cudaPtr());
 
-		CreateReflectRaysInput reflectRaysInput;
-		reflectRaysInput.camPos = mCamera.pos();
-		reflectRaysInput.res = mTargetResolution;
-		reflectRaysInput.posTex = mImpl->gbuffer.positionSurfaceCuda();
-		reflectRaysInput.normalTex = mImpl->gbuffer.normalSurfaceCuda();
-		reflectRaysInput.albedoTex = mImpl->gbuffer.albedoSurfaceCuda();
-		reflectRaysInput.materialTex = mImpl->gbuffer.materialSurfaceCuda();
-		launchCreateReflectRaysKernel(reflectRaysInput, mImpl->rayBuffer.cudaPtr());
-	
-		RayCastKernelInput rayCastInput;
-		rayCastInput.bvhNodes = mImpl->staticBvhNodes.cudaTexture();
-		rayCastInput.triangleVerts = mImpl->staticTriangleVertices.cudaTexture();
-		rayCastInput.numRays = mTargetResolution.x * mTargetResolution.y;
-		rayCastInput.rays = mImpl->rayBuffer.cudaPtr();
-		launchRayCastKernel(rayCastInput, mImpl->rayResultBuffer.cudaPtr(), mImpl->glDeviceProperties);
+		GBufferMaterialKernelInput gBufferMaterialKernelInput;
+		gBufferMaterialKernelInput.res = mTargetResolution;
+		gBufferMaterialKernelInput.pathStates = mImpl->pathStates.cudaPtr();
+		gBufferMaterialKernelInput.shadowRays = mImpl->rayBuffer.cudaPtr();
+		gBufferMaterialKernelInput.sphereLights = mImpl->staticSphereLights.cudaPtr();
+		gBufferMaterialKernelInput.numSphereLights = mImpl->staticSphereLights.size();
+		gBufferMaterialKernelInput.posTex = mImpl->gbuffer.positionSurfaceCuda();
+		gBufferMaterialKernelInput.normalTex = mImpl->gbuffer.normalSurfaceCuda();
+		gBufferMaterialKernelInput.albedoTex = mImpl->gbuffer.albedoSurfaceCuda();
+		gBufferMaterialKernelInput.materialTex = mImpl->gbuffer.materialSurfaceCuda();
+		launchGBufferMaterialKernel(gBufferMaterialKernelInput);
 
-		// TODO: This function should really not be used here, only in ray cast profiling
-		launchWriteRayHitsToScreenKernel(mImpl->cudaResultTex.cudaSurface(), mTargetResolution,
-		                                 mImpl->rayResultBuffer.cudaPtr());
+		RayCastKernelInput shadowRayCastInput;
+		shadowRayCastInput.bvhNodes = mImpl->staticBvhNodes.cudaTexture();
+		shadowRayCastInput.triangleVerts = mImpl->staticTriangleVertices.cudaTexture();
+		shadowRayCastInput.numRays = mTargetResolution.x * mTargetResolution.y;
+		shadowRayCastInput.rays = mImpl->rayBuffer.cudaPtr();
+		launchRayCastKernel(shadowRayCastInput, mImpl->rayResultBuffer.cudaPtr(), mImpl->glDeviceProperties);
+
+		WriteResultKernelInput writeResultInput;
+		writeResultInput.surface = mImpl->cudaResultTex.cudaSurface();
+		writeResultInput.res = mTargetResolution;
+		writeResultInput.rayHits = mImpl->rayResultBuffer.cudaPtr();
+		writeResultInput.pathStates = mImpl->pathStates.cudaPtr();
+		writeResultInput.shadowRays = mImpl->rayBuffer.cudaPtr();
+		launchWriteResultKernel(writeResultInput);
 	}
 
 	// Transfer result to resultFB
@@ -545,6 +552,8 @@ void CudaTracerRenderer::targetResolutionUpdated() noexcept
 	mImpl->rayBuffer.create(numRaysPerBatch);
 	mImpl->rayResultBuffer.destroy();
 	mImpl->rayResultBuffer.create(numRaysPerBatch);
+	mImpl->pathStates.destroy();
+	mImpl->pathStates.create(numRaysPerBatch);
 }
 
 } // namespace phe
