@@ -26,6 +26,7 @@
 #include "CudaGLInterop.hpp"
 #include "CudaHelpers.hpp"
 #include "CudaTextureBuffer.hpp"
+#include "kernels/PetorShading.hpp"
 #include "kernels/ProcessGBufferKernel.hpp"
 #include "kernels/RayCastKernel.hpp"
 
@@ -43,6 +44,7 @@ public:
 	Setting* rayCastPerfTest;
 	Setting* rayCastPerfTestPrimaryRays;
 	Setting* rayCastPerfTestPersistentThreads;
+	Setting* petorShading;
 
 	// The device properties of the used CUDA device
 	int glDeviceIndex;
@@ -81,7 +83,7 @@ public:
 	CudaBuffer<SphereLight> staticSphereLights;
 
 	// Raycast input and output buffers
-	const uint32_t NUM_RAYS_PER_PIXEL_PER_BATCH = 1u;
+	const uint32_t NUM_RAYS_PER_PIXEL_PER_BATCH = 8u;
 	CudaBuffer<RayIn> rayBuffer;
 	CudaBuffer<RayHit> rayResultBuffer;
 
@@ -92,6 +94,7 @@ public:
 		rayCastPerfTest = cfg.sanitizeBool("CudaTracer", "rayCastPerfTest", false);
 		rayCastPerfTestPrimaryRays = cfg.sanitizeBool("CudaTracer", "rayCastPerfTestPrimaryRays", false);
 		rayCastPerfTestPersistentThreads = cfg.sanitizeBool("CudaTracer", "rayCastPerfTestPersistentThreads", true);
+		petorShading = cfg.sanitizeBool("CudaTracer", "petorShading", true);
 
 		// Initialize cuda with the same device that is bound to the OpenGL context
 		unsigned int deviceCount = 0;
@@ -420,6 +423,38 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB,
 		// Write hits to screen
 		launchWriteRayHitsToScreenKernel(mImpl->cudaResultTex.cudaSurface(), mTargetResolution,
 		                                 mImpl->rayResultBuffer.cudaPtr());
+	}
+
+	// Petorshading path
+	else if (mImpl->petorShading->boolValue()) {
+		
+		ProcessGBufferGenRaysInput input1;
+		input1.camPos = mCamera.pos();
+		input1.res = mTargetResolution;
+		input1.posTex = mImpl->gbuffer.positionSurfaceCuda();
+		input1.normalTex = mImpl->gbuffer.normalSurfaceCuda();
+		input1.albedoTex = mImpl->gbuffer.albedoSurfaceCuda();
+		input1.materialTex = mImpl->gbuffer.materialSurfaceCuda();
+		launchProcessGBufferGenRaysKernel(input1, mImpl->rayBuffer.cudaPtr());
+
+		RayCastKernelInput rayCastInput;
+		rayCastInput.bvhNodes = mImpl->staticBvhNodes.cudaTexture();
+		rayCastInput.triangleVerts = mImpl->staticTriangleVertices.cudaTexture();
+		rayCastInput.numRays = mTargetResolution.x * mTargetResolution.y;
+		rayCastInput.rays = mImpl->rayBuffer.cudaPtr();
+		launchRayCastKernel(rayCastInput, mImpl->rayResultBuffer.cudaPtr(), mImpl->glDeviceProperties);
+		
+		GatherRaysShadeKernelInput input2;
+		input2.camPos = mCamera.pos();
+		input2.res = mTargetResolution;
+		input2.posTex = mImpl->gbuffer.positionSurfaceCuda();
+		input2.normalTex = mImpl->gbuffer.normalSurfaceCuda();
+		input2.albedoTex = mImpl->gbuffer.albedoSurfaceCuda();
+		input2.materialTex = mImpl->gbuffer.materialSurfaceCuda();
+		input2.rayResults = mImpl->rayResultBuffer.cudaPtr();
+		input2.staticSphereLights = mImpl->staticSphereLights.cudaPtr();
+		input2.numStaticSphereLights = mImpl->staticSphereLights.size();
+		launchGatherRaysShadeKernel(input2, mImpl->cudaResultTex.cudaSurface());
 	}
 
 	// Normal path

@@ -11,6 +11,9 @@ namespace phe {
 using sfz::vec3;
 using sfz::vec4;
 
+// Helper functions
+// ------------------------------------------------------------------------------------------------
+
 // Assumes both parameters are normalized
 static __device__ vec3 reflect(vec3 in, vec3 normal) noexcept
 {
