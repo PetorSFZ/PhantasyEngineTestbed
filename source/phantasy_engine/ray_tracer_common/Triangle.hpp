@@ -7,8 +7,9 @@
 
 namespace phe {
 
-using sfz::vec3;
 using sfz::vec2;
+using sfz::vec3;
+using sfz::vec4;
 
 // Triangle
 // ------------------------------------------------------------------------------------------------

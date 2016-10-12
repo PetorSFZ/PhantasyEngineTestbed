@@ -38,6 +38,48 @@ static __device__ void writeResult(cudaSurfaceObject_t result, vec2i loc, vec4 v
 	surf2Dwrite(toFloat4(value), result, loc.x * sizeof(float4), loc.y);
 }
 
+// Assumes both parameters are normalized
+static __device__ vec3 reflect(vec3 in, vec3 normal) noexcept
+{
+	return in - 2.0f * dot(normal, in) * normal;
+}
+
+struct RayHitInfo final {
+	vec3 pos;
+	vec3 normal;
+	vec2 uv;
+	uint32_t materialIndex;
+};
+
+static __device__ RayHitInfo interpretRayHit(const TriangleData* __restrict__ triDatas,
+                                             const RayHit& hit, const RayIn& ray) noexcept
+{
+	const TriangleData& data = triDatas[hit.triangleIndex];
+
+	// Retrieving position
+	RayHitInfo info;
+	info.pos = ray.origin() + ray.dir() * hit.t;
+
+	// Interpolating normal
+	float u = hit.u;
+	float v = hit.v;
+	vec3 n0 = data.n0;
+	vec3 n1 = data.n1;
+	vec3 n2 = data.n2;
+	info.normal = normalize(n0 + (n1 - n0) * u + (n2 - n0) * v); // TODO: FMA lerp?
+
+	// Interpolating uv coordinate
+	vec2 uv0 = data.uv0;
+	vec2 uv1 = data.uv1;
+	vec2 uv2 = data.uv2;
+	info.uv = uv0 + (uv1 - uv0) * u + (uv2 - uv0) * v; // TODO: FMA lerp?
+
+	// Material index
+	info.materialIndex = data.materialIndex;
+
+	return info;
+}
+
 // PBR shading functions
 // ------------------------------------------------------------------------------------------------
 
@@ -80,10 +122,62 @@ static __device__ vec3 fresnelSchlick(float nDotL, vec3 f0) noexcept
 // ProccessGBufferGenRaysKernel
 // ------------------------------------------------------------------------------------------------
 
+static __global__ void processGBufferGenRaysKernel(ProcessGBufferGenRaysInput input, vec2i res,
+                                                   RayIn* __restrict__ raysOut)
+{
+	// Calculate surface coordinates
+	vec2i loc = vec2i(blockIdx.x * blockDim.x + threadIdx.x,
+	                  blockIdx.y * blockDim.y + threadIdx.y);
+	if (loc.x >= res.x || loc.y >= res.y) return;
+
+	// Calculate coordinates for the 4 pixel block
+	vec2i loc1 = loc * 2;
+	vec2i loc2 = loc1 + vec2i(1, 0);
+	vec2i loc3 = loc1 + vec2i(0, 1);
+	vec2i loc4 = loc1 + vec2i(1, 1);
+
+	// Read GBuffer values for the 4 pixel block
+	GBufferValue gval1 = readGBuffer(input.posTex, input.normalTex, input.albedoTex,
+	                                input.materialTex, loc1);
+	GBufferValue gval2 = readGBuffer(input.posTex, input.normalTex, input.albedoTex,
+	                                input.materialTex, loc2);
+	GBufferValue gval3 = readGBuffer(input.posTex, input.normalTex, input.albedoTex,
+	                                input.materialTex, loc3);
+	GBufferValue gval4 = readGBuffer(input.posTex, input.normalTex, input.albedoTex,
+	                                input.materialTex, loc4);
+
+	// Take average or now, but should probably do something stochastic.
+	// Maybe ignore values if they are very far away from each other
+	vec3 pos = (gval1.pos + gval2.pos + gval3.pos + gval4.pos) / 4.0f;
+	vec3 normal = normalize((gval1.normal + gval2.normal + gval3.normal + gval4.normal) / 4.0f);
+
+	// Calculate reflect direction
+	vec3 camDir = normalize(pos - input.camPos);
+	vec3 reflected = reflect(camDir, normal);
+
+	// Create ray
+	RayIn ray;
+	ray.setDir(reflected);
+	ray.setOrigin(pos);
+	ray.setNoResultOnlyHit(false);
+	ray.setMaxDist(FLT_MAX);
+
+	// Write ray to array
+	uint32_t id = loc.y * res.x + loc.x;
+	raysOut[id] = ray;
+}
+
 void launchProcessGBufferGenRaysKernel(const ProcessGBufferGenRaysInput& input,
                                        RayIn* raysOut) noexcept
 {
+	vec2i rayTracingRes = input.res / 2;
+	dim3 threadsPerBlock(8, 8);
+	dim3 numBlocks((rayTracingRes.x + threadsPerBlock.x - 1) / threadsPerBlock.x,
+	               (rayTracingRes.y + threadsPerBlock.y - 1) / threadsPerBlock.y);
 
+	processGBufferGenRaysKernel<<<numBlocks,threadsPerBlock>>>(input, rayTracingRes, raysOut);
+	CHECK_CUDA_ERROR(cudaGetLastError());
+	CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 }
 
 // GatherRaysShadeKernel
@@ -164,6 +258,26 @@ static __global__ void gatherRaysShadeKernel(GatherRaysShadeKernelInput input,
 		vec3 res = (diffuse + specular) * lightContrib * nDotL;
 		color += res;
 	}
+
+	// Rayhit
+	vec2i rayLoc = loc / 2;
+	vec2i rayRes = input.res / 2;
+	uint32_t id = rayLoc.y * rayRes.x + rayLoc.x;
+	RayHit hit = input.rayResults[id];
+	
+	if (hit.triangleIndex != ~0u) {
+		RayIn ray = input.castRays[id];
+		RayHitInfo info = interpretRayHit(input.staticTriangleDatas, hit, ray);
+
+		const Material& m = input.materials[info.materialIndex];
+		cudaTextureObject_t albedoTex = input.textures[m.albedoTexIndex()];
+		uchar4 albedoTmp = tex2D<uchar4>(albedoTex, info.uv.x, info.uv.y);
+		vec3 albedo = vec3(albedoTmp.x, albedoTmp.y, albedoTmp.z) / 255.0f;
+
+		color += 0.2f * (1.0f - roughness) * albedo;
+	}
+
+	
 
 	writeResult(resultOut, loc, vec4(color, 1.0));
 
