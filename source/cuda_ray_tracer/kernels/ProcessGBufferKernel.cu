@@ -4,42 +4,12 @@
 
 #include "CudaHelpers.hpp"
 #include "CudaSfzVectorCompatibility.cuh"
+#include "GBufferRead.cuh"
 
 namespace phe {
 
 using sfz::vec3;
 using sfz::vec4;
-
-// Helper functions
-// ------------------------------------------------------------------------------------------------
-
-struct GBufferValue final {
-	vec3 pos;
-	vec3 normal;
-	vec3 albedo;
-	float roughness;
-	float metallic;
-};
-
-static __device__ GBufferValue readGBuffer(cudaSurfaceObject_t posTex,
-                                           cudaSurfaceObject_t normalTex,
-                                           cudaSurfaceObject_t albedoTex,
-                                           cudaSurfaceObject_t materialTex,
-                                           vec2i loc) noexcept
-{
-	float4 posTmp = surf2Dread<float4>(posTex, loc.x * sizeof(float4), loc.y);
-	float4 normalTmp = surf2Dread<float4>(normalTex, loc.x * sizeof(float4), loc.y);
-	uchar4 albedoTmp = surf2Dread<uchar4>(albedoTex, loc.x * sizeof(uchar4), loc.y);
-	float4 materialTmp = surf2Dread<float4>(materialTex, loc.x * sizeof(float4), loc.y);
-
-	GBufferValue tmp;
-	tmp.pos = vec3(posTmp.x, posTmp.y, posTmp.z);
-	tmp.normal = vec3(normalTmp.x, normalTmp.y, normalTmp.z);
-	tmp.albedo = vec3(albedoTmp.x, albedoTmp.y, albedoTmp.z);
-	tmp.roughness = materialTmp.x;
-	tmp.metallic = materialTmp.y;
-	return tmp;
-}
 
 // Assumes both parameters are normalized
 static __device__ vec3 reflect(vec3 in, vec3 normal) noexcept

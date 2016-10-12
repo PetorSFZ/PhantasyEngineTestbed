@@ -213,6 +213,7 @@ if(CUDA_TRACER)
 		${CT_INCLUDE_DIR}/CudaTextureBuffer.hpp
 		${CT_INCLUDE_DIR}/CudaTracerRenderer.hpp
 		 ${CT_SOURCE_DIR}/CudaTracerRenderer.cpp
+		${CT_INCLUDE_DIR}/GBufferRead.cuh
 		${CT_INCLUDE_DIR}/Morton.cuh
 	)
 	set_directory_source_group(${CUDA_TRACER_FILES})
