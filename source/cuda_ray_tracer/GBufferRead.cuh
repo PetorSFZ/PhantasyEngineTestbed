@@ -14,6 +14,15 @@ using sfz::vec2u;
 using sfz::vec3i;
 using sfz::vec3u;
 
+static __device__ vec3 linearize(vec3 rgbGamma) noexcept
+{
+	rgbGamma.x = powf(rgbGamma.x, 2.2f);
+	rgbGamma.y = powf(rgbGamma.y, 2.2f);
+	rgbGamma.z = powf(rgbGamma.z, 2.2f);
+	return rgbGamma;
+}
+
+
 struct GBufferValue final {
 	vec3 pos;
 	vec3 normal;
@@ -36,7 +45,7 @@ __device__ inline GBufferValue readGBuffer(cudaSurfaceObject_t posTex,
 	GBufferValue tmp;
 	tmp.pos = vec3(posTmp.x, posTmp.y, posTmp.z);
 	tmp.normal = vec3(normalTmp.x, normalTmp.y, normalTmp.z);
-	tmp.albedo = vec3(albedoTmp.x, albedoTmp.y, albedoTmp.z) / 255.0f;
+	tmp.albedo = linearize(vec3(albedoTmp.x, albedoTmp.y, albedoTmp.z) / vec3(255.0f));
 	tmp.roughness = materialTmp.x;
 	tmp.metallic = materialTmp.y;
 	return tmp;

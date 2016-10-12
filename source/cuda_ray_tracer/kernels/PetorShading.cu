@@ -6,27 +6,12 @@
 
 #include "CudaHelpers.hpp"
 #include "CudaSfzVectorCompatibility.cuh"
+#include "GBufferRead.cuh"
 
 namespace phe {
 
 // Static helpers
 // ------------------------------------------------------------------------------------------------
-
-struct GBufferValue final {
-	vec3 pos;
-	vec3 normal;
-	vec3 albedo;
-	float roughness;
-	float metallic;
-};
-
-static __device__ vec3 linearize(vec3 rgbGamma) noexcept
-{
-	rgbGamma.x = powf(rgbGamma.x, 2.2f);
-	rgbGamma.y = powf(rgbGamma.y, 2.2f);
-	rgbGamma.z = powf(rgbGamma.z, 2.2f);
-	return rgbGamma;
-}
 
 // https://devblogs.nvidia.com/parallelforall/lerp-faster-cuda/
 static __device__ float lerp(float v0, float v1, float t) noexcept
@@ -46,26 +31,6 @@ static __device__ vec3 lerp(const vec3& v0, const vec3& v1, float t) noexcept
 static __device__ float clamp(float val, float min, float max) noexcept
 {
 	return fminf(fmaxf(val, min), max);
-}
-
-static __device__ GBufferValue readGBuffer(cudaSurfaceObject_t posTex,
-                                           cudaSurfaceObject_t normalTex,
-                                           cudaSurfaceObject_t albedoTex,
-                                           cudaSurfaceObject_t materialTex,
-                                           vec2i loc) noexcept
-{
-	float4 posTmp = surf2Dread<float4>(posTex, loc.x * sizeof(float4), loc.y);
-	float4 normalTmp = surf2Dread<float4>(normalTex, loc.x * sizeof(float4), loc.y);
-	uchar4 albedoTmp = surf2Dread<uchar4>(albedoTex, loc.x * sizeof(uchar4), loc.y);
-	float4 materialTmp = surf2Dread<float4>(materialTex, loc.x * sizeof(float4), loc.y);
-
-	GBufferValue tmp;
-	tmp.pos = vec3(posTmp.x, posTmp.y, posTmp.z);
-	tmp.normal = vec3(normalTmp.x, normalTmp.y, normalTmp.z);
-	tmp.albedo = linearize(vec3(albedoTmp.x, albedoTmp.y, albedoTmp.z) / vec3(255.0f));
-	tmp.roughness = materialTmp.x;
-	tmp.metallic = materialTmp.y;
-	return tmp;
 }
 
 static __device__ void writeResult(cudaSurfaceObject_t result, vec2i loc, vec4 value) noexcept
