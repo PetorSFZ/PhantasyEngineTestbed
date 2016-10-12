@@ -9,6 +9,8 @@
 #include <sfz/containers/DynString.hpp>
 #include <sfz/math/MatrixSupport.hpp>
 
+#include "phantasy_engine/util/IOUtil.hpp"
+
 namespace phe {
 
 using namespace sfz;
@@ -53,20 +55,18 @@ uint32_t loadDynObject(const char* basePath, const char* fileName, Level& level,
 		return -1;
 	}
 
-	uint32_t materialIndex = level.materials.size();
-
-	Material material;
-	material.setAlbedoValue(vec4(100 / 255.0f, 149 / 255.0f, 237 / 255.0f, 1.0f));
-	material.setMetallicValue(1.0f);
-	material.setRoughnessValue(0.5f);
-	level.materials.add(material);
-
 	const mat4 normalMatrix = inverse(transpose(modelMatrix));
+
+	aiString tmpPath;
 
 	RawMesh mesh;
 
+	std::hash<std::string> hashFn;
+
 	// Process all meshes in current node
 	for (uint32_t meshIndex = 0; meshIndex < scene->mNumMeshes; meshIndex++) {
+
+		Material materialTmp;
 
 		const aiMesh* aimesh = scene->mMeshes[meshIndex];
 
@@ -87,9 +87,6 @@ uint32_t loadDynObject(const char* basePath, const char* fileName, Level& level,
 			else {
 				v.uv = vec2(0.0f);
 			}
-			mesh.materialIndices.add(materialIndex);
-			mesh.materialIndices.add(materialIndex);
-			mesh.materialIndices.add(materialIndex);
 		}
 
 		// Fill geometry with indices
@@ -97,6 +94,97 @@ uint32_t loadDynObject(const char* basePath, const char* fileName, Level& level,
 			const aiFace& face = aimesh->mFaces[i];
 			mesh.indices.add(face.mIndices, face.mNumIndices);
 		}
+
+		// Retrieve mesh's material
+		const aiMaterial* mat = scene->mMaterials[aimesh->mMaterialIndex];
+		
+		// Albedo (stored in diffuse for sponza pbr)
+		if (mat->GetTextureCount(aiTextureType_DIFFUSE) > 0) {
+			sfz_assert_debug(mat->GetTextureCount(aiTextureType_DIFFUSE) == 1);
+
+			tmpPath.Clear();
+			mat->GetTexture(aiTextureType_DIFFUSE, 0, &tmpPath);
+
+			size_t hashedString = hashFn(std::string(tmpPath.C_Str()));
+
+			const uint32_t* indexPtr = level.texMapping.get(hashedString);
+			if (indexPtr == nullptr) {
+				//printf("Loaded albedo texture: %s\n", tmpPath.C_Str());
+
+				const uint32_t nextIndex = level.textures.size();
+				level.texMapping.put(hashedString, nextIndex);
+				indexPtr = level.texMapping.get(hashedString);
+
+				level.textures.add(loadImage(basePath, convertToOSPath(tmpPath.C_Str()).str()));
+			}
+			materialTmp.setAlbedoTexIndex(*indexPtr);
+		}
+		else {
+			aiColor3D color(0.0f, 0.0f, 0.0f);
+			mat->Get(AI_MATKEY_COLOR_DIFFUSE, color);
+			materialTmp.setAlbedoValue(vec4(color.r, color.g, color.b, 1.0f));
+		}
+		
+		// Roughness (stored in map_Ns, specular highlight component)
+		if (mat->GetTextureCount(aiTextureType_SHININESS) > 0) {
+			sfz_assert_debug(mat->GetTextureCount(aiTextureType_SHININESS) == 1);
+
+			tmpPath.Clear();
+			mat->GetTexture(aiTextureType_SHININESS, 0, &tmpPath);
+
+			size_t hashedString = hashFn(std::string(tmpPath.C_Str()));
+
+			const uint32_t* indexPtr = level.texMapping.get(hashedString);
+			if (indexPtr == nullptr) {
+				//printf("Loaded roughness texture: %s\n", tmpPath.C_Str());
+
+				const uint32_t nextIndex = level.textures.size();
+				level.texMapping.put(hashedString, nextIndex);
+				indexPtr = level.texMapping.get(hashedString);
+
+				level.textures.add(loadImage(basePath, convertToOSPath(tmpPath.C_Str()).str()));
+			}
+			materialTmp.setRoughnessTexIndex(*indexPtr);
+		}
+		else {
+			aiColor3D color(0.0f, 0.0f, 0.0f);
+			mat->Get(AI_MATKEY_COLOR_SPECULAR, color);
+			materialTmp.setRoughnessValue(color.r);
+		}
+
+		// Metallic (stored in map_Ka, ambient texture map)
+		if (mat->GetTextureCount(aiTextureType_AMBIENT) > 0) {
+			sfz_assert_debug(mat->GetTextureCount(aiTextureType_AMBIENT) == 1);
+
+			tmpPath.Clear();
+			mat->GetTexture(aiTextureType_AMBIENT, 0, &tmpPath);
+
+			size_t hashedString = hashFn(std::string(tmpPath.C_Str()));
+
+			const uint32_t* indexPtr = level.texMapping.get(hashedString);
+			if (indexPtr == nullptr) {
+				//printf("Loaded metallic texture: %s\n", tmpPath.C_Str());
+
+				const uint32_t nextIndex = level.textures.size();
+				level.texMapping.put(hashedString, nextIndex);
+				indexPtr = level.texMapping.get(hashedString);
+
+				level.textures.add(loadImage(basePath, convertToOSPath(tmpPath.C_Str()).str()));
+			}
+			materialTmp.setMetallicTexIndex(*indexPtr);
+		}
+		else {
+			aiColor3D color(0.0f, 0.0f, 0.0f);
+			mat->Get(AI_MATKEY_COLOR_AMBIENT, color);
+			materialTmp.setMetallicValue(color.r);
+		}
+
+		// Add material index
+		uint16_t nextMaterialIndex = uint16_t(level.materials.size());
+		mesh.materialIndices.add(DynArray<uint16_t>(aimesh->mNumVertices, nextMaterialIndex, 0u));
+
+		// Add the mesh and material
+		level.materials.add(materialTmp);
 	}
 	mesh.indices.setCapacity(mesh.indices.size() * 3u);
 

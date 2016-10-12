@@ -2,6 +2,8 @@
 
 #include "phantasy_engine/level/SponzaLoader.hpp"
 
+#include <string>
+
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
@@ -21,10 +23,12 @@ static vec3 toSFZ(const aiVector3D& v)
 	return vec3(v.x, v.y, v.z);
 }
 
-static void processNode(const char* basePath, Level& level, sfz::HashMap<std::string, uint32_t>& texMapping,
+static void processNode(const char* basePath, Level& level,
                         const aiScene* scene, aiNode* node, const mat4& modelMatrix, const mat4& normalMatrix) noexcept
 {
 	aiString tmpPath;
+
+	std::hash<std::string> hashFn;
 
 	// Process all meshes in current node
 	for (uint32_t meshIndex = 0; meshIndex < node->mNumMeshes; meshIndex++) {
@@ -68,13 +72,15 @@ static void processNode(const char* basePath, Level& level, sfz::HashMap<std::st
 			tmpPath.Clear();
 			mat->GetTexture(aiTextureType_DIFFUSE, 0, &tmpPath);
 
-			const uint32_t* indexPtr = texMapping.get(tmpPath.C_Str());
+			size_t hashedString = hashFn(std::string(tmpPath.C_Str()));
+
+			const uint32_t* indexPtr = level.texMapping.get(hashedString);
 			if (indexPtr == nullptr) {
 				//printf("Loaded albedo texture: %s\n", tmpPath.C_Str());
 
 				const uint32_t nextIndex = level.textures.size();
-				texMapping.put(tmpPath.C_Str(), nextIndex);
-				indexPtr = texMapping.get(tmpPath.C_Str());
+				level.texMapping.put(hashedString, nextIndex);
+				indexPtr = level.texMapping.get(hashedString);
 
 				level.textures.add(loadImage(basePath, convertToOSPath(tmpPath.C_Str()).str()));
 			}
@@ -87,14 +93,16 @@ static void processNode(const char* basePath, Level& level, sfz::HashMap<std::st
 
 			tmpPath.Clear();
 			mat->GetTexture(aiTextureType_SHININESS, 0, &tmpPath);
+			
+			size_t hashedString = hashFn(std::string(tmpPath.C_Str()));
 
-			const uint32_t* indexPtr = texMapping.get(tmpPath.C_Str());
+			const uint32_t* indexPtr = level.texMapping.get(hashedString);
 			if (indexPtr == nullptr) {
 				//printf("Loaded roughness texture: %s\n", tmpPath.C_Str());
 
 				const uint32_t nextIndex = level.textures.size();
-				texMapping.put(tmpPath.C_Str(), nextIndex);
-				indexPtr = texMapping.get(tmpPath.C_Str());
+				level.texMapping.put(hashedString, nextIndex);
+				indexPtr = level.texMapping.get(hashedString);
 
 				level.textures.add(loadImage(basePath, convertToOSPath(tmpPath.C_Str()).str()));
 			}
@@ -108,13 +116,15 @@ static void processNode(const char* basePath, Level& level, sfz::HashMap<std::st
 			tmpPath.Clear();
 			mat->GetTexture(aiTextureType_AMBIENT, 0, &tmpPath);
 
-			const uint32_t* indexPtr = texMapping.get(tmpPath.C_Str());
+			size_t hashedString = hashFn(std::string(tmpPath.C_Str()));
+
+			const uint32_t* indexPtr = level.texMapping.get(hashedString);
 			if (indexPtr == nullptr) {
 				//printf("Loaded metallic texture: %s\n", tmpPath.C_Str());
 
 				const uint32_t nextIndex = level.textures.size();
-				texMapping.put(tmpPath.C_Str(), nextIndex);
-				indexPtr = texMapping.get(tmpPath.C_Str());
+				level.texMapping.put(hashedString, nextIndex);
+				indexPtr = level.texMapping.get(hashedString);
 
 				level.textures.add(loadImage(basePath, convertToOSPath(tmpPath.C_Str()).str()));
 			}
@@ -132,7 +142,7 @@ static void processNode(const char* basePath, Level& level, sfz::HashMap<std::st
 
 	// Process all children
 	for (uint32_t i = 0; i < node->mNumChildren; i++) {
-		processNode(basePath, level, texMapping, scene, node->mChildren[i], modelMatrix, normalMatrix);
+		processNode(basePath, level, scene, node->mChildren[i], modelMatrix, normalMatrix);
 	}
 }
 
@@ -178,9 +188,8 @@ void loadStaticSceneSponza(const char* basePath, const char* fileName, Level& le
 	level.staticScene.sphereLights.clear();
 
 	// Process tree, filling up the list of renderable components along the way
-	sfz::HashMap<std::string, uint32_t> texMapping(uint32_t(scene->mNumTextures));
 	const mat4 normalMatrix = inverse(transpose(modelMatrix));
-	processNode(realBasePath.str(), level, texMapping, scene, scene->mRootNode, modelMatrix, normalMatrix);
+	processNode(realBasePath.str(), level, scene, scene->mRootNode, modelMatrix, normalMatrix);
 }
 
 } // namespace phe
