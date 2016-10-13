@@ -86,6 +86,12 @@ static void processNode(const char* basePath, Level& level,
 			}
 			materialTmp.setAlbedoTexIndex(*indexPtr);
 		}
+		else {
+			aiColor3D color(0.0f, 0.0f, 0.0f);
+			mat->Get(AI_MATKEY_COLOR_DIFFUSE, color);
+			materialTmp.setAlbedoValue(vec4(color.r, color.g, color.b, 1.0f));
+		}
+
 
 		// Roughness (stored in map_Ns, specular highlight component)
 		if (mat->GetTextureCount(aiTextureType_SHININESS) > 0) {
@@ -108,6 +114,11 @@ static void processNode(const char* basePath, Level& level,
 			}
 			materialTmp.setRoughnessTexIndex(*indexPtr);
 		}
+		else {
+			aiColor3D color(0.0f, 0.0f, 0.0f);
+			mat->Get(AI_MATKEY_COLOR_SPECULAR, color);
+			materialTmp.setRoughnessValue(color.r);
+		}
 
 		// Metallic (stored in map_Ka, ambient texture map)
 		if (mat->GetTextureCount(aiTextureType_AMBIENT) > 0) {
@@ -129,6 +140,11 @@ static void processNode(const char* basePath, Level& level,
 				level.textures.add(loadImage(basePath, convertToOSPath(tmpPath.C_Str()).str()));
 			}
 			materialTmp.setMetallicTexIndex(*indexPtr);
+		}
+		else {
+			aiColor3D color(0.0f, 0.0f, 0.0f);
+			mat->Get(AI_MATKEY_COLOR_AMBIENT, color);
+			materialTmp.setMetallicValue(color.r);
 		}
 
 		// Add material index
