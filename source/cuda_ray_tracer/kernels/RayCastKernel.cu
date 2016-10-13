@@ -592,10 +592,13 @@ void launchRayCastKernel(const RayCastKernelInput& input, RayHit* rayResults,
 
 	uint32_t factorExtraBlocks = 1; // Creates more blocks than necessary to fill device (more threads)
 	uint32_t factorSmallerBlocks = 4; // Creates smaller blocks without changing number of threads
+	float occupancy = 0.75f;
 
 	uint32_t blocksPerSM = threadsPerSM / maxThreadsPerBlock;
 	uint32_t threadsPerBlock = threadsPerSM / (factorSmallerBlocks * blocksPerSM);
 	uint32_t numBlocks = blocksPerSM * numSM * factorSmallerBlocks * factorExtraBlocks;
+
+	numBlocks = ceil(occupancy * numBlocks);
 
 	dim3 blockDims;
 	blockDims.x = RAY_CAST_KERNEL_BLOCK_WIDTH;
