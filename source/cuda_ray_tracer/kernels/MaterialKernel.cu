@@ -231,7 +231,7 @@ void launchMaterialKernel(const MaterialKernelInput& input) noexcept
 	// Calculate number of threads and blocks to run
 	dim3 threadsPerBlock(8, 8);
 	dim3 numBlocks((input.res.x + threadsPerBlock.x - 1) / threadsPerBlock.x,
-		(input.res.y + threadsPerBlock.y - 1) / threadsPerBlock.y);
+	               (input.res.y + threadsPerBlock.y - 1) / threadsPerBlock.y);
 
 	// Run cuda ray tracer kernel
 	materialKernel<<<numBlocks, threadsPerBlock>>>(input.res, input.shadowRays, input.pathStates, input.rays, input.rayHits, input.staticTriangleDatas, input.materials, input.textures, input.sphereLights, input.numSphereLights);
@@ -346,8 +346,7 @@ void launchInitPathStatesKernel(vec2i res, PathState* pathStates) noexcept
 	CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 }
 
-static __global__ void writeResultKernel(cudaSurfaceObject_t surface, vec2i res,
-                                         const RayHit* shadowRayHits, PathState* pathStates)
+static __global__ void shadowLogicKernel(vec2i res, const RayHit* shadowRayHits, PathState* pathStates)
 {
 	// Calculate surface coordinates
 	vec2i loc = vec2i(blockIdx.x * blockDim.x + threadIdx.x,
@@ -361,6 +360,31 @@ static __global__ void writeResultKernel(cudaSurfaceObject_t surface, vec2i res,
 	if (shadowRayHit.triangleIndex == UINT32_MAX) {
 		pathState.finalColor += pathState.pendingLightContribution;
 	}
+}
+
+void launchShadowLogicKernel(vec2i res, const RayHit* shadowRayHits, PathState* pathStates) noexcept
+{
+	// Calculate number of threads and blocks to run
+	dim3 threadsPerBlock(8, 8);
+	dim3 numBlocks((res.x + threadsPerBlock.x - 1) / threadsPerBlock.x,
+	               (res.y + threadsPerBlock.y - 1) / threadsPerBlock.y);
+
+	// Run cuda ray tracer kernel
+	shadowLogicKernel<<<numBlocks, threadsPerBlock>>>(res, shadowRayHits, pathStates);
+	CHECK_CUDA_ERROR(cudaGetLastError());
+	CHECK_CUDA_ERROR(cudaDeviceSynchronize());
+}
+
+static __global__ void writeResultKernel(cudaSurfaceObject_t surface, vec2i res, PathState* pathStates)
+{
+	// Calculate surface coordinates
+	vec2i loc = vec2i(blockIdx.x * blockDim.x + threadIdx.x,
+	                  blockIdx.y * blockDim.y + threadIdx.y);
+	if (loc.x >= res.x || loc.y >= res.y) return;
+
+	uint32_t id = loc.y * res.x + loc.x;
+
+	PathState& pathState = pathStates[id];
 
 	vec4 color4 = vec4(pathState.finalColor, 1.0f);
 	surf2Dwrite(toFloat4(color4), surface, loc.x * sizeof(float4), loc.y);
@@ -374,7 +398,7 @@ void launchWriteResultKernel(const WriteResultKernelInput& input) noexcept
 	               (input.res.y + threadsPerBlock.y - 1) / threadsPerBlock.y);
 
 	// Run cuda ray tracer kernel
-	writeResultKernel<<<numBlocks, threadsPerBlock>>>(input.surface, input.res, input.rayHits, input.pathStates);
+	writeResultKernel<<<numBlocks, threadsPerBlock>>>(input.surface, input.res, input.pathStates);
 	CHECK_CUDA_ERROR(cudaGetLastError());
 	CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 }

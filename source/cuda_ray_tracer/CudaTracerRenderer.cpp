@@ -506,13 +506,13 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB,
 			shadowRayCastInput.rays = mImpl->shadowRayBuffer.cudaPtr();
 			launchRayCastKernel(shadowRayCastInput, mImpl->rayResultBuffer.cudaPtr(), mImpl->glDeviceProperties);
 
-			WriteResultKernelInput writeResultInput;
-			writeResultInput.surface = mImpl->cudaResultTex.cudaSurface();
-			writeResultInput.res = mTargetResolution;
-			writeResultInput.rayHits = mImpl->rayResultBuffer.cudaPtr();
-			writeResultInput.pathStates = mImpl->pathStates.cudaPtr();
-			writeResultInput.shadowRays = mImpl->shadowRayBuffer.cudaPtr();
-			launchWriteResultKernel(writeResultInput);
+			shadowRayCastInput.bvhNodes = mImpl->staticBvhNodes.cudaTexture();
+			shadowRayCastInput.triangleVerts = mImpl->staticTriangleVertices.cudaTexture();
+			shadowRayCastInput.numRays = mTargetResolution.x * mTargetResolution.y;
+			shadowRayCastInput.rays = mImpl->shadowRayBuffer.cudaPtr();
+			launchRayCastKernel(shadowRayCastInput, mImpl->rayResultBuffer.cudaPtr(), mImpl->glDeviceProperties);
+
+			launchShadowLogicKernel(mTargetResolution, mImpl->rayResultBuffer.cudaPtr(), mImpl->pathStates.cudaPtr());
 		}
 		{
 			RayCastKernelInput secondaryRayCastInput;
@@ -542,12 +542,13 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB,
 			secondaryShadowRayCastInput.rays = mImpl->shadowRayBuffer.cudaPtr();
 			launchRayCastKernel(secondaryShadowRayCastInput, mImpl->rayResultBuffer.cudaPtr(), mImpl->glDeviceProperties);
 
+			launchShadowLogicKernel(mTargetResolution, mImpl->rayResultBuffer.cudaPtr(), mImpl->pathStates.cudaPtr());
+
 			WriteResultKernelInput writeResultInput;
 			writeResultInput.surface = mImpl->cudaResultTex.cudaSurface();
 			writeResultInput.res = mTargetResolution;
 			writeResultInput.rayHits = mImpl->rayResultBuffer.cudaPtr();
 			writeResultInput.pathStates = mImpl->pathStates.cudaPtr();
-			writeResultInput.shadowRays = mImpl->shadowRayBuffer.cudaPtr();
 			launchWriteResultKernel(writeResultInput);
 		}
 	}
