@@ -132,6 +132,41 @@ static void convertRecursively(phe::BVH& bvh, uint32_t& currentTriangleIndex, co
 // Members
 // ------------------------------------------------------------------------------------------------
 
+BVH buildStaticBVH(RawMesh& mesh) noexcept
+{
+	DynArray<TriangleVertices> inTriangles;
+	DynArray<TriangleData> inTriangleDatas;
+
+	inTriangles.setCapacity(mesh.indices.size() / 3);
+	inTriangleDatas.setCapacity(mesh.indices.size() / 3);
+
+	for (uint32_t i = 0; i < mesh.indices.size() - 2; i += 3) {
+		const Vertex& v0 = mesh.vertices[mesh.indices[i]];
+		const Vertex& v1 = mesh.vertices[mesh.indices[i + 1]];
+		const Vertex& v2 = mesh.vertices[mesh.indices[i + 2]];
+
+		TriangleVertices triTmp;
+		triTmp.v0 = vec4(v0.pos, 0.0f);
+		triTmp.v1 = vec4(v1.pos, 0.0f);
+		triTmp.v2 = vec4(v2.pos, 0.0f);
+		inTriangles.add(triTmp);
+
+		TriangleData dataTmp;
+		dataTmp.n0 = v0.normal;
+		dataTmp.n1 = v1.normal;
+		dataTmp.n2 = v2.normal;
+		dataTmp.uv0 = v0.uv;
+		dataTmp.uv1 = v1.uv;
+		dataTmp.uv2 = v2.uv;
+
+		dataTmp.materialIndex = mesh.materialIndices[mesh.indices[i]]; // Should be same for i, i+1 and i+2
+
+		inTriangleDatas.add(dataTmp);
+	}
+
+	return buildStaticFrom(inTriangles, inTriangleDatas);
+}
+
 void buildStaticBVH(StaticScene& scene) noexcept
 {
 	// Extract information from StaticScene to simple arrays, whose indicies map to the same
