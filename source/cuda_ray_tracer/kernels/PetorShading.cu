@@ -44,42 +44,6 @@ static __device__ vec3 reflect(vec3 in, vec3 normal) noexcept
 	return in - 2.0f * dot(normal, in) * normal;
 }
 
-struct RayHitInfo final {
-	vec3 pos;
-	vec3 normal;
-	vec2 uv;
-	uint32_t materialIndex;
-};
-
-static __device__ RayHitInfo interpretRayHit(const TriangleData* __restrict__ triDatas,
-                                             const RayHit& hit, const RayIn& ray) noexcept
-{
-	const TriangleData& data = triDatas[hit.triangleIndex];
-
-	// Retrieving position
-	RayHitInfo info;
-	info.pos = ray.origin() + ray.dir() * hit.t;
-
-	// Interpolating normal
-	float u = hit.u;
-	float v = hit.v;
-	vec3 n0 = data.n0;
-	vec3 n1 = data.n1;
-	vec3 n2 = data.n2;
-	info.normal = normalize(n0 + (n1 - n0) * u + (n2 - n0) * v); // TODO: FMA lerp?
-
-	// Interpolating uv coordinate
-	vec2 uv0 = data.uv0;
-	vec2 uv1 = data.uv1;
-	vec2 uv2 = data.uv2;
-	info.uv = uv0 + (uv1 - uv0) * u + (uv2 - uv0) * v; // TODO: FMA lerp?
-
-	// Material index
-	info.materialIndex = data.materialIndex;
-
-	return info;
-}
-
 // PBR shading functions
 // ------------------------------------------------------------------------------------------------
 
@@ -263,24 +227,13 @@ static __global__ void gatherRaysShadeKernel(GatherRaysShadeKernelInput input,
 	vec2i rayLoc = loc / 2;
 	vec2i rayRes = input.res / 2;
 	uint32_t id = rayLoc.y * rayRes.x + rayLoc.x;
-	RayHit hit = input.rayResults[id];
-	
-	if (hit.triangleIndex != ~0u) {
-		RayIn ray = input.castRays[id];
-		RayHitInfo info = interpretRayHit(input.staticTriangleDatas, hit, ray);
+	RayHitInfo info = input.rayHitInfos[id];
 
-		const Material& m = input.materials[info.materialIndex];
-		cudaTextureObject_t albedoTex = input.textures[m.albedoTexIndex()];
-		uchar4 albedoTmp = tex2D<uchar4>(albedoTex, info.uv.x, info.uv.y);
-		vec3 albedo = vec3(albedoTmp.x, albedoTmp.y, albedoTmp.z) / 255.0f;
-
-		color += 0.2f * (1.0f - roughness) * albedo;
+	if (info.wasHit()) {
+		color += 0.2f * (1.0f - roughness) * info.albedo();
 	}
 
-	
-
 	writeResult(resultOut, loc, vec4(color, 1.0));
-
 }
 
 void launchGatherRaysShadeKernel(const GatherRaysShadeKernelInput& input,

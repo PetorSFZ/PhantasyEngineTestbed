@@ -29,6 +29,7 @@
 #include "CudaTextureBuffer.hpp"
 #include "kernels/InitCurandKernel.hpp"
 #include "kernels/MaterialKernel.hpp"
+#include "kernels/InterpretRayHitKernel.hpp"
 #include "kernels/PetorShading.hpp"
 #include "kernels/ProcessGBufferKernel.hpp"
 #include "kernels/RayCastKernel.hpp"
@@ -98,7 +99,8 @@ public:
 	// PetorShading stuff
 	const uint32_t PETOR_SHADING_NUM_RAYS_PER_PIXEL_BATCH = 4u;
 	CudaBuffer<RayIn> petorShadingRayBuffer;
-	CudaBuffer<RayHit> petorShadingRayResultBuffer;
+	CudaBuffer<RayHit> petorShadingRayHitBuffer;
+	CudaBuffer<RayHitInfo> petorShadingRayHitInfoBuffer;
 
 	CudaTracerRendererImpl() noexcept
 	{
@@ -438,6 +440,8 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB,
 	// Petorshading path
 	else if (mImpl->petorShading->boolValue()) {
 		
+		uint32_t numRays = (mTargetResolution.x * mTargetResolution.y) / 4; // TODO: More dynamic
+
 		// ProcessGBufferGenRaysKernel
 
 		ProcessGBufferGenRaysInput input1;
@@ -454,12 +458,22 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB,
 		RayCastKernelInput rayCastInput;
 		rayCastInput.bvhNodes = mImpl->staticBvhNodes.cudaTexture();
 		rayCastInput.triangleVerts = mImpl->staticTriangleVertices.cudaTexture();
-		
-		rayCastInput.numRays = (mTargetResolution.x * mTargetResolution.y) / 4; // TODO: More dynamic
-
+		rayCastInput.numRays = numRays;
 		rayCastInput.rays = mImpl->petorShadingRayBuffer.cudaPtr();
-		launchRayCastKernel(rayCastInput, mImpl->petorShadingRayResultBuffer.cudaPtr(), mImpl->glDeviceProperties);
+		launchRayCastKernel(rayCastInput, mImpl->petorShadingRayHitBuffer.cudaPtr(), mImpl->glDeviceProperties);
 		
+		// InterpretRayHitKernel
+
+		InterpretRayHitKernelInput interpretRayHitInput;
+		interpretRayHitInput.rays = mImpl->petorShadingRayBuffer.cudaPtr();
+		interpretRayHitInput.rayHits = mImpl->petorShadingRayHitBuffer.cudaPtr();
+		interpretRayHitInput.numRays = numRays;
+		interpretRayHitInput.materials = mImpl->materials.cudaPtr();
+		interpretRayHitInput.textures = mImpl->cudaTextures.cudaPtr();
+		interpretRayHitInput.staticTriangleDatas = mImpl->staticTriangleDatas.cudaPtr();
+		launchInterpretRayHitKernel(interpretRayHitInput, mImpl->petorShadingRayHitInfoBuffer.cudaPtr(),
+		                            mImpl->glDeviceProperties);
+
 		// GatherRaysShadeKernel
 
 		GatherRaysShadeKernelInput input2;
@@ -472,13 +486,7 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB,
 		input2.albedoTex = mImpl->gbuffer.albedoSurfaceCuda();
 		input2.materialTex = mImpl->gbuffer.materialSurfaceCuda();
 
-		input2.materials = mImpl->materials.cudaPtr();
-		input2.textures = mImpl->cudaTextures.cudaPtr();
-
-		input2.staticTriangleDatas = mImpl->staticTriangleDatas.cudaPtr();
-		
-		input2.castRays = mImpl->petorShadingRayBuffer.cudaPtr();
-		input2.rayResults = mImpl->petorShadingRayResultBuffer.cudaPtr();
+		input2.rayHitInfos = mImpl->petorShadingRayHitInfoBuffer.cudaPtr();
 		
 		input2.staticSphereLights = mImpl->staticSphereLights.cudaPtr();
 		input2.numStaticSphereLights = mImpl->staticSphereLights.size();
@@ -635,8 +643,10 @@ void CudaTracerRenderer::targetResolutionUpdated() noexcept
 	                             * mTargetResolution.x * mTargetResolution.y / 4;
 	mImpl->petorShadingRayBuffer.destroy();
 	mImpl->petorShadingRayBuffer.create(petorShadingNumRays);
-	mImpl->petorShadingRayResultBuffer.destroy();
-	mImpl->petorShadingRayResultBuffer.create(petorShadingNumRays);
+	mImpl->petorShadingRayHitBuffer.destroy();
+	mImpl->petorShadingRayHitBuffer.create(petorShadingNumRays);
+	mImpl->petorShadingRayHitInfoBuffer.destroy();
+	mImpl->petorShadingRayHitInfoBuffer.create(petorShadingNumRays);
 }
 
 } // namespace phe

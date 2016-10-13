@@ -621,7 +621,7 @@ void launchRayCastKernel(const RayCastKernelInput& input, RayHit* rayResults,
 void launchRayCastNoPersistenceKernel(const RayCastKernelInput& input, RayHit* rayResults,
                                       const cudaDeviceProp& deviceProperties) noexcept
 {
-	uint32_t raysPerBlock = 256;
+	const uint32_t raysPerBlock = 256;
 	uint32_t numBlocks = (input.numRays / raysPerBlock) + 1;
 
 	rayCastNoPersistenceKernel<<<numBlocks, raysPerBlock>>>(input.bvhNodes, input.triangleVerts,

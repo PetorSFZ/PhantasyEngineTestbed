@@ -12,7 +12,7 @@
 #include "phantasy_engine/ray_tracer_common/Triangle.hpp"
 #include "phantasy_engine/rendering/Material.hpp"
 
-#include "kernels/RayCastKernel.hpp"
+#include "kernels/InterpretRayHitKernel.hpp"
 
 namespace phe {
 
@@ -48,16 +48,8 @@ struct GatherRaysShadeKernelInput final {
 	cudaSurfaceObject_t albedoTex;
 	cudaSurfaceObject_t materialTex;
 
-	// Cuda materials & textures
-	const Material* __restrict__ materials;
-	const cudaTextureObject_t* __restrict__ textures;
-
-	// Static triangle data
-	const TriangleData* __restrict__ staticTriangleDatas;
-
-	// Ray hits
-	const RayIn* __restrict__ castRays;
-	const RayHit* __restrict__ rayResults;
+	// Ray cast results
+	const RayHitInfo* __restrict__ rayHitInfos;
 
 	// Light sources
 	const SphereLight* staticSphereLights;
