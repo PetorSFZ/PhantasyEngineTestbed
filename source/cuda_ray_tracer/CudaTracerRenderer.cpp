@@ -5,6 +5,7 @@
 #include <cuda.h>
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
+#include <curand_kernel.h>
 
 #include <sfz/gl/IncludeOpenGL.hpp>
 #include <cuda_gl_interop.h>
@@ -26,10 +27,11 @@
 #include "CudaGLInterop.hpp"
 #include "CudaHelpers.hpp"
 #include "CudaTextureBuffer.hpp"
+#include "kernels/InitCurandKernel.hpp"
+#include "kernels/MaterialKernel.hpp"
 #include "kernels/PetorShading.hpp"
 #include "kernels/ProcessGBufferKernel.hpp"
 #include "kernels/RayCastKernel.hpp"
-#include "kernels/MaterialKernel.hpp"
 
 namespace phe {
 
@@ -89,6 +91,9 @@ public:
 	CudaBuffer<RayIn> shadowRayBuffer;
 	CudaBuffer<RayHit> rayResultBuffer;
 	CudaBuffer<PathState> pathStates;
+
+	// CUDA RNG state
+	CudaBuffer<curandState> randStates;
 
 	// PetorShading stuff
 	const uint32_t PETOR_SHADING_NUM_RAYS_PER_PIXEL_BATCH = 4u;
@@ -488,6 +493,7 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB,
 		GBufferMaterialKernelInput gBufferMaterialKernelInput;
 		gBufferMaterialKernelInput.res = mTargetResolution;
 		gBufferMaterialKernelInput.pathStates = mImpl->pathStates.cudaPtr();
+		gBufferMaterialKernelInput.randState = mImpl->randStates.cudaPtr();
 		gBufferMaterialKernelInput.extensionRays = mImpl->rayBuffer.cudaPtr();
 		gBufferMaterialKernelInput.shadowRays = mImpl->shadowRayBuffer.cudaPtr();
 		gBufferMaterialKernelInput.sphereLights = mImpl->staticSphereLights.cudaPtr();
@@ -525,6 +531,7 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB,
 			MaterialKernelInput materialKernelInput;
 			materialKernelInput.res = mTargetResolution;
 			materialKernelInput.pathStates = mImpl->pathStates.cudaPtr();
+			materialKernelInput.randStates = mImpl->randStates.cudaPtr();
 			materialKernelInput.rays = mImpl->rayBuffer.cudaPtr();
 			materialKernelInput.rayHits = mImpl->rayResultBuffer.cudaPtr();
 			materialKernelInput.shadowRays = mImpl->shadowRayBuffer.cudaPtr();
@@ -618,6 +625,10 @@ void CudaTracerRenderer::targetResolutionUpdated() noexcept
 	mImpl->rayResultBuffer.create(numRaysPerBatch);
 	mImpl->pathStates.destroy();
 	mImpl->pathStates.create(numRaysPerBatch);
+	mImpl->randStates.destroy();
+	mImpl->randStates.create(numRaysPerBatch);
+
+	launchInitCurandKernel(mTargetResolution, mImpl->randStates.cudaPtr());
 
 	// Petorshading ray memory allocation
 	uint32_t petorShadingNumRays = mImpl->PETOR_SHADING_NUM_RAYS_PER_PIXEL_BATCH

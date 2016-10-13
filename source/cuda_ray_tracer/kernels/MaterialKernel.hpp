@@ -2,10 +2,18 @@
 
 #pragma once
 
-#include "cuda.h"
-#include "cuda_runtime.h"
+#include <cuda.h>
+#include <cuda_runtime.h>
+#include <device_launch_parameters.h>
+#include <curand_kernel.h>
 
 #include <sfz/math/Vector.hpp>
+
+#include <phantasy_engine/level/SphereLight.hpp>
+#include <phantasy_engine/ray_tracer_common/Triangle.hpp>
+#include <phantasy_engine/rendering/Material.hpp>
+
+#include "kernels/RayCastKernel.hpp"
 
 namespace phe {
 
@@ -33,6 +41,7 @@ struct MaterialKernelInput final {
 	vec2i res;
 	RayIn* shadowRays;
 	PathState* pathStates;
+	curandState* randStates;
 	const RayIn* rays;
 	const RayHit* rayHits;
 	const TriangleData* staticTriangleDatas;
@@ -48,6 +57,7 @@ struct GBufferMaterialKernelInput final {
 	RayIn* extensionRays;
 	RayIn* shadowRays;
 	PathState* pathStates;
+	curandState* randState;
 	cudaSurfaceObject_t posTex;
 	cudaSurfaceObject_t normalTex;
 	cudaSurfaceObject_t albedoTex;

@@ -198,6 +198,8 @@ if(CUDA_TRACER)
 		${CT_INCLUDE_DIR}/deprecated/CudaTracer.cuh
 		 ${CT_SOURCE_DIR}/deprecated/CudaTracer.cu
 
+		${CT_INCLUDE_DIR}/kernels/InitCurandKernel.hpp
+		 ${CT_SOURCE_DIR}/kernels/InitCurandKernel.cu
 		${CT_INCLUDE_DIR}/kernels/MaterialKernel.hpp
 		 ${CT_SOURCE_DIR}/kernels/MaterialKernel.cu
 		${CT_INCLUDE_DIR}/kernels/PetorShading.hpp

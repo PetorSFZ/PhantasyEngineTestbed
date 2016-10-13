@@ -1,6 +1,6 @@
 // See 'LICENSE_PHANTASY_ENGINE' for copyright and contributors.
 
-#include "RayCastKernel.hpp"
+#include "kernels/MaterialKernel.hpp"
 
 #include <phantasy_engine/level/SphereLight.hpp>
 #include <phantasy_engine/ray_tracer_common/BVHNode.hpp>
@@ -11,7 +11,6 @@
 
 #include "CudaHelpers.hpp"
 #include "CudaSfzVectorCompatibility.cuh"
-#include "MaterialKernel.hpp"
 #include "GBufferRead.cuh"
 
 namespace phe {
@@ -79,7 +78,7 @@ SFZ_CUDA_CALLABLE HitInfo interpretHit(const TriangleData* triDatas, const RayHi
 	return info;
 }
 
-__device__ void shadeHit(PathState& pathState, RayIn& shadowRay,
+__device__ void shadeHit(PathState& pathState, curandState& randState, RayIn& shadowRay,
 	const vec3& normal, const vec3& toCamera, const vec3& pos, const vec3& offsetPos,
 	const vec3& albedoColor, float metallic, float roughness,
 	const SphereLight* sphereLights, uint32_t numSphereLights) noexcept
@@ -144,9 +143,8 @@ __device__ void shadeHit(PathState& pathState, RayIn& shadowRay,
 			}
 			vec3 circleV = cross(circleU, toLight);
 
-			// TODO: Use RNG
-			float r1 = 0.5f;
-			float r2 = 0.5f;
+			float r1 = curand_uniform(&randState);
+			float r2 = curand_uniform(&randState);
 			float centerDistance = light.radius * (2.0f * r2 - 1.0f);
 			float azimuthAngle = 2.0f * sfz::PI() * r1;
 
@@ -173,6 +171,7 @@ static __global__ void materialKernel(
 	vec2i res,
 	RayIn* shadowRays,
 	PathState* pathStates,
+	curandState* randStates,
 	const RayIn* rays,
 	const RayHit* rayHits,
 	const TriangleData* staticTriangleDatas,
@@ -189,6 +188,8 @@ static __global__ void materialKernel(
 	uint32_t id = loc.y * res.x + loc.x;
 	PathState& pathState = pathStates[id];
 	RayIn& shadowRay = shadowRays[id];
+	curandState randState = randStates[id];
+
 	RayHit hit = rayHits[id];
 	RayIn ray = rays[id];
 
@@ -223,7 +224,8 @@ static __global__ void materialKernel(
 
 	vec3 offsetHitPos = info.pos + info.normal * 0.01f;
 
-	shadeHit(pathState, shadowRay, info.normal, -ray.dir(), info.pos, offsetHitPos, albedoColor, metallic, roughness, sphereLights, numSphereLights);
+	shadeHit(pathState, randState, shadowRay, info.normal, -ray.dir(), info.pos, offsetHitPos, albedoColor, metallic, roughness, sphereLights, numSphereLights);
+	randStates[id] = randState;
 }
 
 void launchMaterialKernel(const MaterialKernelInput& input) noexcept
@@ -234,7 +236,7 @@ void launchMaterialKernel(const MaterialKernelInput& input) noexcept
 	               (input.res.y + threadsPerBlock.y - 1) / threadsPerBlock.y);
 
 	// Run cuda ray tracer kernel
-	materialKernel<<<numBlocks, threadsPerBlock>>>(input.res, input.shadowRays, input.pathStates, input.rays, input.rayHits, input.staticTriangleDatas, input.materials, input.textures, input.sphereLights, input.numSphereLights);
+	materialKernel<<<numBlocks, threadsPerBlock>>>(input.res, input.shadowRays, input.pathStates, input.randStates, input.rays, input.rayHits, input.staticTriangleDatas, input.materials, input.textures, input.sphereLights, input.numSphereLights);
 	CHECK_CUDA_ERROR(cudaGetLastError());
 	CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 }
@@ -245,6 +247,7 @@ static __global__ void gBufferMaterialKernel(
 	RayIn* extensionRays,
 	RayIn* shadowRays,
 	PathState* pathStates,
+	curandState* randStates,
 	cudaSurfaceObject_t posTex,
 	cudaSurfaceObject_t normalTex,
 	cudaSurfaceObject_t albedoTex,
@@ -264,10 +267,11 @@ static __global__ void gBufferMaterialKernel(
 	uint32_t id = loc.y * res.x + loc.x;
 	PathState& pathState = pathStates[id];
 	RayIn& shadowRay = shadowRays[id];
+	curandState randState = randStates[id];
 
 	vec3 toCamera = camPos - gBufferValue.pos;
 
-	shadeHit(pathState, shadowRay, gBufferValue.normal, toCamera, gBufferValue.pos, offsetHitPos, gBufferValue.albedo, gBufferValue.metallic, gBufferValue.roughness, sphereLights, numSphereLights);
+	shadeHit(pathState, randState, shadowRay, gBufferValue.normal, toCamera, gBufferValue.pos, offsetHitPos, gBufferValue.albedo, gBufferValue.metallic, gBufferValue.roughness, sphereLights, numSphereLights);
 
 	pathState.throughput *= gBufferValue.albedo;
 	pathState.throughput *= 0.5f;
@@ -277,8 +281,8 @@ static __global__ void gBufferMaterialKernel(
 
 	RayIn& extensionRay = extensionRays[id];
 
-	float r1 = 0.5f;
-	float r2 = 0.5f;
+	float r1 = curand_uniform(&randState);
+	float r2 = curand_uniform(&randState);
 	float azimuthAngle = 2.0f * sfz::PI() * r1;
 	float altitudeFactor = sqrt(r2);
 
@@ -293,13 +297,15 @@ static __global__ void gBufferMaterialKernel(
 	vec3 v = cross(gBufferValue.normal, u);
 
 	vec3 rayDir = u * cos(azimuthAngle) * altitudeFactor +
-		v * sin(azimuthAngle) * altitudeFactor +
-		gBufferValue.normal * sqrt(1 - r2);
+	              v * sin(azimuthAngle) * altitudeFactor +
+	              gBufferValue.normal * sqrt(1 - r2);
 
 	extensionRay.setOrigin(offsetHitPos);
 	extensionRay.setDir(rayDir);
 	extensionRay.setMaxDist(FLT_MAX);
 	extensionRay.setNoResultOnlyHit(false);
+
+	randStates[id] = randState;
 }
 
 void launchGBufferMaterialKernel(const GBufferMaterialKernelInput& input) noexcept
@@ -310,7 +316,7 @@ void launchGBufferMaterialKernel(const GBufferMaterialKernelInput& input) noexce
 	               (input.res.y + threadsPerBlock.y - 1) / threadsPerBlock.y);
 
 	// Run cuda ray tracer kernel
-	gBufferMaterialKernel<<<numBlocks, threadsPerBlock>>>(input.res, input.camPos, input.extensionRays, input.shadowRays, input.pathStates, input.posTex, input.normalTex, input.albedoTex, input.materialTex, input.sphereLights, input.numSphereLights);
+	gBufferMaterialKernel<<<numBlocks, threadsPerBlock>>>(input.res, input.camPos, input.extensionRays, input.shadowRays, input.pathStates, input.randState, input.posTex, input.normalTex, input.albedoTex, input.materialTex, input.sphereLights, input.numSphereLights);
 
 	CHECK_CUDA_ERROR(cudaGetLastError());
 	CHECK_CUDA_ERROR(cudaDeviceSynchronize());
