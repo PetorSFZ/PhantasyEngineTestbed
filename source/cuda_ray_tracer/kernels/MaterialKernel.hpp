@@ -19,6 +19,7 @@ using sfz::vec4;
 struct PathState final {
 	vec3 pendingLightContribution;
 	vec3 finalColor;
+	vec3 throughput;
 	uint32_t pathLength;
 	uint32_t shadowRayStartIndex;
 	uint32_t numShadowRays;
@@ -44,6 +45,7 @@ struct MaterialKernelInput final {
 struct GBufferMaterialKernelInput final {
 	vec2i res;
 	vec3 camPos;
+	RayIn* extensionRays;
 	RayIn* shadowRays;
 	PathState* pathStates;
 	cudaSurfaceObject_t posTex;

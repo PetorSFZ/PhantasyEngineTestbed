@@ -86,6 +86,7 @@ public:
 	// Raycast input and output buffers
 	const uint32_t NUM_RAYS_PER_PIXEL_PER_BATCH = 8u;
 	CudaBuffer<RayIn> rayBuffer;
+	CudaBuffer<RayIn> shadowRayBuffer;
 	CudaBuffer<RayHit> rayResultBuffer;
 	CudaBuffer<PathState> pathStates;
 
@@ -393,9 +394,6 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB,
 	// Wait for OpenGL to finish rendering GBuffer before we start using it in Cuda
 	glFinish();
 
-	// Temporary cuda kernel
-	// --------------------------------------------------------------------------------------------
-
 	sfz_assert_release((mTargetResolution.x % 8) == 0);
 	sfz_assert_release((mTargetResolution.y % 8) == 0);
 
@@ -490,7 +488,8 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB,
 		GBufferMaterialKernelInput gBufferMaterialKernelInput;
 		gBufferMaterialKernelInput.res = mTargetResolution;
 		gBufferMaterialKernelInput.pathStates = mImpl->pathStates.cudaPtr();
-		gBufferMaterialKernelInput.shadowRays = mImpl->rayBuffer.cudaPtr();
+		gBufferMaterialKernelInput.extensionRays = mImpl->rayBuffer.cudaPtr();
+		gBufferMaterialKernelInput.shadowRays = mImpl->shadowRayBuffer.cudaPtr();
 		gBufferMaterialKernelInput.sphereLights = mImpl->staticSphereLights.cudaPtr();
 		gBufferMaterialKernelInput.numSphereLights = mImpl->staticSphereLights.size();
 		gBufferMaterialKernelInput.posTex = mImpl->gbuffer.positionSurfaceCuda();
@@ -499,20 +498,58 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB,
 		gBufferMaterialKernelInput.materialTex = mImpl->gbuffer.materialSurfaceCuda();
 		launchGBufferMaterialKernel(gBufferMaterialKernelInput);
 
-		RayCastKernelInput shadowRayCastInput;
-		shadowRayCastInput.bvhNodes = mImpl->staticBvhNodes.cudaTexture();
-		shadowRayCastInput.triangleVerts = mImpl->staticTriangleVertices.cudaTexture();
-		shadowRayCastInput.numRays = mTargetResolution.x * mTargetResolution.y;
-		shadowRayCastInput.rays = mImpl->rayBuffer.cudaPtr();
-		launchRayCastKernel(shadowRayCastInput, mImpl->rayResultBuffer.cudaPtr(), mImpl->glDeviceProperties);
+		{
+			RayCastKernelInput shadowRayCastInput;
+			shadowRayCastInput.bvhNodes = mImpl->staticBvhNodes.cudaTexture();
+			shadowRayCastInput.triangleVerts = mImpl->staticTriangleVertices.cudaTexture();
+			shadowRayCastInput.numRays = mTargetResolution.x * mTargetResolution.y;
+			shadowRayCastInput.rays = mImpl->shadowRayBuffer.cudaPtr();
+			launchRayCastKernel(shadowRayCastInput, mImpl->rayResultBuffer.cudaPtr(), mImpl->glDeviceProperties);
 
-		WriteResultKernelInput writeResultInput;
-		writeResultInput.surface = mImpl->cudaResultTex.cudaSurface();
-		writeResultInput.res = mTargetResolution;
-		writeResultInput.rayHits = mImpl->rayResultBuffer.cudaPtr();
-		writeResultInput.pathStates = mImpl->pathStates.cudaPtr();
-		writeResultInput.shadowRays = mImpl->rayBuffer.cudaPtr();
-		launchWriteResultKernel(writeResultInput);
+			WriteResultKernelInput writeResultInput;
+			writeResultInput.surface = mImpl->cudaResultTex.cudaSurface();
+			writeResultInput.res = mTargetResolution;
+			writeResultInput.rayHits = mImpl->rayResultBuffer.cudaPtr();
+			writeResultInput.pathStates = mImpl->pathStates.cudaPtr();
+			writeResultInput.shadowRays = mImpl->shadowRayBuffer.cudaPtr();
+			launchWriteResultKernel(writeResultInput);
+		}
+		{
+			RayCastKernelInput secondaryRayCastInput;
+			secondaryRayCastInput.bvhNodes = mImpl->staticBvhNodes.cudaTexture();
+			secondaryRayCastInput.triangleVerts = mImpl->staticTriangleVertices.cudaTexture();
+			secondaryRayCastInput.numRays = mTargetResolution.x * mTargetResolution.y;
+			secondaryRayCastInput.rays = mImpl->rayBuffer.cudaPtr();
+			launchRayCastKernel(secondaryRayCastInput, mImpl->rayResultBuffer.cudaPtr(), mImpl->glDeviceProperties);
+
+			MaterialKernelInput materialKernelInput;
+			materialKernelInput.res = mTargetResolution;
+			materialKernelInput.pathStates = mImpl->pathStates.cudaPtr();
+			materialKernelInput.rays = mImpl->rayBuffer.cudaPtr();
+			materialKernelInput.rayHits = mImpl->rayResultBuffer.cudaPtr();
+			materialKernelInput.shadowRays = mImpl->shadowRayBuffer.cudaPtr();
+			materialKernelInput.sphereLights = mImpl->staticSphereLights.cudaPtr();
+			materialKernelInput.numSphereLights = mImpl->staticSphereLights.size();
+			materialKernelInput.materials = mImpl->materials.cudaPtr();
+			materialKernelInput.staticTriangleDatas = mImpl->staticTriangleDatas.cudaPtr();
+			materialKernelInput.textures = mImpl->cudaTextures.cudaPtr();
+			launchMaterialKernel(materialKernelInput);
+
+			RayCastKernelInput secondaryShadowRayCastInput;
+			secondaryShadowRayCastInput.bvhNodes = mImpl->staticBvhNodes.cudaTexture();
+			secondaryShadowRayCastInput.triangleVerts = mImpl->staticTriangleVertices.cudaTexture();
+			secondaryShadowRayCastInput.numRays = mTargetResolution.x * mTargetResolution.y;
+			secondaryShadowRayCastInput.rays = mImpl->shadowRayBuffer.cudaPtr();
+			launchRayCastKernel(secondaryShadowRayCastInput, mImpl->rayResultBuffer.cudaPtr(), mImpl->glDeviceProperties);
+
+			WriteResultKernelInput writeResultInput;
+			writeResultInput.surface = mImpl->cudaResultTex.cudaSurface();
+			writeResultInput.res = mTargetResolution;
+			writeResultInput.rayHits = mImpl->rayResultBuffer.cudaPtr();
+			writeResultInput.pathStates = mImpl->pathStates.cudaPtr();
+			writeResultInput.shadowRays = mImpl->shadowRayBuffer.cudaPtr();
+			launchWriteResultKernel(writeResultInput);
+		}
 	}
 
 	// Transfer result to resultFB
@@ -574,6 +611,8 @@ void CudaTracerRenderer::targetResolutionUpdated() noexcept
 	                           * mImpl->NUM_RAYS_PER_PIXEL_PER_BATCH;
 	mImpl->rayBuffer.destroy();
 	mImpl->rayBuffer.create(numRaysPerBatch);
+	mImpl->shadowRayBuffer.destroy();
+	mImpl->shadowRayBuffer.create(numRaysPerBatch);
 	mImpl->rayResultBuffer.destroy();
 	mImpl->rayResultBuffer.create(numRaysPerBatch);
 	mImpl->pathStates.destroy();

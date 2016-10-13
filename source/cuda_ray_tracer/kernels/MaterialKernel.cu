@@ -131,7 +131,7 @@ __device__ void shadeHit(PathState& pathState, RayIn& shadowRay,
 		float falloff = fallofNumerator / fallofDenominator;
 		vec3 lighting = falloff * light.strength;
 
-		vec3 color = (diffuse + specular) * lighting * nDotL;
+		vec3 color = pathState.throughput * (diffuse + specular) * lighting * nDotL;
 
 		if (light.staticShadows) {
 			// Slightly offset light ray to get stochastic soft shadows
@@ -146,11 +146,12 @@ __device__ void shadeHit(PathState& pathState, RayIn& shadowRay,
 
 			// TODO: Use RNG
 			float r1 = 0.5f;
-			float r2 = (2.0f * light.radius * 0.5f) - light.radius;
+			float r2 = 0.5f;
+			float centerDistance = light.radius * (2.0f * r2 - 1.0f);
 			float azimuthAngle = 2.0f * sfz::PI() * r1;
 
-			vec3 lightPosOffset = circleU * cos(azimuthAngle) * r2 +
-				circleV * sin(azimuthAngle) * r2;
+			vec3 lightPosOffset = circleU * cos(azimuthAngle) * centerDistance +
+			                      circleV * sin(azimuthAngle) * centerDistance;
 
 			vec3 offsetLightDiff = light.pos + lightPosOffset - offsetHitPos;
 			vec3 offsetLightDir = normalize(offsetLightDiff);
@@ -238,9 +239,10 @@ void launchMaterialKernel(const MaterialKernelInput& input) noexcept
 	CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 }
 
-static __global__ void materialPrimaryKernel(
+static __global__ void gBufferMaterialKernel(
 	vec2i res,
 	vec3 camPos,
+	RayIn* extensionRays,
 	RayIn* shadowRays,
 	PathState* pathStates,
 	cudaSurfaceObject_t posTex,
@@ -266,6 +268,38 @@ static __global__ void materialPrimaryKernel(
 	vec3 toCamera = camPos - gBufferValue.pos;
 
 	shadeHit(pathState, shadowRay, gBufferValue.normal, toCamera, gBufferValue.pos, offsetHitPos, gBufferValue.albedo, gBufferValue.metallic, gBufferValue.roughness, sphereLights, numSphereLights);
+
+	pathState.throughput *= gBufferValue.albedo;
+	pathState.throughput *= 0.5f;
+
+	// To get ambient light, take cosine-weighted sample over the hemisphere
+	// and trace in that direction.
+
+	RayIn& extensionRay = extensionRays[id];
+
+	float r1 = 0.5f;
+	float r2 = 0.5f;
+	float azimuthAngle = 2.0f * sfz::PI() * r1;
+	float altitudeFactor = sqrt(r2);
+
+	// Find surface vectors u and v orthogonal to normal
+	vec3 u;
+	if (abs(gBufferValue.normal.z) > 0.01f) {
+		u = normalize(vec3(0.0f, -gBufferValue.normal.z, gBufferValue.normal.y));
+	}
+	else {
+		u = normalize(vec3(-gBufferValue.normal.y, gBufferValue.normal.x, 0.0f));
+	}
+	vec3 v = cross(gBufferValue.normal, u);
+
+	vec3 rayDir = u * cos(azimuthAngle) * altitudeFactor +
+		v * sin(azimuthAngle) * altitudeFactor +
+		gBufferValue.normal * sqrt(1 - r2);
+
+	extensionRay.setOrigin(offsetHitPos);
+	extensionRay.setDir(rayDir);
+	extensionRay.setMaxDist(FLT_MAX);
+	extensionRay.setNoResultOnlyHit(false);
 }
 
 void launchGBufferMaterialKernel(const GBufferMaterialKernelInput& input) noexcept
@@ -276,7 +310,7 @@ void launchGBufferMaterialKernel(const GBufferMaterialKernelInput& input) noexce
 	               (input.res.y + threadsPerBlock.y - 1) / threadsPerBlock.y);
 
 	// Run cuda ray tracer kernel
-	materialPrimaryKernel<<<numBlocks, threadsPerBlock>>>(input.res, input.camPos, input.shadowRays, input.pathStates, input.posTex, input.normalTex, input.albedoTex, input.materialTex, input.sphereLights, input.numSphereLights);
+	gBufferMaterialKernel<<<numBlocks, threadsPerBlock>>>(input.res, input.camPos, input.extensionRays, input.shadowRays, input.pathStates, input.posTex, input.normalTex, input.albedoTex, input.materialTex, input.sphereLights, input.numSphereLights);
 
 	CHECK_CUDA_ERROR(cudaGetLastError());
 	CHECK_CUDA_ERROR(cudaDeviceSynchronize());
@@ -296,6 +330,7 @@ static __global__ void initPathStates(vec2i res, PathState* pathStates)
 	pathState.finalColor = vec3(0.0f);
 	pathState.pathLength = 0;
 	pathState.pendingLightContribution = vec3(0.0f);
+	pathState.throughput = vec3(1.0f);
 }
 
 void launchInitPathStatesKernel(vec2i res, PathState* pathStates) noexcept
@@ -324,7 +359,7 @@ static __global__ void writeResultKernel(cudaSurfaceObject_t surface, vec2i res,
 	PathState& pathState = pathStates[id];
 	const RayHit& shadowRayHit = shadowRayHits[id];
 	if (shadowRayHit.triangleIndex == UINT32_MAX) {
-		pathState.finalColor = pathState.pendingLightContribution;
+		pathState.finalColor += pathState.pendingLightContribution;
 	}
 
 	vec4 color4 = vec4(pathState.finalColor, 1.0f);
