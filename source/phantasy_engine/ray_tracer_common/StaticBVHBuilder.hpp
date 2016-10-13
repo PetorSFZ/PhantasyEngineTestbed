@@ -7,6 +7,8 @@
 
 namespace phe {
 
+BVH buildStaticBVH(RawMesh& mesh) noexcept;
+
 void buildStaticBVH(StaticScene& scene) noexcept;
 
 BVH buildStaticFrom(const DynArray<TriangleVertices>& triangles,
