@@ -27,6 +27,7 @@ struct Level final {
 
 	// Dynamic meshes
 	DynArray<RawMesh> meshes;
+	DynArray<BVH> dynBvhs;
 	DynArray<SphereLight> sphereLights;
 
 	// Temporary list of dynamic objects, will not necessarily be stored

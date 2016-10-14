@@ -7,21 +7,23 @@
 
 #include "phantasy_engine/ray_tracer_common/BVH.hpp"
 #include "phantasy_engine/rendering/RawMesh.hpp"
+#include "phantasy_engine/level/DynObject.hpp"
 
 namespace phe {
 
-struct OuterBVHNode {
-	bool leftIsLeaf, rightIsLeaf;
-	uint32_t leftIndex, rightIndex;
-	sfz::vec3 leftMin, leftMax, rightMin, rightMax;
+struct SphereNode {
+	vec3 center;
+	float radius;
+	bool isLeaf;
+	uint32_t leftChildIndex, rightChildIndex;
+	vec3 translation;
 };
 
-struct OuterBVH {
-	sfz::DynArray<OuterBVHNode> nodes;
-	sfz::DynArray<BVH> bvhs;
+struct DynamicBVH {
+	DynArray<SphereNode> nodes;
+	DynArray<uint32_t> leaves;
 };
 
-BVH createDynamicBvh(const RawMesh& meshes, const sfz::mat4& transforms);
-OuterBVH createOuterBvh(DynArray<BVH>& bvhs);
+DynamicBVH createDynamicBvh(DynArray<BVH>& bvhs, DynArray<DynObject>& dynObjects);
 
 }
