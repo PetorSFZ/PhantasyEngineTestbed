@@ -5,6 +5,7 @@
 #include "math_constants.h"
 
 #include "CudaHelpers.hpp"
+#include "CudaDeviceHelpers.cuh"
 #include "CudaSfzVectorCompatibility.cuh"
 #include "GBufferRead.cuh"
 
@@ -13,35 +14,9 @@ namespace phe {
 // Static helpers
 // ------------------------------------------------------------------------------------------------
 
-// https://devblogs.nvidia.com/parallelforall/lerp-faster-cuda/
-static __device__ float lerp(float v0, float v1, float t) noexcept
-{
-	return fma(t, v1, fma(-t, v0, v0));
-}
-
-static __device__ vec3 lerp(const vec3& v0, const vec3& v1, float t) noexcept
-{
-	vec3 tmp;
-	tmp.x = lerp(v0.x, v1.x, t);
-	tmp.y = lerp(v0.y, v1.y, t);
-	tmp.z = lerp(v0.z, v1.z, t);
-	return tmp;
-}
-
-static __device__ float clamp(float val, float min, float max) noexcept
-{
-	return fminf(fmaxf(val, min), max);
-}
-
 static __device__ void writeResult(cudaSurfaceObject_t result, vec2i loc, vec4 value) noexcept
 {
 	surf2Dwrite(toFloat4(value), result, loc.x * sizeof(float4), loc.y);
-}
-
-// Assumes both parameters are normalized
-static __device__ vec3 reflect(vec3 in, vec3 normal) noexcept
-{
-	return in - 2.0f * dot(normal, in) * normal;
 }
 
 // PBR shading functions

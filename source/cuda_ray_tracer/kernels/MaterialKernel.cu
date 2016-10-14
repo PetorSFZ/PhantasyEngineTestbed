@@ -10,6 +10,7 @@
 #include <sfz/math/MathHelpers.hpp>
 
 #include "CudaHelpers.hpp"
+#include "CudaDeviceHelpers.cuh"
 #include "CudaSfzVectorCompatibility.cuh"
 #include "GBufferRead.cuh"
 
@@ -80,57 +81,69 @@ SFZ_CUDA_CALLABLE HitInfo interpretHit(const TriangleData* triDatas, const RayHi
 
 __device__ void shadeHit(PathState& pathState, curandState& randState, RayIn& shadowRay,
 	const vec3& normal, const vec3& toCamera, const vec3& pos, const vec3& offsetPos,
-	const vec3& albedoColor, float metallic, float roughness,
+	const vec3& albedo, float metallic, float roughness,
 	const SphereLight* sphereLights, uint32_t numSphereLights) noexcept
 {
 	vec3 offsetHitPos = pos + 0.01f * normal;
+
+	vec3 p = pos;
+	vec3 n = normal;
+
+	vec3 v = toCamera; // to view
+
+										  // Interpolation of normals sometimes makes them face away from the camera. Clamp
+										  // these to almost zero, to not break shading calculations.
+	float nDotV = fmaxf(0.001f, dot(n, v));
+
 	// TEMP: Restrict to single light source
 	numSphereLights = 2;
 	for (uint32_t i = 1; i < numSphereLights; i++) {
+		// Retrieve light source
 		SphereLight light = sphereLights[i];
-
-		vec3 toLight = light.pos - pos;
+		vec3 toLight = light.pos - p;
 		float toLightDist = length(toLight);
-		vec3 l = toLight / toLightDist;
-		vec3 v = normalize(toCamera);
-		vec3 h = normalize(l + v);
 
-		float nDotL = dot(normal, l);
-		if (nDotL <= 0.0f) {
-			continue;
-		}
+		// Check if surface is in range of light source
+		if (toLightDist > light.range) continue;
 
-		float nDotV = dot(normal, v);
+		// Shading parameters
+		vec3 l = toLight / toLightDist; // to light (normalized)
+		vec3 h = normalize(l + v); // half vector (normal of microfacet)
 
-		nDotV = std::max(0.001f, nDotV);
+								   // If nDotL is <= 0 then the light source is not in the hemisphere of the surface, i.e.
+								   // no shading needs to be performed
+		float nDotL = dot(n, l);
+		if (nDotL <= 0.0f) continue;
 
 		// Lambert diffuse
-		vec3 diffuse = albedoColor / sfz::PI();
+		vec3 diffuse = albedo / float(sfz::PI());
 
 		// Cook-Torrance specular
 		// Normal distribution function
-		float nDotH = std::max(sfz::dot(normal, h), 0.0f); // max() should be superfluous here
+		float nDotH = fmaxf(0.0f, dot(n, h)); // max() should be superfluous here
 		float ctD = ggx(nDotH, roughness * roughness);
 
 		// Geometric self-shadowing term
-		float k = pow(roughness + 1.0f, 2.0f) / 8.0f;
+		float k = powf(roughness + 1.0f, 2.0f) / 8.0f;
 		float ctG = geometricSchlick(nDotL, nDotV, k);
 
 		// Fresnel function
 		// Assume all dielectrics have a f0 of 0.04, for metals we assume f0 == albedo
-		vec3 f0 = sfz::lerp(vec3(0.04f), albedoColor, metallic);
+		vec3 f0 = lerp(vec3(0.04f), albedo, metallic);
 		vec3 ctF = fresnelSchlick(nDotL, f0);
 
 		// Calculate final Cook-Torrance specular value
 		vec3 specular = ctD * ctF * ctG / (4.0f * nDotL * nDotV);
 
 		// Calculates light strength
-		float fallofNumerator = pow(sfz::clamp(1.0f - std::pow(toLightDist / light.range, 4.0f), 0.0f, 1.0f), 2);
-		float fallofDenominator = (toLightDist * toLightDist + 1.0f);
+		float fallofNumerator = powf(clamp(1.0f - powf(toLightDist / light.range, 4.0f), 0.0f, 1.0f), 2.0f);
+		float fallofDenominator = (toLightDist * toLightDist + 1.0);
 		float falloff = fallofNumerator / fallofDenominator;
-		vec3 lighting = falloff * light.strength;
+		vec3 lightContrib = falloff * light.strength;
 
-		vec3 color = pathState.throughput * (diffuse + specular) * lighting * nDotL;
+		// "Solves" reflectance equation under the assumption that the light source is a point light
+		// and that there is no global illumination.
+		vec3 color = pathState.throughput * (diffuse + specular) * lightContrib * nDotL;
 
 		if (light.staticShadows) {
 			// Slightly offset light ray to get stochastic soft shadows
