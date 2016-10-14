@@ -269,7 +269,7 @@ static __global__ void gBufferMaterialKernel(
 	RayIn& shadowRay = shadowRays[id];
 	curandState randState = randStates[id];
 
-	vec3 toCamera = camPos - gBufferValue.pos;
+	vec3 toCamera = normalize(camPos - gBufferValue.pos);
 
 	shadeHit(pathState, randState, shadowRay, gBufferValue.normal, toCamera, gBufferValue.pos, offsetHitPos, gBufferValue.albedo, gBufferValue.metallic, gBufferValue.roughness, sphereLights, numSphereLights);
 
