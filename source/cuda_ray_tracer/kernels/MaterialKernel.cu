@@ -310,11 +310,10 @@ static __global__ void gBufferMaterialKernel(
 	              v * sin(azimuthAngle) * altitudeFactor +
 	              gBufferValue.normal * sqrt(1 - r2);
 
-	extensionRay.setOrigin(offsetHitPos);
+	extensionRay.setOrigin(gBufferValue.pos);
 	extensionRay.setDir(rayDir);
 	extensionRay.setMaxDist(FLT_MAX);
 	extensionRay.setMinDist(0.0001f);
-	assert(false);
 
 	randStates[id] = randState;
 }
