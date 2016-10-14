@@ -80,7 +80,7 @@ SFZ_CUDA_CALLABLE HitInfo interpretHit(const TriangleData* triDatas, const RayHi
 }
 
 __device__ void shadeHit(PathState& pathState, curandState& randState, RayIn& shadowRay,
-	const vec3& normal, const vec3& toCamera, const vec3& pos, const vec3& offsetPos,
+	const vec3& normal, const vec3& toCamera, const vec3& pos,
 	const vec3& albedo, float metallic, float roughness,
 	const SphereLight* sphereLights, uint32_t numSphereLights) noexcept
 {
@@ -235,9 +235,7 @@ static __global__ void materialKernel(
 	}
 	roughness = linearize(roughness);
 
-	vec3 offsetHitPos = info.pos + info.normal * 0.01f;
-
-	shadeHit(pathState, randState, shadowRay, info.normal, -ray.dir(), info.pos, offsetHitPos, albedoColor, metallic, roughness, sphereLights, numSphereLights);
+	shadeHit(pathState, randState, shadowRay, info.normal, -ray.dir(), info.pos, albedoColor, metallic, roughness, sphereLights, numSphereLights);
 	randStates[id] = randState;
 }
 
@@ -275,8 +273,6 @@ static __global__ void gBufferMaterialKernel(
 
 	GBufferValue gBufferValue = readGBuffer(posTex, normalTex, albedoTex, materialTex, loc);
 
-	vec3 offsetHitPos = gBufferValue.pos + gBufferValue.normal * 0.01f;
-
 	uint32_t id = loc.y * res.x + loc.x;
 	PathState& pathState = pathStates[id];
 	RayIn& shadowRay = shadowRays[id];
@@ -284,7 +280,7 @@ static __global__ void gBufferMaterialKernel(
 
 	vec3 toCamera = normalize(camPos - gBufferValue.pos);
 
-	shadeHit(pathState, randState, shadowRay, gBufferValue.normal, toCamera, gBufferValue.pos, offsetHitPos, gBufferValue.albedo, gBufferValue.metallic, gBufferValue.roughness, sphereLights, numSphereLights);
+	shadeHit(pathState, randState, shadowRay, gBufferValue.normal, toCamera, gBufferValue.pos, gBufferValue.albedo, gBufferValue.metallic, gBufferValue.roughness, sphereLights, numSphereLights);
 
 	pathState.throughput *= gBufferValue.albedo;
 	pathState.throughput *= 0.5f;
