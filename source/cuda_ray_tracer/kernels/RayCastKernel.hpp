@@ -53,11 +53,14 @@ struct RayCastKernelInput final {
 	const RayIn* rays;
 };
 
-void launchRayCastKernel(const RayCastKernelInput& input, RayHit* rayResults,
+void launchRayCastKernel(const RayCastKernelInput& input, RayHit* __restrict__ rayResults,
                          const cudaDeviceProp& deviceProperties) noexcept;
 
-void launchRayCastNoPersistenceKernel(const RayCastKernelInput& input, RayHit* rayResults,
+void launchRayCastNoPersistenceKernel(const RayCastKernelInput& input, RayHit* __restrict__ rayResults,
                                       const cudaDeviceProp& deviceProperties) noexcept;
+
+void launchShadowRayCastKernel(const RayCastKernelInput& input, bool* __restrict__ inLight,
+                               const cudaDeviceProp& deviceProperties) noexcept;
 
 // Secondary helper kernels (for debugging and profiling)
 // ------------------------------------------------------------------------------------------------
