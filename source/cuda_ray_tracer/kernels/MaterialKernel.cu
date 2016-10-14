@@ -365,7 +365,7 @@ void launchInitPathStatesKernel(vec2i res, PathState* pathStates) noexcept
 	CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 }
 
-static __global__ void shadowLogicKernel(vec2i res, const RayHit* shadowRayHits, PathState* pathStates)
+static __global__ void shadowLogicKernel(vec2i res, const bool* shadowRayHits, PathState* pathStates)
 {
 	// Calculate surface coordinates
 	vec2i loc = vec2i(blockIdx.x * blockDim.x + threadIdx.x,
@@ -375,13 +375,13 @@ static __global__ void shadowLogicKernel(vec2i res, const RayHit* shadowRayHits,
 	uint32_t id = loc.y * res.x + loc.x;
 
 	PathState& pathState = pathStates[id];
-	const RayHit& shadowRayHit = shadowRayHits[id];
-	if (shadowRayHit.triangleIndex == UINT32_MAX) {
+	const bool inLight = shadowRayHits[id];
+	if (inLight) {
 		pathState.finalColor += pathState.pendingLightContribution;
 	}
 }
 
-void launchShadowLogicKernel(vec2i res, const RayHit* shadowRayHits, PathState* pathStates) noexcept
+void launchShadowLogicKernel(vec2i res, const bool* shadowRayHits, PathState* pathStates) noexcept
 {
 	// Calculate number of threads and blocks to run
 	dim3 threadsPerBlock(8, 8);

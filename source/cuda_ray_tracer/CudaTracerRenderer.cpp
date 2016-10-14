@@ -91,6 +91,7 @@ public:
 	CudaBuffer<RayIn> rayBuffer;
 	CudaBuffer<RayIn> shadowRayBuffer;
 	CudaBuffer<RayHit> rayResultBuffer;
+	CudaBuffer<bool> shadowRayResultBuffer;
 	CudaBuffer<PathState> pathStates;
 
 	// CUDA RNG state
@@ -520,10 +521,10 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB,
 		shadowRayCastInput.triangleVerts = mImpl->staticTriangleVertices.cudaTexture();
 		shadowRayCastInput.numRays = mTargetResolution.x * mTargetResolution.y;
 		shadowRayCastInput.rays = mImpl->shadowRayBuffer.cudaPtr();
-		launchRayCastKernel(shadowRayCastInput, mImpl->rayResultBuffer.cudaPtr(), mImpl->glDeviceProperties);
+		launchShadowRayCastKernel(shadowRayCastInput, mImpl->shadowRayResultBuffer.cudaPtr(), mImpl->glDeviceProperties);
 
 		// Use shading result if not in shadow
-		launchShadowLogicKernel(mTargetResolution, mImpl->rayResultBuffer.cudaPtr(), mImpl->pathStates.cudaPtr());
+		launchShadowLogicKernel(mTargetResolution, mImpl->shadowRayResultBuffer.cudaPtr(), mImpl->pathStates.cudaPtr());
 
 		// Cast secondary ray
 		RayCastKernelInput secondaryRayCastInput;
@@ -554,10 +555,10 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB,
 		secondaryShadowRayCastInput.triangleVerts = mImpl->staticTriangleVertices.cudaTexture();
 		secondaryShadowRayCastInput.numRays = mTargetResolution.x * mTargetResolution.y;
 		secondaryShadowRayCastInput.rays = mImpl->shadowRayBuffer.cudaPtr();
-		launchRayCastKernel(secondaryShadowRayCastInput, mImpl->rayResultBuffer.cudaPtr(), mImpl->glDeviceProperties);
+		launchShadowRayCastKernel(secondaryShadowRayCastInput, mImpl->shadowRayResultBuffer.cudaPtr(), mImpl->glDeviceProperties);
 
 		// Use shading result if not in shadow
-		launchShadowLogicKernel(mTargetResolution, mImpl->rayResultBuffer.cudaPtr(), mImpl->pathStates.cudaPtr());
+		launchShadowLogicKernel(mTargetResolution, mImpl->shadowRayResultBuffer.cudaPtr(), mImpl->pathStates.cudaPtr());
 
 		// Write resulting color to surface
 		WriteResultKernelInput writeResultInput;
@@ -631,6 +632,8 @@ void CudaTracerRenderer::targetResolutionUpdated() noexcept
 	mImpl->shadowRayBuffer.create(numRaysPerBatch);
 	mImpl->rayResultBuffer.destroy();
 	mImpl->rayResultBuffer.create(numRaysPerBatch);
+	mImpl->shadowRayResultBuffer.destroy();
+	mImpl->shadowRayResultBuffer.create(numRaysPerBatch);
 	mImpl->pathStates.destroy();
 	mImpl->pathStates.create(numRaysPerBatch);
 	mImpl->randStates.destroy();

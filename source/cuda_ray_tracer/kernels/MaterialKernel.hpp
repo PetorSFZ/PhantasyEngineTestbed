@@ -82,7 +82,7 @@ void launchGBufferMaterialKernel(const GBufferMaterialKernelInput& input) noexce
 
 void launchInitPathStatesKernel(vec2i res, PathState* pathStates) noexcept;
 
-void launchShadowLogicKernel(vec2i res, const RayHit* shadowRayHits, PathState* pathStates) noexcept;
+void launchShadowLogicKernel(vec2i res, const bool* shadowRayHits, PathState* pathStates) noexcept;
 
 void launchWriteResultKernel(const WriteResultKernelInput& input) noexcept;
 
