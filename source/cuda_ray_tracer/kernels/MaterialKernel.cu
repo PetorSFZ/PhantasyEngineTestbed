@@ -170,7 +170,8 @@ __device__ void shadeHit(PathState& pathState, curandState& randState, RayIn& sh
 			shadowRay.setOrigin(offsetHitPos);
 			shadowRay.setDir(offsetLightDir);
 			shadowRay.setMaxDist(length(offsetLightDiff));
-			shadowRay.setNoResultOnlyHit(true);
+			shadowRay.setMinDist(0.0f);
+			assert(false);
 
 			pathState.pendingLightContribution = color;
 		}
@@ -312,7 +313,8 @@ static __global__ void gBufferMaterialKernel(
 	extensionRay.setOrigin(offsetHitPos);
 	extensionRay.setDir(rayDir);
 	extensionRay.setMaxDist(FLT_MAX);
-	extensionRay.setNoResultOnlyHit(false);
+	extensionRay.setMinDist(0.0001f);
+	assert(false);
 
 	randStates[id] = randState;
 }

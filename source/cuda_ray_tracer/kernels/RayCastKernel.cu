@@ -265,8 +265,7 @@ static __global__ void rayCastKernel(cudaTextureObject_t bvhNodes, cudaTextureOb
 			dir = ray.dir();
 			invDir = vec3(1.0f) / dir;
 			originDivDir = origin * invDir;
-			tMin = 0.0001f;
-			noResultOnlyHit = ray.noResultOnlyHit();
+			tMin = ray.minDist();
 
 			// Reset stack
 			stackTopIndex = 0;
@@ -361,11 +360,6 @@ static __global__ void rayCastKernel(cudaTextureObject_t bvhNodes, cudaTextureOb
 					if (tMin <= t && t < resHitT) {
 						resHitTriIndex = uint32_t(triIndex);
 						resHitT = t;
-						
-						if (noResultOnlyHit) {
-							currentNodeIndex = SENTINEL;
-							break;
-						}
 					}
 
 					// Check if triangle was marked as last one
@@ -450,8 +444,7 @@ static __global__ void rayCastNoPersistenceKernel(cudaTextureObject_t bvhNodes,
 	vec3 dir = ray.dir();
 	vec3 invDir = vec3(1.0f) / dir;
 	vec3 originDivDir = origin * invDir;
-	float tMin = 0.0001f;
-	bool noResultOnlyHit = ray.noResultOnlyHit();
+	float tMin = ray.minDist();
 
 	// Temporary to store the final result in
 	uint32_t resHitTriIndex = ~0u;
@@ -541,11 +534,6 @@ static __global__ void rayCastNoPersistenceKernel(cudaTextureObject_t bvhNodes,
 				if (tMin <= t && t < resHitT) {
 					resHitTriIndex = uint32_t(triIndex);
 					resHitT = t;
-					
-					if (noResultOnlyHit) {
-						currentNodeIndex = SENTINEL;
-						break;
-					}
 				}
 
 				// Check if triangle was marked as last one
@@ -675,7 +663,7 @@ static __global__ void shadowRayCastKernel(cudaTextureObject_t bvhNodes,
 			dir = ray.dir();
 			invDir = vec3(1.0f) / dir;
 			originDivDir = origin * invDir;
-			tMin = 0.0001f;
+			tMin = ray.minDist();
 
 			// Reset stack
 			stackTopIndex = 0;
@@ -935,7 +923,7 @@ static __global__ void genPrimaryRaysKernel(RayIn* rays, CameraDef cam, vec2i re
 	RayIn ray;
 	ray.setDir(calculatePrimaryRayDir(cam, vec2(loc), vec2(res)));
 	ray.setOrigin(cam.origin);
-	ray.setNoResultOnlyHit(false);
+	ray.setMinDist(0.0001f);
 	ray.setMaxDist(FLT_MAX);
 
 	// Write ray to array
@@ -973,7 +961,7 @@ static __global__ void genSecondaryRaysKernel(RayIn* rays, vec3 camPos, vec2i re
 	RayIn ray;
 	ray.setDir(reflected);
 	ray.setOrigin(pos);
-	ray.setNoResultOnlyHit(false);
+	ray.setMinDist(0.0001f);
 	ray.setMaxDist(FLT_MAX);
 
 	// Write ray to array

@@ -98,7 +98,7 @@ static __global__ void processGBufferGenRaysKernel(ProcessGBufferGenRaysInput in
 	RayIn ray;
 	ray.setDir(reflected);
 	ray.setOrigin(pos);
-	ray.setNoResultOnlyHit(false);
+	ray.setMinDist(0.0001f);
 	ray.setMaxDist(FLT_MAX);
 
 	// Write ray to array

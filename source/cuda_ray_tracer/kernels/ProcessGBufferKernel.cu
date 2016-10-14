@@ -60,7 +60,7 @@ static __global__ void createReflectRaysKernel(vec3 camPos, vec2i res,
 	RayIn ray;
 	ray.setDir(reflected);
 	ray.setOrigin(pixelVal.pos);
-	ray.setNoResultOnlyHit(false);
+	ray.setMinDist(0.0001f);
 	ray.setMaxDist(FLT_MAX);
 
 	// Write ray to array
