@@ -501,6 +501,7 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB,
 		// Shade first hit and create shadow rays + next ray in path
 		GBufferMaterialKernelInput gBufferMaterialKernelInput;
 		gBufferMaterialKernelInput.res = mTargetResolution;
+		gBufferMaterialKernelInput.camPos = mCamera.pos();
 		gBufferMaterialKernelInput.pathStates = mImpl->pathStates.cudaPtr();
 		gBufferMaterialKernelInput.randState = mImpl->randStates.cudaPtr();
 		gBufferMaterialKernelInput.extensionRays = mImpl->rayBuffer.cudaPtr();
