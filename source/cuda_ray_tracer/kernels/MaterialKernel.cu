@@ -91,8 +91,8 @@ __device__ void shadeHit(PathState& pathState, curandState& randState, RayIn& sh
 
 	vec3 v = toCamera; // to view
 
-										  // Interpolation of normals sometimes makes them face away from the camera. Clamp
-										  // these to almost zero, to not break shading calculations.
+	// Interpolation of normals sometimes makes them face away from the camera. Clamp
+	// these to almost zero, to not break shading calculations.
 	float nDotV = fmaxf(0.001f, dot(n, v));
 
 	// TEMP: Restrict to single light source
@@ -110,8 +110,8 @@ __device__ void shadeHit(PathState& pathState, curandState& randState, RayIn& sh
 		vec3 l = toLight / toLightDist; // to light (normalized)
 		vec3 h = normalize(l + v); // half vector (normal of microfacet)
 
-								   // If nDotL is <= 0 then the light source is not in the hemisphere of the surface, i.e.
-								   // no shading needs to be performed
+		// If nDotL is <= 0 then the light source is not in the hemisphere of the surface, i.e.
+		// no shading needs to be performed
 		float nDotL = dot(n, l);
 		if (nDotL <= 0.0f) continue;
 
@@ -170,8 +170,7 @@ __device__ void shadeHit(PathState& pathState, curandState& randState, RayIn& sh
 			shadowRay.setOrigin(offsetHitPos);
 			shadowRay.setDir(offsetLightDir);
 			shadowRay.setMaxDist(length(offsetLightDiff));
-			shadowRay.setMinDist(0.0f);
-			assert(false);
+			shadowRay.setMinDist(0.001f);
 
 			pathState.pendingLightContribution = color;
 		}
@@ -313,7 +312,7 @@ static __global__ void gBufferMaterialKernel(
 	extensionRay.setOrigin(gBufferValue.pos);
 	extensionRay.setDir(rayDir);
 	extensionRay.setMaxDist(FLT_MAX);
-	extensionRay.setMinDist(0.0001f);
+	extensionRay.setMinDist(0.001f);
 
 	randStates[id] = randState;
 }
