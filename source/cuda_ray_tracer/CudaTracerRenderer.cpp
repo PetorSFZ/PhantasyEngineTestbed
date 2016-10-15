@@ -95,6 +95,7 @@ public:
 	CudaBuffer<RayIn> rayBuffer;
 	CudaBuffer<RayIn> shadowRayBuffer;
 	CudaBuffer<RayHit> rayResultBuffer;
+	CudaBuffer<RayHitInfo> rayHitInfoBuffer;
 	CudaBuffer<bool> shadowRayResultBuffer;
 
 	// CUDA RNG state
@@ -547,20 +548,27 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB,
 		secondaryRayCastInput.rays = mImpl->rayBuffer.cudaPtr();
 		launchRayCastKernel(secondaryRayCastInput, mImpl->rayResultBuffer.cudaPtr(), mImpl->glDeviceProperties);
 
+		InterpretRayHitKernelInput interpretRayHitInput;
+		interpretRayHitInput.rays = mImpl->rayBuffer.cudaPtr();
+		interpretRayHitInput.rayHits = mImpl->rayResultBuffer.cudaPtr();
+		interpretRayHitInput.numRays = numRays;
+		interpretRayHitInput.materials = mImpl->materials.cudaPtr();
+		interpretRayHitInput.textures = mImpl->cudaTextures.cudaPtr();
+		interpretRayHitInput.staticTriangleDatas = mImpl->staticTriangleDatas.cudaPtr();
+		launchInterpretRayHitKernel(interpretRayHitInput, mImpl->rayHitInfoBuffer.cudaPtr(),
+		                            mImpl->glDeviceProperties);
+
 		// Shade secondary ray hit and create shadow rays
 		MaterialKernelInput materialKernelInput;
 		materialKernelInput.res = mTargetResolution;
 		materialKernelInput.pathStates = mImpl->pathStates.cudaPtr();
 		materialKernelInput.randStates = mImpl->randStates.cudaPtr();
 		materialKernelInput.rays = mImpl->rayBuffer.cudaPtr();
-		materialKernelInput.rayHits = mImpl->rayResultBuffer.cudaPtr();
+		materialKernelInput.rayHitInfo = mImpl->rayHitInfoBuffer.cudaPtr();
 		materialKernelInput.shadowRays = mImpl->shadowRayBuffer.cudaPtr();
 		materialKernelInput.lightContributions = mImpl->lightContributions.cudaPtr();
 		materialKernelInput.staticSphereLights = mImpl->staticSphereLights.cudaPtr();
 		materialKernelInput.numStaticSphereLights = mImpl->staticSphereLights.size();
-		materialKernelInput.materials = mImpl->materials.cudaPtr();
-		materialKernelInput.staticTriangleDatas = mImpl->staticTriangleDatas.cudaPtr();
-		materialKernelInput.textures = mImpl->cudaTextures.cudaPtr();
 		launchMaterialKernel(materialKernelInput);
 
 		// Determine if secondary hit is in shadow
@@ -655,6 +663,8 @@ void CudaTracerRenderer::targetResolutionUpdated() noexcept
 	mImpl->rayResultBuffer.create(numRaysPerBatch);
 	mImpl->shadowRayResultBuffer.destroy();
 	mImpl->shadowRayResultBuffer.create(numShadowRaysPerBatch);
+	mImpl->rayHitInfoBuffer.destroy();
+	mImpl->rayHitInfoBuffer.create(numRaysPerBatch);
 	mImpl->pathStates.destroy();
 	mImpl->pathStates.create(numRaysPerBatch);
 	mImpl->lightContributions.destroy();

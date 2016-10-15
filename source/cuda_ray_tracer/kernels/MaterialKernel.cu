@@ -3,11 +3,7 @@
 #include "kernels/MaterialKernel.hpp"
 
 #include <phantasy_engine/level/SphereLight.hpp>
-#include <phantasy_engine/ray_tracer_common/BVHNode.hpp>
-#include <phantasy_engine/ray_tracer_common/Triangle.hpp>
 #include <phantasy_engine/ray_tracer_common/Shading.hpp>
-#include <phantasy_engine/rendering/Material.hpp>
-#include <sfz/math/MathHelpers.hpp>
 
 #include "CudaHelpers.hpp"
 #include "CudaDeviceHelpers.cuh"
@@ -22,61 +18,6 @@ using sfz::vec3;
 using sfz::vec3i;
 using sfz::vec4;
 using sfz::vec4i;
-
-// Material access helpers
-// ------------------------------------------------------------------------------------------------
-
-__device__ float readMaterialTextureGray(cudaTextureObject_t texture, vec2 coord) noexcept {
-	uchar1 res = tex2D<uchar1>(texture, coord.x, coord.y);
-	return float(res.x) / 255.0f;
-}
-
-__device__ vec4 readMaterialTextureRGBA(cudaTextureObject_t texture, vec2 coord) noexcept
-{
-	uchar4 res = tex2D<uchar4>(texture, coord.x, coord.y);
-	return vec4(float(res.x), float(res.y), float(res.z), float(res.w)) / 255.0f;
-}
-
-inline __device__ float linearize(float value)
-{
-	return std::pow(value, 2.2f);
-}
-
-struct HitInfo final {
-	vec3 pos;
-	vec3 normal;
-	vec2 uv;
-	uint32_t materialIndex;
-};
-
-SFZ_CUDA_CALLABLE HitInfo interpretHit(const TriangleData* triDatas, const RayHit& result,
-	const RayIn& ray) noexcept
-{
-	const TriangleData& data = triDatas[result.triangleIndex];
-	float u = result.u;
-	float v = result.v;
-
-	// Retrieving position
-	HitInfo info;
-	info.pos = ray.origin() + result.t * ray.dir();
-
-	// Interpolating normal
-	vec3 n0 = data.n0;
-	vec3 n1 = data.n1;
-	vec3 n2 = data.n2;
-	info.normal = normalize(n0 + (n1 - n0) * u + (n2 - n0) * v);
-
-	 // Interpolating uv coordinate
-	vec2 uv0 = data.uv0;
-	vec2 uv1 = data.uv1;
-	vec2 uv2 = data.uv2;
-	info.uv = uv0 + (uv1 - uv0) * u + (uv2 - uv0) * v;
-
-	// Material index
-	info.materialIndex = data.materialIndex;
-
-	return info;
-}
 
 __device__ void shadeHit(uint32_t id, PathState& pathState, curandState& randState,
                          RayIn* shadowRays, vec3* lightContributions,
@@ -272,10 +213,7 @@ static __global__ void materialKernel(
 	PathState* pathStates,
 	curandState* randStates,
 	const RayIn* rays,
-	const RayHit* rayHits,
-	const TriangleData* staticTriangleDatas,
-	const Material* materials,
-	const cudaTextureObject_t* textures,
+	const RayHitInfo* rayHitInfos,
 	const SphereLight* staticSphereLights,
 	uint32_t numStaticSphereLights)
 {
@@ -285,43 +223,19 @@ static __global__ void materialKernel(
 	if (loc.x >= res.x || loc.y >= res.y) return;
 
 	uint32_t id = loc.y * res.x + loc.x;
-	PathState& pathState = pathStates[id];
-	curandState randState = randStates[id];
 
-	RayHit hit = rayHits[id];
-	RayIn ray = rays[id];
+	RayHitInfo hitInfo = rayHitInfos[id];
 
-	if (hit.triangleIndex == ~0u) {
+	if (!hitInfo.wasHit()) {
 		return;
 	}
 
-	HitInfo info = interpretHit(staticTriangleDatas, hit, ray);
+	PathState& pathState = pathStates[id];
+	curandState randState = randStates[id];
+	RayIn ray = rays[id];
 
-	const Material& material = materials[info.materialIndex];
-	vec4 albedoValue = material.albedoValue();
-	if (materials[info.materialIndex].albedoTexIndex() != UINT32_MAX) {
-		cudaTextureObject_t albedoTexture = textures[material.albedoTexIndex()];
-		albedoValue = readMaterialTextureRGBA(albedoTexture, info.uv);
-	}
-	vec3 albedoColor = albedoValue.xyz;
-	albedoColor = linearize(albedoColor);
-
-	float metallic = material.metallicValue();
-	if (materials[info.materialIndex].metallicTexIndex() != UINT32_MAX) {
-		cudaTextureObject_t metallicTexture = textures[material.metallicTexIndex()];
-		metallic = readMaterialTextureGray(metallicTexture, info.uv);
-	}
-	metallic = linearize(metallic);
-
-	float roughness = material.roughnessValue();
-	if (materials[info.materialIndex].roughnessTexIndex() != UINT32_MAX) {
-		cudaTextureObject_t roughnessTexture = textures[material.roughnessTexIndex()];
-		roughness = readMaterialTextureGray(roughnessTexture, info.uv);
-	}
-	roughness = linearize(roughness);
-
-	shadeHit(id, pathState, randState, shadowRays, lightContributions, info.normal, -ray.dir(),
-	         info.pos, albedoColor, metallic, roughness,
+	shadeHit(id, pathState, randState, shadowRays, lightContributions, hitInfo.normal(), -ray.dir(),
+	         hitInfo.position(), hitInfo.albedo(), hitInfo.metallic(), hitInfo.roughness(),
 	         staticSphereLights, numStaticSphereLights);
 	randStates[id] = randState;
 }
@@ -334,7 +248,7 @@ void launchMaterialKernel(const MaterialKernelInput& input) noexcept
 	               (input.res.y + threadsPerBlock.y - 1) / threadsPerBlock.y);
 
 	// Run cuda ray tracer kernel
-	materialKernel<<<numBlocks, threadsPerBlock>>>(input.res, input.shadowRays, input.lightContributions, input.pathStates, input.randStates, input.rays, input.rayHits, input.staticTriangleDatas, input.materials, input.textures, input.staticSphereLights, input.numStaticSphereLights);
+	materialKernel<<<numBlocks, threadsPerBlock>>>(input.res, input.shadowRays, input.lightContributions, input.pathStates, input.randStates, input.rays, input.rayHitInfo, input.staticSphereLights, input.numStaticSphereLights);
 	CHECK_CUDA_ERROR(cudaGetLastError());
 	CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 }

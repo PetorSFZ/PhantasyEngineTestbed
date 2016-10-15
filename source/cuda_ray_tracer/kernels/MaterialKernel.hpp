@@ -10,9 +10,8 @@
 #include <sfz/math/Vector.hpp>
 
 #include <phantasy_engine/level/SphereLight.hpp>
-#include <phantasy_engine/ray_tracer_common/Triangle.hpp>
-#include <phantasy_engine/rendering/Material.hpp>
 
+#include "kernels/InterpretRayHitKernel.hpp"
 #include "kernels/RayCastKernel.hpp"
 
 namespace phe {
@@ -53,10 +52,7 @@ struct MaterialKernelInput final {
 	PathState* pathStates;
 	curandState* randStates;
 	const RayIn* rays;
-	const RayHit* rayHits;
-	const TriangleData* staticTriangleDatas;
-	const Material* materials;
-	const cudaTextureObject_t* textures;
+	const RayHitInfo* rayHitInfo;
 	const SphereLight* staticSphereLights;
 	uint32_t numStaticSphereLights;
 };
