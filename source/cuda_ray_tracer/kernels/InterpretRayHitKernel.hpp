@@ -67,7 +67,7 @@ struct InterpretRayHitKernelInput final {
 	uint32_t numRays;
 
 	// Cuda materials & textures
-	const Material* __restrict__ materials;
+	cudaTextureObject_t materialsTex;
 	const cudaTextureObject_t* __restrict__ textures;
 
 	// Static triangle data

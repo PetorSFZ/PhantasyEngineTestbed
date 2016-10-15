@@ -74,7 +74,7 @@ public:
 	SSBO materialsSSBO;
 
 	// Cuda materials & textures
-	CudaBuffer<Material> materials;
+	CudaTextureBuffer<Material> materials;
 	DynArray<CudaBindlessTexture> textureWrappers;
 	CudaBuffer<cudaTextureObject_t> cudaTextures;
 
@@ -199,7 +199,7 @@ void CudaTracerRenderer::setMaterialsAndTextures(const DynArray<Material>& mater
 
 
 	// Copy materials to Cuda
-	mImpl->materials = CudaBuffer<Material>(materials.data(), materials.size());
+	mImpl->materials = CudaTextureBuffer<Material>(materials.data(), materials.size());
 
 	// Create Cuda bindless textures
 	mImpl->textureWrappers.clear();
@@ -473,7 +473,7 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB,
 		interpretRayHitInput.rays = mImpl->petorShadingRayBuffer.cudaPtr();
 		interpretRayHitInput.rayHits = mImpl->petorShadingRayHitBuffer.cudaPtr();
 		interpretRayHitInput.numRays = numRays;
-		interpretRayHitInput.materials = mImpl->materials.cudaPtr();
+		interpretRayHitInput.materialsTex = mImpl->materials.cudaTexture();
 		interpretRayHitInput.textures = mImpl->cudaTextures.cudaPtr();
 		interpretRayHitInput.staticTriangleDatas = mImpl->staticTriangleDatas.cudaPtr();
 		launchInterpretRayHitKernel(interpretRayHitInput, mImpl->petorShadingRayHitInfoBuffer.cudaPtr(),
@@ -571,7 +571,7 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB,
 		interpretRayHitInput.rays = mImpl->rayBuffer.cudaPtr();
 		interpretRayHitInput.rayHits = mImpl->rayResultBuffer.cudaPtr();
 		interpretRayHitInput.numRays = numSecondaryRays;
-		interpretRayHitInput.materials = mImpl->materials.cudaPtr();
+		interpretRayHitInput.materialsTex = mImpl->materials.cudaTexture();
 		interpretRayHitInput.textures = mImpl->cudaTextures.cudaPtr();
 		interpretRayHitInput.staticTriangleDatas = mImpl->staticTriangleDatas.cudaPtr();
 		launchInterpretRayHitKernel(interpretRayHitInput, mImpl->rayHitInfoBuffer.cudaPtr(),
