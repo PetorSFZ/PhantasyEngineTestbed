@@ -33,7 +33,7 @@ struct GBufferMaterialKernelInput final {
 	vec3 camPos;
 	RayIn* shadowRays;
 	vec3* lightContributions;
-	curandState* randState;
+	curandState* randStates;
 	cudaSurfaceObject_t posTex;
 	cudaSurfaceObject_t normalTex;
 	cudaSurfaceObject_t albedoTex;
@@ -49,7 +49,7 @@ struct MaterialKernelInput final {
 	PathState* pathStates;
 	curandState* randStates;
 	const RayIn* rays;
-	const RayHitInfo* rayHitInfo;
+	const RayHitInfo* rayHitInfos;
 	const SphereLight* staticSphereLights;
 	uint32_t numStaticSphereLights;
 };

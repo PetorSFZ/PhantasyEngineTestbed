@@ -514,7 +514,7 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB,
 		GBufferMaterialKernelInput gBufferMaterialKernelInput;
 		gBufferMaterialKernelInput.res = mTargetResolution;
 		gBufferMaterialKernelInput.camPos = mCamera.pos();
-		gBufferMaterialKernelInput.randState = mImpl->randStates.cudaPtr();
+		gBufferMaterialKernelInput.randStates = mImpl->randStates.cudaPtr();
 		gBufferMaterialKernelInput.shadowRays = mImpl->shadowRayBuffer.cudaPtr();
 		gBufferMaterialKernelInput.lightContributions = mImpl->lightContributions.cudaPtr();
 		gBufferMaterialKernelInput.staticSphereLights = mImpl->staticSphereLights.cudaPtr();
@@ -583,7 +583,7 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB,
 		materialKernelInput.pathStates = mImpl->pathStates.cudaPtr();
 		materialKernelInput.randStates = mImpl->randStates.cudaPtr();
 		materialKernelInput.rays = mImpl->rayBuffer.cudaPtr();
-		materialKernelInput.rayHitInfo = mImpl->rayHitInfoBuffer.cudaPtr();
+		materialKernelInput.rayHitInfos = mImpl->rayHitInfoBuffer.cudaPtr();
 		materialKernelInput.shadowRays = mImpl->shadowRayBuffer.cudaPtr();
 		materialKernelInput.lightContributions = mImpl->lightContributions.cudaPtr();
 		materialKernelInput.staticSphereLights = mImpl->staticSphereLights.cudaPtr();

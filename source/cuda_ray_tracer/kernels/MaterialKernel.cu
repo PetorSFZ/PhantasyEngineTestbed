@@ -153,37 +153,28 @@ static __device__ void shadeHit(uint32_t id, const vec3& mask, curandState& rand
 // Main material kernels
 // ------------------------------------------------------------------------------------------------
 
-static __global__ void gBufferMaterialKernel(
-	vec2i res,
-	vec3 camPos,
-	RayIn* shadowRays,
-	vec3* lightContributions,
-	curandState* randStates,
-	cudaSurfaceObject_t posTex,
-	cudaSurfaceObject_t normalTex,
-	cudaSurfaceObject_t albedoTex,
-	cudaSurfaceObject_t materialTex,
-	const SphereLight* staticSphereLights,
-	uint32_t numStaticSphereLights)
+static __global__ void gBufferMaterialKernel(GBufferMaterialKernelInput input)
 {
 	// Calculate surface coordinates
 	vec2i loc = vec2i(blockIdx.x * blockDim.x + threadIdx.x,
 	                  blockIdx.y * blockDim.y + threadIdx.y);
-	if (loc.x >= res.x || loc.y >= res.y) return;
+	if (loc.x >= input.res.x || loc.y >= input.res.y) return;
 
-	GBufferValue gBufferValue = readGBuffer(posTex, normalTex, albedoTex, materialTex, loc);
+	GBufferValue gBufferValue = readGBuffer(input.posTex, input.normalTex, input.albedoTex,
+	                                        input.materialTex, loc);
 
-	uint32_t id = loc.y * res.x + loc.x;
+	uint32_t id = loc.y * input.res.x + loc.x;
 
-	curandState randState = randStates[id];
+	curandState randState = input.randStates[id];
 
-	vec3 toCamera = normalize(camPos - gBufferValue.pos);
+	vec3 toCamera = normalize(input.camPos - gBufferValue.pos);
 
-	shadeHit(id, vec3(1.0f), randState, shadowRays, lightContributions, gBufferValue.normal, toCamera,
-	         gBufferValue.pos, gBufferValue.albedo, gBufferValue.metallic, gBufferValue.roughness,
-	         staticSphereLights, numStaticSphereLights);
+	shadeHit(id, vec3(1.0f), randState, input.shadowRays, input.lightContributions,
+	         gBufferValue.normal, toCamera, gBufferValue.pos, gBufferValue.albedo,
+	         gBufferValue.metallic, gBufferValue.roughness,
+	         input.staticSphereLights, input.numStaticSphereLights);
 
-	randStates[id] = randState;
+	input.randStates[id] = randState;
 }
 
 void launchGBufferMaterialKernel(const GBufferMaterialKernelInput& input) noexcept
@@ -193,53 +184,44 @@ void launchGBufferMaterialKernel(const GBufferMaterialKernelInput& input) noexce
 	dim3 numBlocks((input.res.x + threadsPerBlock.x - 1) / threadsPerBlock.x,
 	               (input.res.y + threadsPerBlock.y - 1) / threadsPerBlock.y);
 
-	gBufferMaterialKernel<<<numBlocks, threadsPerBlock>>>(input.res, input.camPos, input.shadowRays, input.lightContributions, input.randState, input.posTex, input.normalTex, input.albedoTex, input.materialTex, input.staticSphereLights, input.numStaticSphereLights);
+	gBufferMaterialKernel<<<numBlocks, threadsPerBlock>>>(input);
 
 	CHECK_CUDA_ERROR(cudaGetLastError());
 	CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 }
 
-static __global__ void materialKernel(
-	vec2i res,
-	RayIn* shadowRays,
-	vec3* lightContributions,
-	PathState* pathStates,
-	curandState* randStates,
-	const RayIn* rays,
-	const RayHitInfo* rayHitInfos,
-	const SphereLight* staticSphereLights,
-	uint32_t numStaticSphereLights)
+static __global__ void materialKernel(MaterialKernelInput input)
 {
 	// Calculate surface coordinates
 	vec2i loc = vec2i(blockIdx.x * blockDim.x + threadIdx.x,
 	                  blockIdx.y * blockDim.y + threadIdx.y);
-	if (loc.x >= res.x || loc.y >= res.y) return;
+	if (loc.x >= input.res.x || loc.y >= input.res.y) return;
 
-	uint32_t id = loc.y * res.x + loc.x;
+	uint32_t id = loc.y * input.res.x + loc.x;
 
-	RayHitInfo hitInfo = rayHitInfos[id];
+	RayHitInfo hitInfo = input.rayHitInfos[id];
 
 	if (!hitInfo.wasHit()) {
-		// If nothing was hit, return black. Set shadow ray to dummy. A future improvement would be to
-		// only queue up as many RayIns as are actually needed
+		// If nothing was hit, return black. Set shadow ray to dummy. A future improvement would
+		// be to only queue up as many RayIns as are actually needed
 		RayIn dummyRay;
 		setToDummyRay(dummyRay);
-		for (uint32_t i = 0; i < numStaticSphereLights; i++) {
-			uint32_t shadowRayID = id * numStaticSphereLights + i;
-			shadowRays[shadowRayID] = dummyRay;
-			lightContributions[shadowRayID] = vec3(0.0f);
+		for (uint32_t i = 0; i < input.numStaticSphereLights; i++) {
+			uint32_t shadowRayID = id * input.numStaticSphereLights + i;
+			input.shadowRays[shadowRayID] = dummyRay;
+			input.lightContributions[shadowRayID] = vec3(0.0f);
 		}
 		return;
 	}
 
-	PathState& pathState = pathStates[id];
-	curandState randState = randStates[id];
-	RayIn ray = rays[id];
+	PathState& pathState = input.pathStates[id];
+	curandState randState = input.randStates[id];
+	RayIn ray = input.rays[id];
 
-	shadeHit(id, pathState.throughput, randState, shadowRays, lightContributions, hitInfo.normal(), -ray.dir(),
-	         hitInfo.position(), hitInfo.albedo(), hitInfo.metallic(), hitInfo.roughness(),
-	         staticSphereLights, numStaticSphereLights);
-	randStates[id] = randState;
+	shadeHit(id, pathState.throughput, randState, input.shadowRays, input.lightContributions,
+	         hitInfo.normal(), -ray.dir(), hitInfo.position(), hitInfo.albedo(), hitInfo.metallic(),
+	         hitInfo.roughness(), input.staticSphereLights, input.numStaticSphereLights);
+	input.randStates[id] = randState;
 }
 
 void launchMaterialKernel(const MaterialKernelInput& input) noexcept
@@ -249,7 +231,7 @@ void launchMaterialKernel(const MaterialKernelInput& input) noexcept
 	dim3 numBlocks((input.res.x + threadsPerBlock.x - 1) / threadsPerBlock.x,
 	               (input.res.y + threadsPerBlock.y - 1) / threadsPerBlock.y);
 
-	materialKernel<<<numBlocks, threadsPerBlock>>>(input.res, input.shadowRays, input.lightContributions, input.pathStates, input.randStates, input.rays, input.rayHitInfo, input.staticSphereLights, input.numStaticSphereLights);
+	materialKernel<<<numBlocks, threadsPerBlock>>>(input);
 	CHECK_CUDA_ERROR(cudaGetLastError());
 	CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 }
@@ -358,32 +340,32 @@ void launchInitPathStatesKernel(vec2i res, PathState* pathStates) noexcept
 // Shadow logic kernel
 // ------------------------------------------------------------------------------------------------
 
-static __global__ void shadowLogicKernel(cudaSurfaceObject_t surface, vec2i res, uint32_t resolutionScale, bool addToSurface, const bool* shadowRayHits, const vec3* lightContributions, uint32_t numStaticSphereLights)
+static __global__ void shadowLogicKernel(ShadowLogicKernelInput input)
 {
 	// Calculate surface coordinates
 	vec2i loc = vec2i(blockIdx.x * blockDim.x + threadIdx.x,
 	                  blockIdx.y * blockDim.y + threadIdx.y);
-	if (loc.x >= res.x || loc.y >= res.y) return;
+	if (loc.x >= input.res.x || loc.y >= input.res.y) return;
 
-	uint32_t id = loc.y * res.x + loc.x;
-	vec2i scaledLoc = loc / int32_t(resolutionScale);
-	vec2i scaledRes = res / int32_t(resolutionScale);
+	uint32_t id = loc.y * input.res.x + loc.x;
+	vec2i scaledLoc = loc / int32_t(input.resolutionScale);
+	vec2i scaledRes = input.res / int32_t(input.resolutionScale);
 	uint32_t scaledID = scaledLoc.y * scaledRes.x + scaledLoc.x;
 
 	vec3 color(0.0f);
-	if (addToSurface) {
-		vec4 color4 = readFromSurface(surface, loc);
+	if (input.addToSurface) {
+		vec4 color4 = readFromSurface(input.surface, loc);
 		color = color4.xyz;
 	}
 
-	for (int i = 0; i < numStaticSphereLights; i++) {
-		uint32_t shadowRayID = scaledID * numStaticSphereLights + i;
-		const bool inLight = shadowRayHits[shadowRayID];
+	for (int i = 0; i < input.numStaticSphereLights; i++) {
+		uint32_t shadowRayID = scaledID * input.numStaticSphereLights + i;
+		const bool inLight = input.shadowRayHits[shadowRayID];
 		if (inLight) {
-			color += lightContributions[shadowRayID];
+			color += input.lightContributions[shadowRayID];
 		}
 	}
-	writeToSurface(surface, loc, vec4(color, 1.0f));
+	writeToSurface(input.surface, loc, vec4(color, 1.0f));
 }
 
 void launchShadowLogicKernel(const ShadowLogicKernelInput& input) noexcept
@@ -393,7 +375,7 @@ void launchShadowLogicKernel(const ShadowLogicKernelInput& input) noexcept
 	dim3 numBlocks((input.res.x + threadsPerBlock.x - 1) / threadsPerBlock.x,
 	               (input.res.y + threadsPerBlock.y - 1) / threadsPerBlock.y);
 
-	shadowLogicKernel<<<numBlocks, threadsPerBlock>>>(input.surface, input.res, input.resolutionScale, input.addToSurface, input.shadowRayHits, input.lightContributions, input.numStaticSphereLights);
+	shadowLogicKernel<<<numBlocks, threadsPerBlock>>>(input);
 	CHECK_CUDA_ERROR(cudaGetLastError());
 	CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 }
