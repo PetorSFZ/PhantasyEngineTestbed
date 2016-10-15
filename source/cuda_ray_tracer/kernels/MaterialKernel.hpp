@@ -24,7 +24,6 @@ using sfz::vec4;
 // ------------------------------------------------------------------------------------------------
 
 struct PathState final {
-	vec3 finalColor;
 	vec3 throughput;
 	uint32_t pathLength;
 };
@@ -32,10 +31,8 @@ struct PathState final {
 struct GBufferMaterialKernelInput final {
 	vec2i res;
 	vec3 camPos;
-	RayIn* extensionRays;
 	RayIn* shadowRays;
 	vec3* lightContributions;
-	PathState* pathStates;
 	curandState* randState;
 	cudaSurfaceObject_t posTex;
 	cudaSurfaceObject_t normalTex;
@@ -57,8 +54,23 @@ struct MaterialKernelInput final {
 	uint32_t numStaticSphereLights;
 };
 
-struct ShadowLogicKernelInput final {
+struct CreateSecondaryRaysKernelInput final {
 	vec2i res;
+	vec3 camPos;
+	RayIn* extensionRays;
+	PathState* pathStates;
+	curandState* randStates;
+	cudaSurfaceObject_t posTex;
+	cudaSurfaceObject_t normalTex;
+	cudaSurfaceObject_t albedoTex;
+	cudaSurfaceObject_t materialTex;
+};
+
+struct ShadowLogicKernelInput final {
+	cudaSurfaceObject_t surface;
+	vec2i res;
+	uint32_t resolutionScale;
+	bool addToSurface;
 	const bool* shadowRayHits;
 	PathState* pathStates;
 	const vec3* lightContributions;
@@ -79,10 +91,10 @@ void launchGBufferMaterialKernel(const GBufferMaterialKernelInput& input) noexce
 
 void launchMaterialKernel(const MaterialKernelInput& input) noexcept;
 
+void launchCreateSecondaryRaysKernel(const CreateSecondaryRaysKernelInput& input) noexcept;
+
 void launchInitPathStatesKernel(vec2i res, PathState* pathStates) noexcept;
 
 void launchShadowLogicKernel(const ShadowLogicKernelInput& input) noexcept;
-
-void launchWriteResultKernel(const WriteResultKernelInput& input) noexcept;
 
 } // namespace phe
