@@ -25,30 +25,9 @@ using sfz::vec4;
 // ------------------------------------------------------------------------------------------------
 
 struct PathState final {
-	vec3 pendingLightContribution;
 	vec3 finalColor;
 	vec3 throughput;
 	uint32_t pathLength;
-	uint32_t shadowRayStartIndex;
-	uint32_t numShadowRays;
-};
-
-struct MaterialRequest final {
-	uint32_t materialID;
-};
-
-struct MaterialKernelInput final {
-	vec2i res;
-	RayIn* shadowRays;
-	PathState* pathStates;
-	curandState* randStates;
-	const RayIn* rays;
-	const RayHit* rayHits;
-	const TriangleData* staticTriangleDatas;
-	const Material* materials;
-	const cudaTextureObject_t* textures;
-	const SphereLight* sphereLights;
-	uint32_t numSphereLights;
 };
 
 struct GBufferMaterialKernelInput final {
@@ -56,14 +35,38 @@ struct GBufferMaterialKernelInput final {
 	vec3 camPos;
 	RayIn* extensionRays;
 	RayIn* shadowRays;
+	vec3* lightContributions;
 	PathState* pathStates;
 	curandState* randState;
 	cudaSurfaceObject_t posTex;
 	cudaSurfaceObject_t normalTex;
 	cudaSurfaceObject_t albedoTex;
 	cudaSurfaceObject_t materialTex;
-	const SphereLight* sphereLights;
-	uint32_t numSphereLights;
+	const SphereLight* staticSphereLights;
+	uint32_t numStaticSphereLights;
+};
+
+struct MaterialKernelInput final {
+	vec2i res;
+	RayIn* shadowRays;
+	vec3* lightContributions;
+	PathState* pathStates;
+	curandState* randStates;
+	const RayIn* rays;
+	const RayHit* rayHits;
+	const TriangleData* staticTriangleDatas;
+	const Material* materials;
+	const cudaTextureObject_t* textures;
+	const SphereLight* staticSphereLights;
+	uint32_t numStaticSphereLights;
+};
+
+struct ShadowLogicKernelInput final {
+	vec2i res;
+	const bool* shadowRayHits;
+	PathState* pathStates;
+	const vec3* lightContributions;
+	uint32_t numStaticSphereLights;
 };
 
 struct WriteResultKernelInput final {
@@ -76,13 +79,13 @@ struct WriteResultKernelInput final {
 // Material kernel launch function
 // ------------------------------------------------------------------------------------------------
 
-void launchMaterialKernel(const MaterialKernelInput& input) noexcept;
-
 void launchGBufferMaterialKernel(const GBufferMaterialKernelInput& input) noexcept;
+
+void launchMaterialKernel(const MaterialKernelInput& input) noexcept;
 
 void launchInitPathStatesKernel(vec2i res, PathState* pathStates) noexcept;
 
-void launchShadowLogicKernel(vec2i res, const bool* shadowRayHits, PathState* pathStates) noexcept;
+void launchShadowLogicKernel(const ShadowLogicKernelInput& input) noexcept;
 
 void launchWriteResultKernel(const WriteResultKernelInput& input) noexcept;
 
