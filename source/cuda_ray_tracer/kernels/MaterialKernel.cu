@@ -236,6 +236,51 @@ void launchMaterialKernel(const MaterialKernelInput& input) noexcept
 	CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 }
 
+// Importance sampling helpers
+// ------------------------------------------------------------------------------------------------
+
+inline __device__ vec3 hemisphereToWorld(float phi, float cosTheta, float sinTheta, const vec3& normal)
+{
+	vec3 hemisphereCoord;
+	hemisphereCoord.x = sinTheta * cos(phi);
+	hemisphereCoord.y = sinTheta * sin(phi);
+	hemisphereCoord.z = cosTheta;
+
+	vec3 upVector = abs(normal.z) < 0.999f ? vec3(0.0f, 0.0f, 1.0f) : vec3(1.0f, 0.0f, 0.0f);
+	vec3 u = sfz::normalize(sfz::cross(upVector, normal));
+	vec3 v = sfz::cross(normal, u);
+
+	return u * hemisphereCoord.x + v * hemisphereCoord.y + normal * hemisphereCoord.z;
+}
+
+/// Move vector facing into a surface up to the tangent plane of the surface.
+inline __device__ vec3 clampToHemisphere(const vec3& vector, const vec3& surfaceNormal)
+{
+	float nDotV = dot(vector, surfaceNormal);
+	float normalOffsetDist = -std::min(0.0f, nDotV);
+	return sfz::normalize(vector + normalOffsetDist * surfaceNormal);
+}
+
+/// Return a GGX distributed sample around the reflection vector.
+inline __device__ vec3 sampleGgx(const vec2& randVec, float a, const vec3& reflection, const vec3& surfaceNormal)
+{
+	float phi = 2.0f * sfz::PI() * randVec.x;
+	float cosTheta = sqrt((1.0f - randVec.y) / (1.0f + (a * a - 1.0f) * randVec.y));
+	float sinTheta = sqrt(1.0f - cosTheta * cosTheta);
+
+	return clampToHemisphere(hemisphereToWorld(phi, cosTheta, sinTheta, reflection), surfaceNormal);
+}
+
+/// Return cosine-weighted sample around the hemisphere.
+inline __device__ vec3 sampleLambertian(const vec2& randVec, const vec3& normal)
+{
+	float phi = 2.0f * sfz::PI() * randVec.x;
+	float sinTheta = sqrt(randVec.y);
+	float cosTheta = sqrt(1.0f - randVec.y);
+
+	return hemisphereToWorld(phi, cosTheta, sinTheta, normal);
+}
+
 // Ray generation kernel
 // ------------------------------------------------------------------------------------------------
 
@@ -260,30 +305,30 @@ static __global__ void createSecondaryRaysKernel(CreateSecondaryRaysKernelInput 
 
 	GBufferValue gBufferValue = readGBuffer(input.posTex, input.normalTex, input.albedoTex, input.materialTex, doubleLocRandomized);
 
-	pathState.throughput *= 0.5f * gBufferValue.albedo;
+	pathState.throughput *= gBufferValue.albedo;
 
-	// To get ambient light, take cosine-weighted sample over the hemisphere
-	// and trace in that direction.
-	RayIn extensionRay;
 	float r1 = curand_uniform(&randState);
 	float r2 = curand_uniform(&randState);
-	float azimuthAngle = 2.0f * sfz::PI() * r1;
-	float altitudeFactor = sqrt(r2);
 
-	// Find surface vectors u and v orthogonal to normal
-	vec3 u;
-	if (abs(gBufferValue.normal.z) > 0.01f) {
-		u = normalize(vec3(0.0f, -gBufferValue.normal.z, gBufferValue.normal.y));
+	// Probabilistically pick type of sample using russian roulette with roughness as threshold
+	float diffuseOrSpecularSample = curand_uniform(&randState);
+	vec3 rayDir;
+	if (diffuseOrSpecularSample < gBufferValue.roughness) {
+		rayDir = sampleLambertian(vec2(r1, r2), gBufferValue.normal);
+
+		// TODO: Weigh sample according to pdf
+		pathState.throughput *= 0.8f;
 	}
 	else {
-		u = normalize(vec3(-gBufferValue.normal.y, gBufferValue.normal.x, 0.0f));
+		vec3 fromCamera = normalize(gBufferValue.pos - input.camPos);
+		vec3 reflection = reflect(fromCamera, gBufferValue.normal);
+		float a = gBufferValue.roughness * gBufferValue.roughness;
+		rayDir = sampleGgx(vec2(r1, r2), a, reflection, gBufferValue.normal);
+
+		// TODO: Weigh sample according to pdf
+		pathState.throughput *= 0.8f;
 	}
-	vec3 v = cross(gBufferValue.normal, u);
-
-	vec3 rayDir = u * cos(azimuthAngle) * altitudeFactor +
-	              v * sin(azimuthAngle) * altitudeFactor +
-	              gBufferValue.normal * sqrt(1 - r2);
-
+	RayIn extensionRay;
 	extensionRay.setOrigin(gBufferValue.pos);
 	extensionRay.setDir(rayDir);
 	extensionRay.setMinDist(0.001f);
