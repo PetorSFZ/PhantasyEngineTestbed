@@ -3,10 +3,10 @@
 #include "kernels/MaterialKernel.hpp"
 
 #include <phantasy_engine/level/SphereLight.hpp>
-#include <phantasy_engine/ray_tracer_common/Shading.hpp>
 
 #include "CudaHelpers.hpp"
 #include "CudaDeviceHelpers.cuh"
+#include "CudaPbr.cuh"
 #include "CudaSfzVectorCompatibility.cuh"
 #include "GBufferRead.cuh"
 

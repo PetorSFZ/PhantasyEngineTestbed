@@ -218,6 +218,7 @@ if(CUDA_TRACER)
 		${CT_INCLUDE_DIR}/CudaGLInterop.hpp
 		 ${CT_SOURCE_DIR}/CudaGLInterop.cpp
 		${CT_INCLUDE_DIR}/CudaHelpers.hpp
+		${CT_INCLUDE_DIR}/CudaPbr.cuh
 		${CT_INCLUDE_DIR}/CudaSfzVectorCompatibility.cuh
 		${CT_INCLUDE_DIR}/CudaTextureBuffer.hpp
 		${CT_INCLUDE_DIR}/CudaTracerRenderer.hpp
