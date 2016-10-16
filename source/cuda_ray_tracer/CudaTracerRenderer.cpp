@@ -27,6 +27,7 @@
 #include "CudaGLInterop.hpp"
 #include "CudaHelpers.hpp"
 #include "CudaTextureBuffer.hpp"
+#include "kernels/GenSecondaryShadowRaysKernel.hpp"
 #include "kernels/InitCurandKernel.hpp"
 #include "kernels/MaterialKernel.hpp"
 #include "kernels/InterpretRayHitKernel.hpp"
@@ -102,10 +103,10 @@ public:
 	CudaBuffer<curandState> randStates;
 
 	// PetorShading stuff
-	const uint32_t PETOR_SHADING_NUM_RAYS_PER_PIXEL_BATCH = 4u;
 	CudaBuffer<RayIn> petorShadingRayBuffer;
 	CudaBuffer<RayHit> petorShadingRayHitBuffer;
 	CudaBuffer<RayHitInfo> petorShadingRayHitInfoBuffer;
+	CudaBuffer<bool> petorShadingShadowRayInLightBuffer;
 
 	CudaTracerRendererImpl() noexcept
 	{
@@ -479,6 +480,20 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB,
 		launchInterpretRayHitKernel(interpretRayHitInput, mImpl->petorShadingRayHitInfoBuffer.cudaPtr(),
 		                            mImpl->glDeviceProperties);
 
+		// GenSecondaryShadowRaysKernel
+
+		GenSecondaryShadowRaysKernelInput secondaryShadowRayInput;
+		secondaryShadowRayInput.rayHitInfos = mImpl->petorShadingRayHitInfoBuffer.cudaPtr();
+		secondaryShadowRayInput.numRayHitInfos = numRays;
+		secondaryShadowRayInput.staticSphereLights = mImpl->staticSphereLights.cudaPtr();
+		secondaryShadowRayInput.numStaticSphereLights = mImpl->staticSphereLights.size();
+		launchGenSecondaryShadowRaysKernel(secondaryShadowRayInput, mImpl->petorShadingRayBuffer.cudaPtr());
+		
+		// Cast secondary shadow rays
+
+		rayCastInput.numRays = numRays * mImpl->staticSphereLights.size();
+		launchShadowRayCastKernel(rayCastInput, mImpl->petorShadingShadowRayInLightBuffer.cudaPtr(), mImpl->glDeviceProperties);
+
 		// GatherRaysShadeKernel
 
 		GatherRaysShadeKernelInput input2;
@@ -690,7 +705,7 @@ void CudaTracerRenderer::targetResolutionUpdated() noexcept
 	launchInitCurandKernel(mTargetResolution, mImpl->randStates.cudaPtr());
 
 	// Petorshading ray memory allocation
-	uint32_t petorShadingNumRays = mImpl->PETOR_SHADING_NUM_RAYS_PER_PIXEL_BATCH
+	uint32_t petorShadingNumRays = mImpl->staticSphereLights.size()
 	                             * mTargetResolution.x * mTargetResolution.y / 4;
 	mImpl->petorShadingRayBuffer.destroy();
 	mImpl->petorShadingRayBuffer.create(petorShadingNumRays);
@@ -698,6 +713,8 @@ void CudaTracerRenderer::targetResolutionUpdated() noexcept
 	mImpl->petorShadingRayHitBuffer.create(petorShadingNumRays);
 	mImpl->petorShadingRayHitInfoBuffer.destroy();
 	mImpl->petorShadingRayHitInfoBuffer.create(petorShadingNumRays);
+	mImpl->petorShadingShadowRayInLightBuffer.destroy();
+	mImpl->petorShadingShadowRayInLightBuffer.create(petorShadingNumRays);
 }
 
 } // namespace phe
