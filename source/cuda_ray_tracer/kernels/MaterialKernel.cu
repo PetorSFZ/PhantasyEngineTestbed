@@ -46,8 +46,8 @@ static __device__ void setToDummyRay(RayIn& ray)
 	ray.setMaxDist(0.001f);
 }
 
-static __device__ void shadeHit(uint32_t id, const vec3& mask, curandState& randState,
-                                RayIn* shadowRays, vec3* lightContributions,
+static __device__ void shadeHit(uint32_t id, uint32_t numPixels, const vec3& mask,
+                                curandState& randState, RayIn* shadowRays, vec3* lightContributions,
                                 const vec3& normal, const vec3& toCamera, const vec3& pos,
                                 const vec3& albedo, float metallic, float roughness,
                                 const SphereLight* staticSphereLights,
@@ -86,7 +86,7 @@ static __device__ void shadeHit(uint32_t id, const vec3& mask, curandState& rand
 			float nDotL = dot(n, l);
 			if (nDotL > 0.0f) {
 				// Lambert diffuse
-				vec3 diffuse = albedo / float(sfz::PI());
+				vec3 diffuse = albedo / sfz::PI();
 
 				// Cook-Torrance specular
 				// Normal distribution function
@@ -144,7 +144,7 @@ static __device__ void shadeHit(uint32_t id, const vec3& mask, curandState& rand
 				}
 			}
 		}
-		uint32_t shadowRayID = id * numStaticSphereLights + i;
+		uint32_t shadowRayID = id + i * numPixels;
 		shadowRays[shadowRayID] = shadowRay;
 		lightContributions[shadowRayID] = color;
 	}
@@ -164,14 +164,15 @@ static __global__ void gBufferMaterialKernel(GBufferMaterialKernelInput input)
 	                                        input.materialTex, loc);
 
 	uint32_t id = loc.y * input.res.x + loc.x;
+	uint32_t numPixels = input.res.x * input.res.y;
 
 	curandState randState = input.randStates[id];
 
 	vec3 toCamera = normalize(input.camPos - gBufferValue.pos);
 
-	shadeHit(id, vec3(1.0f), randState, input.shadowRays, input.lightContributions,
-	         gBufferValue.normal, toCamera, gBufferValue.pos, gBufferValue.albedo,
-	         gBufferValue.metallic, gBufferValue.roughness,
+	shadeHit(id, numPixels, vec3(1.0f), randState, input.shadowRays,
+	         input.lightContributions, gBufferValue.normal, toCamera, gBufferValue.pos,
+	         gBufferValue.albedo, gBufferValue.metallic, gBufferValue.roughness,
 	         input.staticSphereLights, input.numStaticSphereLights);
 
 	input.randStates[id] = randState;
@@ -198,6 +199,7 @@ static __global__ void materialKernel(MaterialKernelInput input)
 	if (loc.x >= input.res.x || loc.y >= input.res.y) return;
 
 	uint32_t id = loc.y * input.res.x + loc.x;
+	uint32_t numPixels = input.res.x * input.res.y;
 
 	RayHitInfo hitInfo = input.rayHitInfos[id];
 
@@ -218,9 +220,10 @@ static __global__ void materialKernel(MaterialKernelInput input)
 	curandState randState = input.randStates[id];
 	RayIn ray = input.rays[id];
 
-	shadeHit(id, pathState.throughput, randState, input.shadowRays, input.lightContributions,
-	         hitInfo.normal(), -ray.dir(), hitInfo.position(), hitInfo.albedo(), hitInfo.metallic(),
-	         hitInfo.roughness(), input.staticSphereLights, input.numStaticSphereLights);
+	shadeHit(id, numPixels, pathState.throughput, randState, input.shadowRays,
+	         input.lightContributions, hitInfo.normal(), -ray.dir(), hitInfo.position(),
+	         hitInfo.albedo(), hitInfo.metallic(), hitInfo.roughness(), input.staticSphereLights,
+	         input.numStaticSphereLights);
 	input.randStates[id] = randState;
 }
 
@@ -396,6 +399,7 @@ static __global__ void shadowLogicKernel(ShadowLogicKernelInput input)
 	vec2i scaledLoc = loc / int32_t(input.resolutionScale);
 	vec2i scaledRes = input.res / int32_t(input.resolutionScale);
 	uint32_t scaledID = scaledLoc.y * scaledRes.x + scaledLoc.x;
+	uint32_t scaledNumPixels = scaledRes.x * scaledRes.y;
 
 	vec3 color(0.0f);
 	if (input.addToSurface) {
@@ -404,7 +408,7 @@ static __global__ void shadowLogicKernel(ShadowLogicKernelInput input)
 	}
 
 	for (int i = 0; i < input.numStaticSphereLights; i++) {
-		uint32_t shadowRayID = scaledID * input.numStaticSphereLights + i;
+		uint32_t shadowRayID = scaledID + i * scaledNumPixels;
 		const bool inLight = input.shadowRayHits[shadowRayID];
 		if (inLight) {
 			color += input.lightContributions[shadowRayID];
