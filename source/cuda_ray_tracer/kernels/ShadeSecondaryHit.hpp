@@ -13,6 +13,7 @@ namespace phe {
 // ------------------------------------------------------------------------------------------------
 
 struct ShadeSecondaryHitKernelInput final {
+	const RayIn* secondaryRays; // The rays used to generate the secondary hits, needed for view dir
 	const RayHitInfo* rayHitInfos;
 	uint32_t numRayHitInfos;
 

@@ -495,6 +495,7 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB,
 
 		// Shade secondary hits and generate outgoing light to primary hits
 		ShadeSecondaryHitKernelInput shadeSecondaryHitInput;
+		shadeSecondaryHitInput.secondaryRays = mImpl->petorShadingSecondaryRayBuffer.cudaPtr();
 		shadeSecondaryHitInput.rayHitInfos = mImpl->petorShadingRayHitInfoBuffer.cudaPtr();
 		shadeSecondaryHitInput.numRayHitInfos = numRays;
 		shadeSecondaryHitInput.staticSphereLights = mImpl->staticSphereLights.cudaPtr();

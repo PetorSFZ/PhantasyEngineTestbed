@@ -171,6 +171,8 @@ static __global__ void gatherRaysShadeKernel(GatherRaysShadeKernelInput input,
 		color += 0.2f * (1.0f - roughness) * info.amount();
 	//}
 
+	//color = info.amount();
+
 	writeResult(resultOut, loc, vec4(color, 1.0));
 }
 
