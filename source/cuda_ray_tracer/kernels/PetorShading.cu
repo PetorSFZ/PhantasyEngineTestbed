@@ -97,7 +97,7 @@ static __global__ void gatherRaysShadeKernel(GatherRaysShadeKernelInput input,
 	                               input.materialTex, loc);
 	vec3 p = val.pos;
 	vec3 n = val.normal;
-	vec3 albedo = val.albedo;;
+	vec3 albedo = val.albedo;
 	float roughness = val.roughness;
 	float metallic = val.metallic;
 
@@ -164,11 +164,12 @@ static __global__ void gatherRaysShadeKernel(GatherRaysShadeKernelInput input,
 	vec2i rayLoc = loc / 2;
 	vec2i rayRes = input.res / 2;
 	uint32_t id = rayLoc.y * rayRes.x + rayLoc.x;
-	RayHitInfo info = input.rayHitInfos[id];
+	IncomingLight info = input.incomingLights[id];
 
-	if (info.wasHit()) {
-		color += 0.2f * (1.0f - roughness) * info.albedo();
-	}
+	//if (info.wasHit()) {
+		//color += 0.2f * (1.0f - roughness) * info.albedo();
+		color += 0.2f * (1.0f - roughness) * info.amount();
+	//}
 
 	writeResult(resultOut, loc, vec4(color, 1.0));
 }

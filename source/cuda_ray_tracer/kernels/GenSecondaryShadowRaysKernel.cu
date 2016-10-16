@@ -11,8 +11,8 @@ namespace phe {
 // GenSecondaryShadowRaysKernel
 // ------------------------------------------------------------------------------------------------
 
-__global__ void genSecondaryShadowRaysKernel(GenSecondaryShadowRaysKernelInput input,
-                                             RayIn* __restrict__ raysOut)
+static __global__ void genSecondaryShadowRaysKernel(GenSecondaryShadowRaysKernelInput input,
+                                                    RayIn* __restrict__ raysOut)
 {
 	// Calculate index in array
 	uint32_t idx = blockDim.x * blockIdx.x + threadIdx.x;

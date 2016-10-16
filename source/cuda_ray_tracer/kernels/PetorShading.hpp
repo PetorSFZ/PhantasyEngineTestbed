@@ -16,6 +16,24 @@
 
 namespace phe {
 
+using sfz::vec3;
+using sfz::vec4;
+
+// Light input
+// ------------------------------------------------------------------------------------------------
+
+struct IncomingLight final {
+	vec4 fData1;
+	vec4 fData2;
+
+	SFZ_CUDA_CALLABLE vec3 origin() const noexcept { return fData1.xyz; }
+	SFZ_CUDA_CALLABLE vec3 amount() const noexcept { return fData2.xyz; }
+
+	SFZ_CUDA_CALLABLE void setOrigin(const vec3& val) noexcept { fData1.xyz = val; }
+	SFZ_CUDA_CALLABLE void setAmount(const vec3& val) noexcept { fData2.xyz = val; }
+};
+
+
 // ProccessGBufferGenRaysKernel
 // ------------------------------------------------------------------------------------------------
 
@@ -49,7 +67,7 @@ struct GatherRaysShadeKernelInput final {
 	cudaSurfaceObject_t materialTex;
 
 	// Ray cast results
-	const RayHitInfo* __restrict__ rayHitInfos;
+	const IncomingLight* __restrict__ incomingLights;
 
 	// Light sources
 	const SphereLight* staticSphereLights;

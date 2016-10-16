@@ -212,6 +212,8 @@ if(CUDA_TRACER)
 		 ${CT_SOURCE_DIR}/kernels/ProcessGBufferKernel.cu
 		${CT_INCLUDE_DIR}/kernels/RayCastKernel.hpp
 		 ${CT_SOURCE_DIR}/kernels/RayCastKernel.cu
+		${CT_INCLUDE_DIR}/kernels/ShadeSecondaryHit.hpp
+		 ${CT_SOURCE_DIR}/kernels/ShadeSecondaryHit.cu
 
 		${CT_INCLUDE_DIR}/CudaBindlessTexture.hpp
 		 ${CT_SOURCE_DIR}/CudaBindlessTexture.cpp
