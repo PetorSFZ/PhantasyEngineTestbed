@@ -46,7 +46,7 @@ void main()
 
 	// Weight history using velocity similar to method in SMAA paper, "SMAA: Enhanced Subpixel
 	// Morphological Antialiasing" [Jimenez12].
-	float velocityFactor = min(1.0, 1.2 * sqrt(abs(length(pixelVelocity) - length(historyPixelVelocity))));
+	float velocityFactor = min(1.0, 0.5 * sqrt(abs(length(pixelVelocity) - length(historyPixelVelocity))));
 
 	float trust = clamp(1.0 - velocityFactor, 0.0, 1.0);
 
