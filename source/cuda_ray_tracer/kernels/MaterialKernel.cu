@@ -124,7 +124,7 @@ static __device__ void shadeHit(uint32_t id, const vec3& mask, curandState& rand
 					else {
 						circleU = normalize(vec3(-normal.y, normal.x, 0.0f));
 					}
-					vec3 circleV = cross(circleU, toLight);
+					vec3 circleV = cross(circleU, l);
 
 					float r1 = curand_uniform(&randState);
 					float r2 = curand_uniform(&randState);
