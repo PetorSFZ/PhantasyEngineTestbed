@@ -54,11 +54,31 @@ static __global__ void shadeSecondaryHitKernel(ShadeSecondaryHitKernelInput inpu
 		color += shading * fallofFactor(toLightDist, light.range);
 	}
 
+	// Calculate incoming light struct to output
 	IncomingLight tmp;
 	tmp.setOrigin(p);
 	tmp.setAmount(color);
 	tmp.setFallofFactor(1.0f); // TODO: Assume that we don't need to scale this by distance
-	incomingLightsOut[idx] = tmp;
+
+	// Calculate write indices and write to the corresponding 4 fullscreen pixels
+	vec2i halfRes = input.res / 2;
+	vec2i halfResIdx = vec2i(idx % halfRes.x, idx / halfRes.x);
+	vec2i fullResIdx = halfResIdx * 2;
+
+	vec2i loc1 = fullResIdx;
+	vec2i loc2 = loc1 + vec2i(1, 0);
+	vec2i loc3 = loc1 + vec2i(0, 1);
+	vec2i loc4 = loc1 + vec2i(1, 1);
+
+	int idx1 = (loc1.y * input.res.x + loc1.x) * input.numIncomingLightsPerPixel;
+	int idx2 = (loc2.y * input.res.x + loc2.x) * input.numIncomingLightsPerPixel;
+	int idx3 = (loc3.y * input.res.x + loc3.x) * input.numIncomingLightsPerPixel;
+	int idx4 = (loc4.y * input.res.x + loc4.x) * input.numIncomingLightsPerPixel;
+
+	incomingLightsOut[idx1] = tmp;
+	incomingLightsOut[idx2] = tmp;
+	incomingLightsOut[idx3] = tmp;
+	incomingLightsOut[idx4] = tmp;
 }
 
 // ShadeSecondaryHitKernel launch function

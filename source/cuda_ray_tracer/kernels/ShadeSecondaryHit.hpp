@@ -16,6 +16,8 @@ struct ShadeSecondaryHitKernelInput final {
 	const RayIn* secondaryRays; // The rays used to generate the secondary hits, needed for view dir
 	const RayHitInfo* rayHitInfos;
 	uint32_t numRayHitInfos;
+	vec2i res;
+	uint32_t numIncomingLightsPerPixel;
 
 	// Light sources
 	const SphereLight* staticSphereLights;

@@ -498,6 +498,8 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB,
 		shadeSecondaryHitInput.secondaryRays = mImpl->petorShadingSecondaryRayBuffer.cudaPtr();
 		shadeSecondaryHitInput.rayHitInfos = mImpl->petorShadingRayHitInfoBuffer.cudaPtr();
 		shadeSecondaryHitInput.numRayHitInfos = numRays;
+		shadeSecondaryHitInput.res = mTargetResolution;
+		shadeSecondaryHitInput.numIncomingLightsPerPixel = mImpl->staticSphereLights.size() + 1;
 		shadeSecondaryHitInput.staticSphereLights = mImpl->staticSphereLights.cudaPtr();
 		shadeSecondaryHitInput.numStaticSphereLights = mImpl->staticSphereLights.size();
 		shadeSecondaryHitInput.shadowRayResults = mImpl->petorShadingShadowRayInLightBuffer.cudaPtr();
@@ -516,6 +518,7 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB,
 		input2.materialTex = mImpl->gbuffer.materialSurfaceCuda();
 
 		input2.incomingLights = mImpl->petorShadingIncomingLightBuffer.cudaPtr();
+		input2.numIncomingLights = mImpl->staticSphereLights.size() + 1;
 		
 		input2.staticSphereLights = mImpl->staticSphereLights.cudaPtr();
 		input2.numStaticSphereLights = mImpl->staticSphereLights.size();
@@ -715,7 +718,7 @@ void CudaTracerRenderer::targetResolutionUpdated() noexcept
 
 	// Petorshading ray memory allocation
 	uint32_t petorShadingNumRays = (mImpl->staticSphereLights.size() + 1)
-	                             * mTargetResolution.x * mTargetResolution.y / 4;
+	                             * mTargetResolution.x * mTargetResolution.y;
 	mImpl->petorShadingSecondaryRayBuffer.destroy();
 	mImpl->petorShadingSecondaryRayBuffer.create(petorShadingNumRays);
 	mImpl->petorShadingRayHitBuffer.destroy();

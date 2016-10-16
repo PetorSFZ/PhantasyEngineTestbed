@@ -161,10 +161,10 @@ static __global__ void gatherRaysShadeKernel(GatherRaysShadeKernelInput input,
 	}
 
 	// Rayhit
-	vec2i rayLoc = loc / 2;
-	vec2i rayRes = input.res / 2;
-	uint32_t id = rayLoc.y * rayRes.x + rayLoc.x;
-	IncomingLight info = input.incomingLights[id];
+	int baseIdx = (loc.y * input.res.x + loc.x) * input.numIncomingLights;
+
+	IncomingLight info = input.incomingLights[baseIdx];
+
 
 	//if (info.wasHit()) {
 		//color += 0.2f * (1.0f - roughness) * info.albedo();

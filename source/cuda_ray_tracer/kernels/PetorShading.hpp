@@ -70,6 +70,7 @@ struct GatherRaysShadeKernelInput final {
 
 	// Ray cast results
 	const IncomingLight* __restrict__ incomingLights;
+	uint32_t numIncomingLights;
 
 	// Light sources
 	const SphereLight* staticSphereLights;
