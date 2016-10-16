@@ -75,12 +75,12 @@ static __device__ AABBIsect rayVsAabb(const vec3& invDir, const vec3& originDivD
 	//vec3 hi = (max - ray.origin) * ray.invDir;
 
 	// FMA operations
-	float loX = min.x * invDir.x - originDivDir.x;
-	float loY = min.y * invDir.y - originDivDir.y;
-	float loZ = min.z * invDir.z - originDivDir.z;
-	float hiX = max.x * invDir.x - originDivDir.x;
-	float hiY = max.y * invDir.y - originDivDir.y;
-	float hiZ = max.z * invDir.z - originDivDir.z;
+	float loX = fma(min.x, invDir.x, -originDivDir.x);
+	float loY = fma(min.y, invDir.y, -originDivDir.y);
+	float loZ = fma(min.z, invDir.z, -originDivDir.z);
+	float hiX = fma(max.x, invDir.x, -originDivDir.x);
+	float hiY = fma(max.y, invDir.y, -originDivDir.y);
+	float hiZ = fma(max.z, invDir.z, -originDivDir.z);
 
 	AABBIsect tmp;
 	tmp.tIn = spanBeginKepler(loX, hiX, loY, hiY, loZ, hiZ, tCurrMin);
