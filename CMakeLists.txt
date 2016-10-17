@@ -102,6 +102,8 @@ set(PHANTASY_ENGINE_LIB_FILES
 	 ${PH_SOURCE_DIR}/deferred_renderer/GLModel.cpp
 	${PH_INCLUDE_DIR}/deferred_renderer/GLTexture.hpp
 	 ${PH_SOURCE_DIR}/deferred_renderer/GLTexture.cpp
+	${PH_INCLUDE_DIR}/deferred_renderer/ShadowCubeMap.hpp
+	 ${PH_SOURCE_DIR}/deferred_renderer/ShadowCubeMap.cpp
 	${PH_INCLUDE_DIR}/deferred_renderer/SSBO.hpp
 	 ${PH_SOURCE_DIR}/deferred_renderer/SSBO.cpp
 
