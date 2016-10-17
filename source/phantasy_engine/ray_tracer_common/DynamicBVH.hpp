@@ -8,6 +8,7 @@
 #include "phantasy_engine/ray_tracer_common/BVH.hpp"
 #include "phantasy_engine/rendering/RawMesh.hpp"
 #include "phantasy_engine/level/DynObject.hpp"
+#include "phantasy_engine/ray_tracer_common/BVHNode.hpp"
 
 namespace phe {
 
@@ -16,14 +17,8 @@ struct LeafData {
 	vec3 translation;
 };
 
-struct DynNode {
-	vec3 min, max;
-	bool isLeaf = false;
-	uint32_t leftChildIndex, rightChildIndex;
-};
-
 struct DynamicBVH {
-	DynArray<DynNode> nodes;
+	DynArray<BVHNode> nodes;
 	DynArray<LeafData> leaves;
 };
 
