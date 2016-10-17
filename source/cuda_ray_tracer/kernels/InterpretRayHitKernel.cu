@@ -3,6 +3,7 @@
 #include "kernels/InterpretRayHitKernel.hpp"
 
 #include "CudaHelpers.hpp"
+#include "CudaSfzVectorCompatibility.cuh"
 
 namespace phe {
 
@@ -43,6 +44,16 @@ static __device__ vec4 linearize(vec4 rgbaGamma) noexcept
 	return rgbaGamma;
 }
 
+static __device__ Material retrieveMaterial(cudaTextureObject_t materialsTex, uint32_t index) noexcept
+{
+	index *= 3; // 3 reads per material
+	Material tmp;
+	tmp.iData = toSFZ(tex1Dfetch<int4>(materialsTex, index));
+	tmp.fData1 = toSFZ(tex1Dfetch<float4>(materialsTex, index + 1));
+	tmp.fData2 = toSFZ(tex1Dfetch<float4>(materialsTex, index + 2)); 
+	return tmp;
+}
+
 // InterpretRayHitKernel
 // ------------------------------------------------------------------------------------------------
 
@@ -64,12 +75,12 @@ static __global__ void interpretRayHitKernel(InterpretRayHitKernelInput input,
 		vec3 pos, normal;
 		vec2 uv;
 		uint32_t materialIndex;
-		retrieveTriData(input.staticTriangleDatas, ray, hit, pos, normal, uv, materialIndex);		
+		retrieveTriData(input.staticTriangleDatas, ray, hit, pos, normal, uv, materialIndex);
 		info.setPosition(pos);
 		info.setNormal(normal);
 
 		// Retrieve material
-		const Material& mat = input.materials[materialIndex];
+		Material mat = retrieveMaterial(input.materialsTex, materialIndex);
 
 		// Albedo
 		vec4 albedo = mat.albedoValue();

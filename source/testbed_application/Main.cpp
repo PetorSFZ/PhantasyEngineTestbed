@@ -47,6 +47,10 @@ int main(int, char**)
 	GlobalConfig& cfg = GlobalConfig::instance();
 	Setting* renderingBackendSetting = cfg.sanitizeInt("PhantasyEngineTestbed", "renderingBackend", 0, 0, 2);
 
+	cfg.sanitizeInt("PhantasyEngineTestbed", "sphereColour", 0, 0, 4);
+	cfg.sanitizeInt("PhantasyEngineTestbed", "sphereRoughness", 5, 1, 10);
+	cfg.sanitizeBool("PhantasyEngineTestbed", "sphereMetallic", true);
+
 	// Print all settings
 	DynArray<Setting*> settings;
 	cfg.getSettings(settings);
@@ -179,8 +183,15 @@ int main(int, char**)
 	level->staticScene.sphereLights.add(std::move(sunlight));
 
 	// Add triangle mesh to scene
-	loadDynObject(modelsPath.str, "sphere.obj", *level);
 	loadDynObject(modelsPath.str, "skysphere/skysphere.obj", *level, scalingMatrix4(10.0f));
+//	loadDynObject(modelsPath.str, "sphere.obj", *level);
+	
+	// 100
+	for (vec3 albedo : {vec3(1.0f, 1.0f, 1.0f), vec3(1.0f, 0.0f, 0.0f), vec3(0.0f, 1.0f, 0.0f), vec3(0.0f, 0.0f, 1.0f), vec3(0.0f, 0.0f, 0.0f)})
+	for (float metallic = 0.0f; metallic < 1.01f; metallic += 1.0f)
+	for (float roughness = 0.1f; roughness < 1.01f; roughness += 0.1f) {
+		loadDynObjectCustomMaterial(modelsPath.str, "sphere.obj", *level, albedo, roughness, metallic);
+	}
 
 	// Run gameloop
 	sfz::runGameLoop(engine.window(), SharedPtr<BaseScreen>(sfz_new<GameScreen>(

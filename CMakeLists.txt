@@ -198,6 +198,8 @@ if(CUDA_TRACER)
 		${CT_INCLUDE_DIR}/deprecated/CudaTracer.cuh
 		 ${CT_SOURCE_DIR}/deprecated/CudaTracer.cu
 
+		${CT_INCLUDE_DIR}/kernels/GenSecondaryShadowRaysKernel.hpp
+		 ${CT_SOURCE_DIR}/kernels/GenSecondaryShadowRaysKernel.cu
 		${CT_INCLUDE_DIR}/kernels/InitCurandKernel.hpp
 		 ${CT_SOURCE_DIR}/kernels/InitCurandKernel.cu
 		${CT_INCLUDE_DIR}/kernels/InterpretRayHitKernel.hpp
@@ -210,13 +212,17 @@ if(CUDA_TRACER)
 		 ${CT_SOURCE_DIR}/kernels/ProcessGBufferKernel.cu
 		${CT_INCLUDE_DIR}/kernels/RayCastKernel.hpp
 		 ${CT_SOURCE_DIR}/kernels/RayCastKernel.cu
+		${CT_INCLUDE_DIR}/kernels/ShadeSecondaryHit.hpp
+		 ${CT_SOURCE_DIR}/kernels/ShadeSecondaryHit.cu
 
 		${CT_INCLUDE_DIR}/CudaBindlessTexture.hpp
 		 ${CT_SOURCE_DIR}/CudaBindlessTexture.cpp
 		${CT_INCLUDE_DIR}/CudaBuffer.hpp
+		${CT_INCLUDE_DIR}/CudaDeviceHelpers.cuh
 		${CT_INCLUDE_DIR}/CudaGLInterop.hpp
 		 ${CT_SOURCE_DIR}/CudaGLInterop.cpp
 		${CT_INCLUDE_DIR}/CudaHelpers.hpp
+		${CT_INCLUDE_DIR}/CudaPbr.cuh
 		${CT_INCLUDE_DIR}/CudaSfzVectorCompatibility.cuh
 		${CT_INCLUDE_DIR}/CudaTextureBuffer.hpp
 		${CT_INCLUDE_DIR}/CudaTracerRenderer.hpp

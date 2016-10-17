@@ -3,6 +3,7 @@
 #pragma once
 
 #include <sfz/CUDACallable.hpp>
+#include <sfz/math/MathHelpers.hpp>
 #include <sfz/math/Vector.hpp>
 
 namespace phe {
@@ -52,5 +53,16 @@ struct Material final {
 	SFZ_CUDA_CALLABLE void setRoughnessValue(float value) noexcept { fData2.x = value; }
 	SFZ_CUDA_CALLABLE void setMetallicValue(float value) noexcept { fData2.y = value; }
 };
+
+// Material comparison functions
+// ------------------------------------------------------------------------------------------------
+
+inline bool approxEqual(const Material& lhs, const Material& rhs) noexcept
+{
+	return lhs.iData == rhs.iData &&
+	       sfz::approxEqual(lhs.fData1, rhs.fData1) &&
+	       sfz::approxEqual(lhs.fData2, rhs.fData2);
+}
+
 
 } // namespace phe

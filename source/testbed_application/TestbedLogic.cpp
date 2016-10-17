@@ -30,8 +30,7 @@ TestbedLogic::TestbedLogic(DynArray<RendererAndStatus>&& renderers, uint32_t ren
 	mRenderers(std::move(renderers)),
 	mCurrentRenderer(rendererIndex)
 {
-	triangleObjectHandle = 0;
-	instanceHandles.add(spawnObjectInstance(1, level, identityMatrix4<float>()));
+	instanceHandles.add(spawnObjectInstance(0, level, identityMatrix4<float>()));
 	objectPositions.put(0, vec3(0, 0, 0));
 }
 
@@ -55,7 +54,7 @@ UpdateOp TestbedLogic::update(GameScreen& screen, UpdateState& state) noexcept
 	for (uint32_t handle : instanceHandles) {
 		vec3& pos = objectPositions[handle];
 		vec3 velocity = vec3(0.0f, cos(accumulatedTime) - sin(accumulatedTime/4), sin(accumulatedTime) - cos(accumulatedTime/4)) * 10.0f * state.delta;
-		pos += velocity;
+		//pos += velocity;
 		screen.level->objects[handle].transform = translationMatrix(pos);
 	}
 
@@ -166,7 +165,10 @@ UpdateOp TestbedLogic::update(GameScreen& screen, UpdateState& state) noexcept
 	// Face buttons
 	if (ctrl.y == ButtonState::DOWN) {
 		vec3 pos = screen.cam.pos();
-		uint32_t handle = spawnObjectInstance(triangleObjectHandle, *screen.level, translationMatrix(pos));
+		int colour = cfg.getSetting("PhantasyEngineTestbed", "sphereColour")->intValue();
+		int metallic = cfg.getSetting("PhantasyEngineTestbed", "sphereMetallic")->boolValue() ? 1 : 0;
+		int roughness = cfg.getSetting("PhantasyEngineTestbed", "sphereRoughness")->intValue() - 1;
+		uint32_t handle = spawnObjectInstance(1 + (10 * 2 * colour + 10 * metallic + roughness), *screen.level, translationMatrix(pos));
 		instanceHandles.add(handle);
 		objectPositions.put(handle, pos);
 	}

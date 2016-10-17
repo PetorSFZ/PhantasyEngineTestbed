@@ -20,17 +20,18 @@ using sfz::vec4;
 // ------------------------------------------------------------------------------------------------
 
 struct RayIn final {
-	vec4 data[2];
+	vec4 data1;
+	vec4 data2;
 
-	SFZ_CUDA_CALLABLE vec3 origin() const noexcept { return data[0].xyz; }
-	SFZ_CUDA_CALLABLE vec3 dir() const noexcept { return data[1].xyz; }
-	SFZ_CUDA_CALLABLE float maxDist() const noexcept { return data[0].w; }
-	SFZ_CUDA_CALLABLE bool noResultOnlyHit() const noexcept { return (data[1].w < 0.0f); }
+	SFZ_CUDA_CALLABLE vec3 origin() const noexcept { return data1.xyz; }
+	SFZ_CUDA_CALLABLE vec3 dir() const noexcept { return data2.xyz; }
+	SFZ_CUDA_CALLABLE float minDist() const noexcept { return data1.w; }
+	SFZ_CUDA_CALLABLE float maxDist() const noexcept { return data2.w; }
 
-	SFZ_CUDA_CALLABLE void setOrigin(const vec3& origin) noexcept { data[0].xyz = origin; }
-	SFZ_CUDA_CALLABLE void setDir(const vec3& dir) noexcept { data[1].xyz = dir; }
-	SFZ_CUDA_CALLABLE void setMaxDist(float dist) noexcept { data[0].w = dist; }
-	SFZ_CUDA_CALLABLE void setNoResultOnlyHit(bool val) noexcept { data[1].w = val ? -1.0f : 1.0f; }
+	SFZ_CUDA_CALLABLE void setOrigin(const vec3& origin) noexcept { data1.xyz = origin; }
+	SFZ_CUDA_CALLABLE void setDir(const vec3& dir) noexcept { data2.xyz = dir; }
+	SFZ_CUDA_CALLABLE void setMinDist(float dist) noexcept { data1.w = dist; }
+	SFZ_CUDA_CALLABLE void setMaxDist(float dist) noexcept { data2.w = dist; }
 };
 
 static_assert(sizeof(RayIn) == 32, "RayIn is padded");
@@ -53,11 +54,14 @@ struct RayCastKernelInput final {
 	const RayIn* rays;
 };
 
-void launchRayCastKernel(const RayCastKernelInput& input, RayHit* rayResults,
+void launchRayCastKernel(const RayCastKernelInput& input, RayHit* __restrict__ rayResults,
                          const cudaDeviceProp& deviceProperties) noexcept;
 
-void launchRayCastNoPersistenceKernel(const RayCastKernelInput& input, RayHit* rayResults,
+void launchRayCastNoPersistenceKernel(const RayCastKernelInput& input, RayHit* __restrict__ rayResults,
                                       const cudaDeviceProp& deviceProperties) noexcept;
+
+void launchShadowRayCastKernel(const RayCastKernelInput& input, bool* __restrict__ inLight,
+                               const cudaDeviceProp& deviceProperties) noexcept;
 
 // Secondary helper kernels (for debugging and profiling)
 // ------------------------------------------------------------------------------------------------

@@ -203,4 +203,27 @@ uint32_t loadDynObject(const char* basePath, const char* fileName, Level& level)
 	return loadDynObject(basePath, fileName, level, identityMatrix4<float>());
 }
 
+uint32_t loadDynObjectCustomMaterial(const char* basePath, const char* fileName, Level& level, vec3& albedo, float roughness, float metallic, const mat4& modelMatrix)
+{
+	uint32_t handle = loadDynObject(basePath, fileName, level, modelMatrix);
+
+	const RawMesh& mesh = level.meshes[handle];
+
+	for (uint32_t matIndex : mesh.materialIndices) {
+		level.materials[matIndex].setAlbedoTexIndex(-1);
+		level.materials[matIndex].setRoughnessTexIndex(-1);
+		level.materials[matIndex].setMetallicTexIndex(-1);
+		level.materials[matIndex].setAlbedoValue(vec4(albedo, 1.0));
+		level.materials[matIndex].setRoughnessValue(roughness);
+		level.materials[matIndex].setMetallicValue(metallic);
+	}
+
+	return handle;
+}
+
+uint32_t loadDynObjectCustomMaterial(const char* basePath, const char* fileName, Level& level, vec3& albedo, float roughness, float metallic)
+{
+	return loadDynObjectCustomMaterial(basePath, fileName, level, albedo, roughness, metallic, identityMatrix4<float>());
+}
+
 }

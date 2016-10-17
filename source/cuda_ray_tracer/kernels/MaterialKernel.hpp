@@ -10,9 +10,8 @@
 #include <sfz/math/Vector.hpp>
 
 #include <phantasy_engine/level/SphereLight.hpp>
-#include <phantasy_engine/ray_tracer_common/Triangle.hpp>
-#include <phantasy_engine/rendering/Material.hpp>
 
+#include "kernels/InterpretRayHitKernel.hpp"
 #include "kernels/RayCastKernel.hpp"
 
 namespace phe {
@@ -25,45 +24,57 @@ using sfz::vec4;
 // ------------------------------------------------------------------------------------------------
 
 struct PathState final {
-	vec3 pendingLightContribution;
-	vec3 finalColor;
 	vec3 throughput;
 	uint32_t pathLength;
-	uint32_t shadowRayStartIndex;
-	uint32_t numShadowRays;
-};
-
-struct MaterialRequest final {
-	uint32_t materialID;
-};
-
-struct MaterialKernelInput final {
-	vec2i res;
-	RayIn* shadowRays;
-	PathState* pathStates;
-	curandState* randStates;
-	const RayIn* rays;
-	const RayHit* rayHits;
-	const TriangleData* staticTriangleDatas;
-	const Material* materials;
-	const cudaTextureObject_t* textures;
-	const SphereLight* sphereLights;
-	uint32_t numSphereLights;
 };
 
 struct GBufferMaterialKernelInput final {
 	vec2i res;
 	vec3 camPos;
-	RayIn* extensionRays;
 	RayIn* shadowRays;
-	PathState* pathStates;
-	curandState* randState;
+	vec3* lightContributions;
+	curandState* randStates;
 	cudaSurfaceObject_t posTex;
 	cudaSurfaceObject_t normalTex;
 	cudaSurfaceObject_t albedoTex;
 	cudaSurfaceObject_t materialTex;
-	const SphereLight* sphereLights;
-	uint32_t numSphereLights;
+	const SphereLight* staticSphereLights;
+	uint32_t numStaticSphereLights;
+};
+
+struct MaterialKernelInput final {
+	vec2i res;
+	RayIn* shadowRays;
+	vec3* lightContributions;
+	PathState* pathStates;
+	curandState* randStates;
+	const RayIn* rays;
+	const RayHitInfo* rayHitInfos;
+	const SphereLight* staticSphereLights;
+	uint32_t numStaticSphereLights;
+};
+
+struct CreateSecondaryRaysKernelInput final {
+	vec2i res;
+	vec3 camPos;
+	RayIn* extensionRays;
+	PathState* pathStates;
+	curandState* randStates;
+	cudaSurfaceObject_t posTex;
+	cudaSurfaceObject_t normalTex;
+	cudaSurfaceObject_t albedoTex;
+	cudaSurfaceObject_t materialTex;
+};
+
+struct ShadowLogicKernelInput final {
+	cudaSurfaceObject_t surface;
+	vec2i res;
+	uint32_t resolutionScale;
+	bool addToSurface;
+	const bool* shadowRayHits;
+	PathState* pathStates;
+	const vec3* lightContributions;
+	uint32_t numStaticSphereLights;
 };
 
 struct WriteResultKernelInput final {
@@ -76,14 +87,14 @@ struct WriteResultKernelInput final {
 // Material kernel launch function
 // ------------------------------------------------------------------------------------------------
 
+void launchGBufferMaterialKernel(const GBufferMaterialKernelInput& input) noexcept;
+
 void launchMaterialKernel(const MaterialKernelInput& input) noexcept;
 
-void launchGBufferMaterialKernel(const GBufferMaterialKernelInput& input) noexcept;
+void launchCreateSecondaryRaysKernel(const CreateSecondaryRaysKernelInput& input) noexcept;
 
 void launchInitPathStatesKernel(vec2i res, PathState* pathStates) noexcept;
 
-void launchShadowLogicKernel(vec2i res, const RayHit* shadowRayHits, PathState* pathStates) noexcept;
-
-void launchWriteResultKernel(const WriteResultKernelInput& input) noexcept;
+void launchShadowLogicKernel(const ShadowLogicKernelInput& input) noexcept;
 
 } // namespace phe

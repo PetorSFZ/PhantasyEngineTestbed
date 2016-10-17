@@ -147,13 +147,24 @@ static void processNode(const char* basePath, Level& level,
 			materialTmp.setMetallicValue(color.r);
 		}
 
-		// Add material index
-		uint16_t nextMaterialIndex = uint16_t(level.materials.size());
-		meshTmp.materialIndices = DynArray<uint16_t>(meshTmp.vertices.size(), nextMaterialIndex, 0u);
+		// Go through all existing materials and try to find one identical to the current one
+		uint32_t materialIndex = ~0u;
+		for (uint32_t i = 0; i < level.materials.size(); i++) {
+			if (approxEqual(level.materials[i], materialTmp)) {
+				materialIndex = i;
+				break;
+			}
+		}
 
-		// Add the mesh and material
+		// If material doesn't exist, add it
+		if (materialIndex == ~0u) {
+			materialIndex = level.materials.size();
+			level.materials.add(materialTmp);
+		}
+
+		// Set material index to all vertices in mesh and add it to level
+		meshTmp.materialIndices = DynArray<uint16_t>(meshTmp.vertices.size(), uint16_t(materialIndex), 0u);
 		level.staticScene.meshes.add(std::move(meshTmp));
-		level.materials.add(materialTmp);
 	}
 
 	// Process all children

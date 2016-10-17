@@ -3,13 +3,10 @@
 #include "kernels/MaterialKernel.hpp"
 
 #include <phantasy_engine/level/SphereLight.hpp>
-#include <phantasy_engine/ray_tracer_common/BVHNode.hpp>
-#include <phantasy_engine/ray_tracer_common/Triangle.hpp>
-#include <phantasy_engine/ray_tracer_common/Shading.hpp>
-#include <phantasy_engine/rendering/Material.hpp>
-#include <sfz/math/MathHelpers.hpp>
 
 #include "CudaHelpers.hpp"
+#include "CudaDeviceHelpers.cuh"
+#include "CudaPbr.cuh"
 #include "CudaSfzVectorCompatibility.cuh"
 #include "GBufferRead.cuh"
 
@@ -22,290 +19,163 @@ using sfz::vec3i;
 using sfz::vec4;
 using sfz::vec4i;
 
-
-// Material access helpers
+// Surface manipulation helpers
 // ------------------------------------------------------------------------------------------------
 
-__device__ float readMaterialTextureGray(cudaTextureObject_t texture, vec2 coord) noexcept {
-	uchar1 res = tex2D<uchar1>(texture, coord.x, coord.y);
-	return float(res.x) / 255.0f;
+inline __device__ void writeToSurface(const cudaSurfaceObject_t& surface, vec2i loc, const vec4& data) noexcept
+{
+	float4 dataFloat4 = toFloat4(data);
+	surf2Dwrite(dataFloat4, surface, loc.x * sizeof(float4), loc.y);
 }
 
-__device__ vec4 readMaterialTextureRGBA(cudaTextureObject_t texture, vec2 coord) noexcept
-{
-	uchar4 res = tex2D<uchar4>(texture, coord.x, coord.y);
-	return vec4(float(res.x), float(res.y), float(res.z), float(res.w)) / 255.0f;
+inline __device__ vec4 readFromSurface(const cudaSurfaceObject_t& surface, vec2i loc) noexcept {
+	float4 data;
+	surf2Dread(&data, surface, loc.x * sizeof(float4), loc.y);
+	return toSFZ(data);
 }
 
-inline __device__ float linearize(float value)
+// Shading
+// ------------------------------------------------------------------------------------------------
+
+/// Set ray to not hit anything and be cheap to evaluate in ray casting.
+static __device__ void setToDummyRay(RayIn& ray)
 {
-	return std::pow(value, 2.2f);
+	ray.setOrigin(vec3(1000000.0f));
+	ray.setDir(vec3(0.0f, 1.0f, 0.0f));
+	ray.setMinDist(0.001f);
+	ray.setMaxDist(0.001f);
 }
 
-struct HitInfo final {
-	vec3 pos;
-	vec3 normal;
-	vec2 uv;
-	uint32_t materialIndex;
-};
-
-SFZ_CUDA_CALLABLE HitInfo interpretHit(const TriangleData* triDatas, const RayHit& result,
-	const RayIn& ray) noexcept
+static __device__ void shadeHit(uint32_t id, uint32_t numPixels, const vec3& mask,
+                                curandState& randState, RayIn* shadowRays, vec3* lightContributions,
+                                const vec3& normal, const vec3& toCamera, const vec3& pos,
+                                const vec3& albedo, float metallic, float roughness,
+                                const SphereLight* staticSphereLights,
+                                uint32_t numStaticSphereLights) noexcept
 {
-	const TriangleData& data = triDatas[result.triangleIndex];
-	float u = result.u;
-	float v = result.v;
+	vec3 p = pos;
+	vec3 n = normal;
 
-	// Retrieving position
-	HitInfo info;
-	info.pos = ray.origin() + result.t * ray.dir();
+	vec3 v = toCamera; // to view
 
-	// Interpolating normal
-	vec3 n0 = data.n0;
-	vec3 n1 = data.n1;
-	vec3 n2 = data.n2;
-	info.normal = normalize(n0 + (n1 - n0) * u + (n2 - n0) * v);
+	// Interpolation of normals sometimes makes them face away from the camera. Clamp
+	// these to almost zero, to not break shading calculations.
+	float nDotV = fmaxf(0.001f, dot(n, v));
 
-	 // Interpolating uv coordinate
-	vec2 uv0 = data.uv0;
-	vec2 uv1 = data.uv1;
-	vec2 uv2 = data.uv2;
-	info.uv = uv0 + (uv1 - uv0) * u + (uv2 - uv0) * v;
+	for (uint32_t i = 0; i < numStaticSphereLights; i++) {
+		SphereLight light = staticSphereLights[i];
 
-	// Material index
-	info.materialIndex = data.materialIndex;
+		vec3 color = vec3(0.0f);
 
-	return info;
-}
+		// Initialize shadow ray to dummy. A future improvement would be to only queue up as many
+		// RayIns as are actually needed
+		RayIn shadowRay;
+		setToDummyRay(shadowRay);
 
-__device__ void shadeHit(PathState& pathState, curandState& randState, RayIn& shadowRay,
-	const vec3& normal, const vec3& toCamera, const vec3& pos, const vec3& offsetPos,
-	const vec3& albedoColor, float metallic, float roughness,
-	const SphereLight* sphereLights, uint32_t numSphereLights) noexcept
-{
-	vec3 offsetHitPos = pos + 0.01f * normal;
-	// TEMP: Restrict to single light source
-	numSphereLights = 2;
-	for (uint32_t i = 1; i < numSphereLights; i++) {
-		SphereLight light = sphereLights[i];
-
-		vec3 toLight = light.pos - pos;
+		vec3 toLight = light.pos - p;
 		float toLightDist = length(toLight);
-		vec3 l = toLight / toLightDist;
-		vec3 v = normalize(toCamera);
-		vec3 h = normalize(l + v);
 
-		float nDotL = dot(normal, l);
-		if (nDotL <= 0.0f) {
-			continue;
-		}
+		// Check if surface is in range of light source
+		if (toLightDist <= light.range) {
+			// Shading parameters
+			vec3 l = toLight / toLightDist; // to light (normalized)
+			vec3 h = normalize(l + v); // half vector (normal of microfacet)
 
-		float nDotV = dot(normal, v);
+			// If nDotL is <= 0 then the light source is not in the hemisphere of the surface, i.e.
+			// no shading needs to be performed
+			float nDotL = dot(n, l);
+			if (nDotL > 0.0f) {
+				// Lambert diffuse
+				vec3 diffuse = albedo / sfz::PI();
 
-		nDotV = std::max(0.001f, nDotV);
+				// Cook-Torrance specular
+				// Normal distribution function
+				float nDotH = fmaxf(0.0f, dot(n, h)); // max() should be superfluous here
+				float ctD = ggx(nDotH, roughness * roughness);
 
-		// Lambert diffuse
-		vec3 diffuse = albedoColor / sfz::PI();
+				// Geometric self-shadowing term
+				float k = powf(roughness + 1.0f, 2.0f) / 8.0f;
+				float ctG = geometricSchlick(nDotL, nDotV, k);
 
-		// Cook-Torrance specular
-		// Normal distribution function
-		float nDotH = std::max(sfz::dot(normal, h), 0.0f); // max() should be superfluous here
-		float ctD = ggx(nDotH, roughness * roughness);
+				// Fresnel function
+				// Assume all dielectrics have a f0 of 0.04, for metals we assume f0 == albedo
+				vec3 f0 = lerp(vec3(0.04f), albedo, metallic);
+				vec3 ctF = fresnelSchlick(nDotL, f0);
 
-		// Geometric self-shadowing term
-		float k = pow(roughness + 1.0f, 2.0f) / 8.0f;
-		float ctG = geometricSchlick(nDotL, nDotV, k);
+				// Calculate final Cook-Torrance specular value
+				vec3 specular = ctD * ctF * ctG / (4.0f * nDotL * nDotV);
 
-		// Fresnel function
-		// Assume all dielectrics have a f0 of 0.04, for metals we assume f0 == albedo
-		vec3 f0 = sfz::lerp(vec3(0.04f), albedoColor, metallic);
-		vec3 ctF = fresnelSchlick(nDotL, f0);
+				// Calculates light strength
+				float fallofNumerator = powf(clamp(1.0f - powf(toLightDist / light.range, 4.0f), 0.0f, 1.0f), 2.0f);
+				float fallofDenominator = (toLightDist * toLightDist + 1.0);
+				float falloff = fallofNumerator / fallofDenominator;
+				vec3 lightContrib = falloff * light.strength;
 
-		// Calculate final Cook-Torrance specular value
-		vec3 specular = ctD * ctF * ctG / (4.0f * nDotL * nDotV);
+				// "Solves" reflectance equation under the assumption that the light source is a point light
+				// and that there is no global illumination.
+				color = mask * (diffuse + specular) * lightContrib * nDotL;
 
-		// Calculates light strength
-		float fallofNumerator = pow(sfz::clamp(1.0f - std::pow(toLightDist / light.range, 4.0f), 0.0f, 1.0f), 2);
-		float fallofDenominator = (toLightDist * toLightDist + 1.0f);
-		float falloff = fallofNumerator / fallofDenominator;
-		vec3 lighting = falloff * light.strength;
+				if (light.staticShadows) {
+					// Slightly offset light ray to get stochastic soft shadows
+					vec3 circleU;
+					if (abs(normal.z) > 0.01f) {
+						circleU = normalize(vec3(0.0f, -normal.z, normal.y));
+					}
+					else {
+						circleU = normalize(vec3(-normal.y, normal.x, 0.0f));
+					}
+					vec3 circleV = cross(circleU, l);
 
-		vec3 color = pathState.throughput * (diffuse + specular) * lighting * nDotL;
+					float r1 = curand_uniform(&randState);
+					float r2 = curand_uniform(&randState);
+					float centerDistance = light.radius * (2.0f * r2 - 1.0f);
+					float azimuthAngle = 2.0f * sfz::PI() * r1;
 
-		if (light.staticShadows) {
-			// Slightly offset light ray to get stochastic soft shadows
-			vec3 circleU;
-			if (abs(normal.z) > 0.01f) {
-				circleU = normalize(vec3(0.0f, -normal.z, normal.y));
+					vec3 lightPosOffset = circleU * cos(azimuthAngle) * centerDistance +
+					                      circleV * sin(azimuthAngle) * centerDistance;
+
+					vec3 offsetLightDiff = light.pos + lightPosOffset - pos;
+					vec3 offsetLightDir = normalize(offsetLightDiff);
+
+					shadowRay.setOrigin(pos);
+					shadowRay.setDir(offsetLightDir);
+					shadowRay.setMinDist(0.001f);
+					shadowRay.setMaxDist(length(offsetLightDiff));
+				}
 			}
-			else {
-				circleU = normalize(vec3(-normal.y, normal.x, 0.0f));
-			}
-			vec3 circleV = cross(circleU, toLight);
-
-			float r1 = curand_uniform(&randState);
-			float r2 = curand_uniform(&randState);
-			float centerDistance = light.radius * (2.0f * r2 - 1.0f);
-			float azimuthAngle = 2.0f * sfz::PI() * r1;
-
-			vec3 lightPosOffset = circleU * cos(azimuthAngle) * centerDistance +
-			                      circleV * sin(azimuthAngle) * centerDistance;
-
-			vec3 offsetLightDiff = light.pos + lightPosOffset - offsetHitPos;
-			vec3 offsetLightDir = normalize(offsetLightDiff);
-
-			shadowRay.setOrigin(offsetHitPos);
-			shadowRay.setDir(offsetLightDir);
-			shadowRay.setMaxDist(length(offsetLightDiff));
-			shadowRay.setNoResultOnlyHit(true);
-
-			pathState.pendingLightContribution = color;
 		}
-		else {
-			pathState.finalColor += color;
-		}
+		uint32_t shadowRayID = id + i * numPixels;
+		shadowRays[shadowRayID] = shadowRay;
+		lightContributions[shadowRayID] = color;
 	}
 }
 
-static __global__ void materialKernel(
-	vec2i res,
-	RayIn* shadowRays,
-	PathState* pathStates,
-	curandState* randStates,
-	const RayIn* rays,
-	const RayHit* rayHits,
-	const TriangleData* staticTriangleDatas,
-	const Material* materials,
-	const cudaTextureObject_t* textures,
-	const SphereLight* sphereLights,
-	uint32_t numSphereLights)
+// Main material kernels
+// ------------------------------------------------------------------------------------------------
+
+static __global__ void gBufferMaterialKernel(GBufferMaterialKernelInput input)
 {
 	// Calculate surface coordinates
 	vec2i loc = vec2i(blockIdx.x * blockDim.x + threadIdx.x,
 	                  blockIdx.y * blockDim.y + threadIdx.y);
-	if (loc.x >= res.x || loc.y >= res.y) return;
+	if (loc.x >= input.res.x || loc.y >= input.res.y) return;
 
-	uint32_t id = loc.y * res.x + loc.x;
-	PathState& pathState = pathStates[id];
-	RayIn& shadowRay = shadowRays[id];
-	curandState randState = randStates[id];
+	GBufferValue gBufferValue = readGBuffer(input.posTex, input.normalTex, input.albedoTex,
+	                                        input.materialTex, loc);
 
-	RayHit hit = rayHits[id];
-	RayIn ray = rays[id];
+	uint32_t id = loc.y * input.res.x + loc.x;
+	uint32_t numPixels = input.res.x * input.res.y;
 
-	if (hit.triangleIndex == ~0u) {
-		return;
-	}
+	curandState randState = input.randStates[id];
 
-	HitInfo info = interpretHit(staticTriangleDatas, hit, ray);
+	vec3 toCamera = normalize(input.camPos - gBufferValue.pos);
 
-	const Material& material = materials[info.materialIndex];
-	vec4 albedoValue = material.albedoValue();
-	if (materials[info.materialIndex].albedoTexIndex() != UINT32_MAX) {
-		cudaTextureObject_t albedoTexture = textures[material.albedoTexIndex()];
-		albedoValue = readMaterialTextureRGBA(albedoTexture, info.uv);
-	}
-	vec3 albedoColor = albedoValue.xyz;
-	albedoColor = linearize(albedoColor);
+	shadeHit(id, numPixels, vec3(1.0f), randState, input.shadowRays,
+	         input.lightContributions, gBufferValue.normal, toCamera, gBufferValue.pos,
+	         gBufferValue.albedo, gBufferValue.metallic, gBufferValue.roughness,
+	         input.staticSphereLights, input.numStaticSphereLights);
 
-	float metallic = material.metallicValue();
-	if (materials[info.materialIndex].metallicTexIndex() != UINT32_MAX) {
-		cudaTextureObject_t metallicTexture = textures[material.metallicTexIndex()];
-		metallic = readMaterialTextureGray(metallicTexture, info.uv);
-	}
-	metallic = linearize(metallic);
-
-	float roughness = material.roughnessValue();
-	if (materials[info.materialIndex].roughnessTexIndex() != UINT32_MAX) {
-		cudaTextureObject_t roughnessTexture = textures[material.roughnessTexIndex()];
-		roughness = readMaterialTextureGray(roughnessTexture, info.uv);
-	}
-	roughness = linearize(roughness);
-
-	vec3 offsetHitPos = info.pos + info.normal * 0.01f;
-
-	shadeHit(pathState, randState, shadowRay, info.normal, -ray.dir(), info.pos, offsetHitPos, albedoColor, metallic, roughness, sphereLights, numSphereLights);
-	randStates[id] = randState;
-}
-
-void launchMaterialKernel(const MaterialKernelInput& input) noexcept
-{
-	// Calculate number of threads and blocks to run
-	dim3 threadsPerBlock(8, 8);
-	dim3 numBlocks((input.res.x + threadsPerBlock.x - 1) / threadsPerBlock.x,
-	               (input.res.y + threadsPerBlock.y - 1) / threadsPerBlock.y);
-
-	// Run cuda ray tracer kernel
-	materialKernel<<<numBlocks, threadsPerBlock>>>(input.res, input.shadowRays, input.pathStates, input.randStates, input.rays, input.rayHits, input.staticTriangleDatas, input.materials, input.textures, input.sphereLights, input.numSphereLights);
-	CHECK_CUDA_ERROR(cudaGetLastError());
-	CHECK_CUDA_ERROR(cudaDeviceSynchronize());
-}
-
-static __global__ void gBufferMaterialKernel(
-	vec2i res,
-	vec3 camPos,
-	RayIn* extensionRays,
-	RayIn* shadowRays,
-	PathState* pathStates,
-	curandState* randStates,
-	cudaSurfaceObject_t posTex,
-	cudaSurfaceObject_t normalTex,
-	cudaSurfaceObject_t albedoTex,
-	cudaSurfaceObject_t materialTex,
-	const SphereLight* sphereLights,
-	uint32_t numSphereLights)
-{
-	// Calculate surface coordinates
-	vec2i loc = vec2i(blockIdx.x * blockDim.x + threadIdx.x,
-		blockIdx.y * blockDim.y + threadIdx.y);
-	if (loc.x >= res.x || loc.y >= res.y) return;
-
-	GBufferValue gBufferValue = readGBuffer(posTex, normalTex, albedoTex, materialTex, loc);
-
-	vec3 offsetHitPos = gBufferValue.pos + gBufferValue.normal * 0.01f;
-
-	uint32_t id = loc.y * res.x + loc.x;
-	PathState& pathState = pathStates[id];
-	RayIn& shadowRay = shadowRays[id];
-	curandState randState = randStates[id];
-
-	vec3 toCamera = camPos - gBufferValue.pos;
-
-	shadeHit(pathState, randState, shadowRay, gBufferValue.normal, toCamera, gBufferValue.pos, offsetHitPos, gBufferValue.albedo, gBufferValue.metallic, gBufferValue.roughness, sphereLights, numSphereLights);
-
-	pathState.throughput *= gBufferValue.albedo;
-	pathState.throughput *= 0.5f;
-
-	// To get ambient light, take cosine-weighted sample over the hemisphere
-	// and trace in that direction.
-
-	RayIn& extensionRay = extensionRays[id];
-
-	float r1 = curand_uniform(&randState);
-	float r2 = curand_uniform(&randState);
-	float azimuthAngle = 2.0f * sfz::PI() * r1;
-	float altitudeFactor = sqrt(r2);
-
-	// Find surface vectors u and v orthogonal to normal
-	vec3 u;
-	if (abs(gBufferValue.normal.z) > 0.01f) {
-		u = normalize(vec3(0.0f, -gBufferValue.normal.z, gBufferValue.normal.y));
-	}
-	else {
-		u = normalize(vec3(-gBufferValue.normal.y, gBufferValue.normal.x, 0.0f));
-	}
-	vec3 v = cross(gBufferValue.normal, u);
-
-	vec3 rayDir = u * cos(azimuthAngle) * altitudeFactor +
-	              v * sin(azimuthAngle) * altitudeFactor +
-	              gBufferValue.normal * sqrt(1 - r2);
-
-	extensionRay.setOrigin(offsetHitPos);
-	extensionRay.setDir(rayDir);
-	extensionRay.setMaxDist(FLT_MAX);
-	extensionRay.setNoResultOnlyHit(false);
-
-	randStates[id] = randState;
+	input.randStates[id] = randState;
 }
 
 void launchGBufferMaterialKernel(const GBufferMaterialKernelInput& input) noexcept
@@ -315,12 +185,177 @@ void launchGBufferMaterialKernel(const GBufferMaterialKernelInput& input) noexce
 	dim3 numBlocks((input.res.x + threadsPerBlock.x - 1) / threadsPerBlock.x,
 	               (input.res.y + threadsPerBlock.y - 1) / threadsPerBlock.y);
 
-	// Run cuda ray tracer kernel
-	gBufferMaterialKernel<<<numBlocks, threadsPerBlock>>>(input.res, input.camPos, input.extensionRays, input.shadowRays, input.pathStates, input.randState, input.posTex, input.normalTex, input.albedoTex, input.materialTex, input.sphereLights, input.numSphereLights);
+	gBufferMaterialKernel<<<numBlocks, threadsPerBlock>>>(input);
 
 	CHECK_CUDA_ERROR(cudaGetLastError());
 	CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 }
+
+static __global__ void materialKernel(MaterialKernelInput input)
+{
+	// Calculate surface coordinates
+	vec2i loc = vec2i(blockIdx.x * blockDim.x + threadIdx.x,
+	                  blockIdx.y * blockDim.y + threadIdx.y);
+	if (loc.x >= input.res.x || loc.y >= input.res.y) return;
+
+	uint32_t id = loc.y * input.res.x + loc.x;
+	uint32_t numPixels = input.res.x * input.res.y;
+
+	RayHitInfo hitInfo = input.rayHitInfos[id];
+
+	if (!hitInfo.wasHit()) {
+		// If nothing was hit, return black. Set shadow ray to dummy. A future improvement would
+		// be to only queue up as many RayIns as are actually needed
+		RayIn dummyRay;
+		setToDummyRay(dummyRay);
+		for (uint32_t i = 0; i < input.numStaticSphereLights; i++) {
+			uint32_t shadowRayID = id * input.numStaticSphereLights + i;
+			input.shadowRays[shadowRayID] = dummyRay;
+			input.lightContributions[shadowRayID] = vec3(0.0f);
+		}
+		return;
+	}
+
+	PathState& pathState = input.pathStates[id];
+	curandState randState = input.randStates[id];
+	RayIn ray = input.rays[id];
+
+	shadeHit(id, numPixels, pathState.throughput, randState, input.shadowRays,
+	         input.lightContributions, hitInfo.normal(), -ray.dir(), hitInfo.position(),
+	         hitInfo.albedo(), hitInfo.metallic(), hitInfo.roughness(), input.staticSphereLights,
+	         input.numStaticSphereLights);
+	input.randStates[id] = randState;
+}
+
+void launchMaterialKernel(const MaterialKernelInput& input) noexcept
+{
+	// Calculate number of threads and blocks to run
+	dim3 threadsPerBlock(8, 8);
+	dim3 numBlocks((input.res.x + threadsPerBlock.x - 1) / threadsPerBlock.x,
+	               (input.res.y + threadsPerBlock.y - 1) / threadsPerBlock.y);
+
+	materialKernel<<<numBlocks, threadsPerBlock>>>(input);
+	CHECK_CUDA_ERROR(cudaGetLastError());
+	CHECK_CUDA_ERROR(cudaDeviceSynchronize());
+}
+
+// Importance sampling helpers
+// ------------------------------------------------------------------------------------------------
+
+inline __device__ vec3 hemisphereToWorld(float phi, float cosTheta, float sinTheta, const vec3& normal)
+{
+	vec3 hemisphereCoord;
+	hemisphereCoord.x = sinTheta * cos(phi);
+	hemisphereCoord.y = sinTheta * sin(phi);
+	hemisphereCoord.z = cosTheta;
+
+	vec3 upVector = abs(normal.z) < 0.999f ? vec3(0.0f, 0.0f, 1.0f) : vec3(1.0f, 0.0f, 0.0f);
+	vec3 u = sfz::normalize(sfz::cross(upVector, normal));
+	vec3 v = sfz::cross(normal, u);
+
+	return u * hemisphereCoord.x + v * hemisphereCoord.y + normal * hemisphereCoord.z;
+}
+
+/// Move vector facing into a surface up to the tangent plane of the surface.
+inline __device__ vec3 clampToHemisphere(const vec3& vector, const vec3& surfaceNormal)
+{
+	float nDotV = dot(vector, surfaceNormal);
+	float normalOffsetDist = -std::min(0.0f, nDotV);
+	return sfz::normalize(vector + normalOffsetDist * surfaceNormal);
+}
+
+/// Return a GGX distributed sample around the reflection vector.
+inline __device__ vec3 sampleGgx(const vec2& randVec, float a, const vec3& reflection, const vec3& surfaceNormal)
+{
+	float phi = 2.0f * sfz::PI() * randVec.x;
+	float cosTheta = sqrt((1.0f - randVec.y) / (1.0f + (a * a - 1.0f) * randVec.y));
+	float sinTheta = sqrt(1.0f - cosTheta * cosTheta);
+
+	return clampToHemisphere(hemisphereToWorld(phi, cosTheta, sinTheta, reflection), surfaceNormal);
+}
+
+/// Return cosine-weighted sample around the hemisphere.
+inline __device__ vec3 sampleLambertian(const vec2& randVec, const vec3& normal)
+{
+	float phi = 2.0f * sfz::PI() * randVec.x;
+	float sinTheta = sqrt(randVec.y);
+	float cosTheta = sqrt(1.0f - randVec.y);
+
+	return hemisphereToWorld(phi, cosTheta, sinTheta, normal);
+}
+
+// Ray generation kernel
+// ------------------------------------------------------------------------------------------------
+
+static __global__ void createSecondaryRaysKernel(CreateSecondaryRaysKernelInput input)
+{
+	// Calculate surface coordinates
+	vec2i loc = vec2i(blockIdx.x * blockDim.x + threadIdx.x,
+	                  blockIdx.y * blockDim.y + threadIdx.y);
+	if (loc.x >= input.res.x || loc.y >= input.res.y) return;
+
+	uint32_t id = loc.y * input.res.x + loc.x;
+
+	curandState randState = input.randStates[id];
+	PathState& pathState = input.pathStates[id];
+
+	vec2i doubleLoc = loc * 2;
+	uint32_t random = curand(&randState);
+
+	uint32_t pixel = random % 4;
+	vec2i offset(pixel % 2, pixel / 2);
+	vec2i doubleLocRandomized = doubleLoc + offset;
+
+	GBufferValue gBufferValue = readGBuffer(input.posTex, input.normalTex, input.albedoTex, input.materialTex, doubleLocRandomized);
+
+	pathState.throughput *= gBufferValue.albedo;
+
+	float r1 = curand_uniform(&randState);
+	float r2 = curand_uniform(&randState);
+
+	// Probabilistically pick type of sample using russian roulette with roughness as threshold
+	float diffuseOrSpecularSample = curand_uniform(&randState);
+	vec3 rayDir;
+	if (diffuseOrSpecularSample < gBufferValue.roughness) {
+		rayDir = sampleLambertian(vec2(r1, r2), gBufferValue.normal);
+
+		// TODO: Weigh sample according to pdf
+		pathState.throughput *= 0.8f;
+	}
+	else {
+		vec3 fromCamera = normalize(gBufferValue.pos - input.camPos);
+		vec3 reflection = reflect(fromCamera, gBufferValue.normal);
+		float a = gBufferValue.roughness * gBufferValue.roughness;
+		rayDir = sampleGgx(vec2(r1, r2), a, reflection, gBufferValue.normal);
+
+		// TODO: Weigh sample according to pdf
+		pathState.throughput *= 0.8f;
+	}
+	RayIn extensionRay;
+	extensionRay.setOrigin(gBufferValue.pos);
+	extensionRay.setDir(rayDir);
+	extensionRay.setMinDist(0.001f);
+	extensionRay.setMaxDist(FLT_MAX);
+
+	input.extensionRays[id] = extensionRay;
+	input.randStates[id] = randState;
+}
+
+void launchCreateSecondaryRaysKernel(const CreateSecondaryRaysKernelInput& input) noexcept
+{
+	// Calculate number of threads and blocks to run
+	dim3 threadsPerBlock(8, 8);
+	dim3 numBlocks((input.res.x + threadsPerBlock.x - 1) / threadsPerBlock.x,
+	               (input.res.y + threadsPerBlock.y - 1) / threadsPerBlock.y);
+
+	createSecondaryRaysKernel<<<numBlocks, threadsPerBlock>>>(input);
+
+	CHECK_CUDA_ERROR(cudaGetLastError());
+	CHECK_CUDA_ERROR(cudaDeviceSynchronize());
+}
+
+// Path initialization kernel
+// ------------------------------------------------------------------------------------------------
 
 static __global__ void initPathStates(vec2i res, PathState* pathStates)
 {
@@ -333,9 +368,7 @@ static __global__ void initPathStates(vec2i res, PathState* pathStates)
 	uint32_t id = loc.y * res.x + loc.x;
 
 	PathState& pathState = pathStates[id];
-	pathState.finalColor = vec3(0.0f);
 	pathState.pathLength = 0;
-	pathState.pendingLightContribution = vec3(0.0f);
 	pathState.throughput = vec3(1.0f);
 }
 
@@ -352,59 +385,46 @@ void launchInitPathStatesKernel(vec2i res, PathState* pathStates) noexcept
 	CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 }
 
-static __global__ void shadowLogicKernel(vec2i res, const RayHit* shadowRayHits, PathState* pathStates)
+// Shadow logic kernel
+// ------------------------------------------------------------------------------------------------
+
+static __global__ void shadowLogicKernel(ShadowLogicKernelInput input)
 {
 	// Calculate surface coordinates
 	vec2i loc = vec2i(blockIdx.x * blockDim.x + threadIdx.x,
 	                  blockIdx.y * blockDim.y + threadIdx.y);
-	if (loc.x >= res.x || loc.y >= res.y) return;
+	if (loc.x >= input.res.x || loc.y >= input.res.y) return;
 
-	uint32_t id = loc.y * res.x + loc.x;
+	uint32_t id = loc.y * input.res.x + loc.x;
+	vec2i scaledLoc = loc / int32_t(input.resolutionScale);
+	vec2i scaledRes = input.res / int32_t(input.resolutionScale);
+	uint32_t scaledID = scaledLoc.y * scaledRes.x + scaledLoc.x;
+	uint32_t scaledNumPixels = scaledRes.x * scaledRes.y;
 
-	PathState& pathState = pathStates[id];
-	const RayHit& shadowRayHit = shadowRayHits[id];
-	if (shadowRayHit.triangleIndex == UINT32_MAX) {
-		pathState.finalColor += pathState.pendingLightContribution;
+	vec3 color(0.0f);
+	if (input.addToSurface) {
+		vec4 color4 = readFromSurface(input.surface, loc);
+		color = color4.xyz;
 	}
+
+	for (int i = 0; i < input.numStaticSphereLights; i++) {
+		uint32_t shadowRayID = scaledID + i * scaledNumPixels;
+		const bool inLight = input.shadowRayHits[shadowRayID];
+		if (inLight) {
+			color += input.lightContributions[shadowRayID];
+		}
+	}
+	writeToSurface(input.surface, loc, vec4(color, 1.0f));
 }
 
-void launchShadowLogicKernel(vec2i res, const RayHit* shadowRayHits, PathState* pathStates) noexcept
-{
-	// Calculate number of threads and blocks to run
-	dim3 threadsPerBlock(8, 8);
-	dim3 numBlocks((res.x + threadsPerBlock.x - 1) / threadsPerBlock.x,
-	               (res.y + threadsPerBlock.y - 1) / threadsPerBlock.y);
-
-	// Run cuda ray tracer kernel
-	shadowLogicKernel<<<numBlocks, threadsPerBlock>>>(res, shadowRayHits, pathStates);
-	CHECK_CUDA_ERROR(cudaGetLastError());
-	CHECK_CUDA_ERROR(cudaDeviceSynchronize());
-}
-
-static __global__ void writeResultKernel(cudaSurfaceObject_t surface, vec2i res, PathState* pathStates)
-{
-	// Calculate surface coordinates
-	vec2i loc = vec2i(blockIdx.x * blockDim.x + threadIdx.x,
-	                  blockIdx.y * blockDim.y + threadIdx.y);
-	if (loc.x >= res.x || loc.y >= res.y) return;
-
-	uint32_t id = loc.y * res.x + loc.x;
-
-	PathState& pathState = pathStates[id];
-
-	vec4 color4 = vec4(pathState.finalColor, 1.0f);
-	surf2Dwrite(toFloat4(color4), surface, loc.x * sizeof(float4), loc.y);
-}
-
-void launchWriteResultKernel(const WriteResultKernelInput& input) noexcept
+void launchShadowLogicKernel(const ShadowLogicKernelInput& input) noexcept
 {
 	// Calculate number of threads and blocks to run
 	dim3 threadsPerBlock(8, 8);
 	dim3 numBlocks((input.res.x + threadsPerBlock.x - 1) / threadsPerBlock.x,
 	               (input.res.y + threadsPerBlock.y - 1) / threadsPerBlock.y);
 
-	// Run cuda ray tracer kernel
-	writeResultKernel<<<numBlocks, threadsPerBlock>>>(input.surface, input.res, input.pathStates);
+	shadowLogicKernel<<<numBlocks, threadsPerBlock>>>(input);
 	CHECK_CUDA_ERROR(cudaGetLastError());
 	CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 }

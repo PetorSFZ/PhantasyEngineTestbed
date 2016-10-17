@@ -62,7 +62,6 @@ private:
 	DynArray<RendererAndStatus> mRenderers;
 	uint32_t mCurrentRenderer;
 
-	uint32_t triangleObjectHandle;
 	DynArray<uint32_t> instanceHandles;
 	HashMap<uint32_t, vec3> objectPositions;
 };

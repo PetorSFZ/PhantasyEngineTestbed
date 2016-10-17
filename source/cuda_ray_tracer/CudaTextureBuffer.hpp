@@ -27,7 +27,9 @@ public:
 	// Getters
 	// --------------------------------------------------------------------------------------------
 	
-	cudaTextureObject_t cudaTexture() const noexcept { return mTexture; }
+	inline T* cudaPtr() noexcept { return mBuffer.cudaPtr(); }
+	inline const T* cudaPtr() const noexcept { return mBuffer.cudaPtr(); }
+	inline cudaTextureObject_t cudaTexture() const noexcept { return mTexture; }
 
 private:
 	// Private members
