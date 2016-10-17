@@ -45,11 +45,9 @@ static void fillNode(DynamicBVH& bvh, DynArray<DynNode>& leafNodes, const DynArr
 	const int nRightLeaves = nLeaves / 2;
 	const int nLeftLeaves = nLeaves - nRightLeaves;
 
-	DynArray<DynNode> rightLeaves;
-	DynArray<DynNode> leftLeaves;
-	rightLeaves.setCapacity(nRightLeaves);
-	leftLeaves.setCapacity(nLeftLeaves);
-
+	DynArray<DynNode> rightLeaves(0, nRightLeaves);
+	DynArray<DynNode> leftLeaves(0, nLeftLeaves);
+	
 	for (int i = 0; i < nRightLeaves; i++) {
 		rightLeaves.add(std::move(leafNodes[i]));
 	}
@@ -68,10 +66,8 @@ DynamicBVH createDynamicBvh(const DynArray<BVH>& bvhs, const DynArray<DynObject>
 {
 	int nLeaves = dynObjects.size();
 
-	DynArray<LeafData> leafDatas;
-	DynArray<DynNode> leafNodes;
-	leafDatas.setCapacity(nLeaves);
-	leafNodes.setCapacity(nLeaves);
+	DynArray<LeafData> leafDatas(0, nLeaves);
+	DynArray<DynNode> leafNodes(0, nLeaves);
 
 	for (int i = 0; i < nLeaves; i++) {
 		const DynObject& obj = dynObjects[i];
