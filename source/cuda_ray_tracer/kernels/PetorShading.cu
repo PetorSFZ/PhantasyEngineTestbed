@@ -48,8 +48,8 @@ static __global__ void gatherRaysShadeKernel(GatherRaysShadeKernelInput input,
 
 	vec3 color = vec3(0.0f);
 
+	// Shade using light sources
 	uint32_t baseShadowIdx = (loc.y * input.res.x + loc.x) * input.numStaticSphereLights;
-
 	for (uint32_t i = 0; i < input.numStaticSphereLights; i++) {
 
 		// Check if in shadow or not
@@ -60,63 +60,27 @@ static __global__ void gatherRaysShadeKernel(GatherRaysShadeKernelInput input,
 		SphereLight light = input.staticSphereLights[i];
 		vec3 toLight = light.pos - p;
 		float toLightDist = length(toLight);
-		
-		// Check if surface is in range of light source
-		if (toLightDist > light.range) continue;
+		vec3 l = toLight / toLightDist; 
 
-		// Shading parameters
-		vec3 l = toLight / toLightDist; // to light (normalized)
-		vec3 h = normalize(l + v); // half vector (normal of microfacet)
-		
-		// If nDotL is <= 0 then the light source is not in the hemisphere of the surface, i.e.
-		// no shading needs to be performed
-		float nDotL = dot(n, l);
-		if (nDotL <= 0.0f) continue;
-
-		// Lambert diffuse
-		vec3 diffuse = albedo / float(CUDART_PI);
-
-		// Cook-Torrance specular
-		// Normal distribution function
-		float nDotH = fmaxf(0.0f, dot(n, h)); // max() should be superfluous here
-		float ctD = ggx(nDotH, roughness * roughness);
-
-		// Geometric self-shadowing term
-		float k = powf(roughness + 1.0f, 2.0f) / 8.0f;
-		float ctG = geometricSchlick(nDotL, nDotV, k);
-
-		// Fresnel function
-		// Assume all dielectrics have a f0 of 0.04, for metals we assume f0 == albedo
-		vec3 f0 = lerp(vec3(0.04f), albedo, metallic);
-		vec3 ctF = fresnelSchlick(nDotL, f0);
-
-		// Calculate final Cook-Torrance specular value
-		vec3 specular = ctD * ctF * ctG / (4.0f * nDotL * nDotV);
-
-		// Calculates light strength
-		float fallofNumerator = powf(clamp(1.0f - powf(toLightDist / light.range, 4.0f), 0.0f, 1.0f), 2.0f);
-		float fallofDenominator = (toLightDist * toLightDist + 1.0);
-		float falloff = fallofNumerator / fallofDenominator;
-		vec3 lightContrib = falloff * light.strength;
-
-		// "Solves" reflectance equation under the assumption that the light source is a point light
-		// and that there is no global illumination.
-		vec3 res = (diffuse + specular) * lightContrib * nDotL;
-		color += res;
+		// Shade
+		vec3 shading = shade(p, n, v, albedo, roughness, metallic, l, toLightDist, light.strength, light.range);
+		color += shading * fallofFactor(toLightDist, light.range);
 	}
 
-	// Rayhit
-	int baseIdx = (loc.y * input.res.x + loc.x) * input.numIncomingLights;
+	// Shade using secondary rays
+	int baseSecondaryIdx = (loc.y * input.res.x + loc.x) * input.numIncomingLights;
+	IncomingLight info = input.incomingLights[baseSecondaryIdx];
 
-	IncomingLight info = input.incomingLights[baseIdx];
+	if (sfz::sum(info.amount()) > 0.001f) {
+		vec3 toHit = info.origin() - p;
+		float toHitDist = length(toHit);
+		vec3 toHitDir = toHit / toHitDist;
 
+		vec3 secondaryShading = shade(p, n, v, albedo, roughness, metallic, toHitDir, toHitDist, info.amount(), FLT_MAX);
+		color += secondaryShading * fallofFactor(toHitDist, 10.0f);
+	}
 
-	//if (info.wasHit()) {
-		//color += 0.2f * (1.0f - roughness) * info.albedo();
-		color += 0.2f * (1.0f - roughness) * info.amount();
-	//}
-
-	//color = info.amount();
+	
 
 	writeResult(resultOut, loc, vec4(color, 1.0));
 }
