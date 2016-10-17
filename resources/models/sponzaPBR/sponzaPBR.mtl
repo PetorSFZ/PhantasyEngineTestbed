@@ -161,13 +161,13 @@ newmtl floor
 	illum 2
 	Ka 0.5880 0.5880 0.5880
 	Kd 0.5880 0.5880 0.5880
-	Ks 0.0000 0.0000 0.0000
+	Ks 0.1000 0.1000 0.1000
 	Ke 0.0000 0.0000 0.0000
 	map_Ka textures_pbr\Dielectric_metallic.tga
 	map_Kd textures_pbr\Sponza_Floor_diffuse.tga
 	map_bump textures_pbr\Sponza_Floor_normal.tga
 	bump textures_pbr\Sponza_Floor_normal.tga
-	map_Ns textures_pbr\Sponza_Floor_roughness.tga
+	#map_Ns textures_pbr\Sponza_Floor_roughness.tga # Using specular value instead of texture to get reflective floor
 
 newmtl column_c
 	Ns 10.0000
