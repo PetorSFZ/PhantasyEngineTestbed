@@ -9,7 +9,7 @@
 namespace phe {
 
 using std::uint32_t;
-using sfz::vec2i;
+using sfz::vec2u;
 using sfz::vec2u;
 using sfz::vec3i;
 using sfz::vec3u;

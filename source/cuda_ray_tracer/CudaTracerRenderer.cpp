@@ -531,7 +531,8 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB,
 		uint32_t numTargetPixels = mTargetResolution.x * mTargetResolution.y;
 		uint32_t numPrimaryShadowRays = numTargetPixels * mImpl->staticSphereLights.size();
 
-		vec2i halfTargetResolution = mTargetResolution / 2;
+		vec2u targetResolution = vec2u(mTargetResolution);
+		vec2u halfTargetResolution = targetResolution / 2u;
 		uint32_t numSecondaryRays = halfTargetResolution.x * halfTargetResolution.y;
 		uint32_t numSecondaryShadowRays = numSecondaryRays * mImpl->staticSphereLights.size();
 
@@ -539,7 +540,7 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB,
 
 		// Shade first hit and create shadow rays + next ray in path
 		GBufferMaterialKernelInput gBufferMaterialKernelInput;
-		gBufferMaterialKernelInput.res = mTargetResolution;
+		gBufferMaterialKernelInput.res = targetResolution;
 		gBufferMaterialKernelInput.camPos = mCamera.pos();
 		gBufferMaterialKernelInput.randStates = mImpl->randStates.cudaPtr();
 		gBufferMaterialKernelInput.shadowRays = mImpl->shadowRayBuffer.cudaPtr();
@@ -563,7 +564,7 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB,
 		// Use shading result if not in shadow
 		ShadowLogicKernelInput primaryShadowLogicKernelInput;
 		primaryShadowLogicKernelInput.surface = mImpl->cudaResultTex.cudaSurface();
-		primaryShadowLogicKernelInput.res = mTargetResolution;
+		primaryShadowLogicKernelInput.res = targetResolution;
 		primaryShadowLogicKernelInput.resolutionScale = 1;
 		primaryShadowLogicKernelInput.addToSurface = false;
 		primaryShadowLogicKernelInput.shadowRayHits = mImpl->shadowRayResultBuffer.cudaPtr();
@@ -628,7 +629,7 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB,
 		// Use shading result if not in shadow
 		ShadowLogicKernelInput secondaryShadowLogicKernelInput;
 		secondaryShadowLogicKernelInput.surface = mImpl->cudaResultTex.cudaSurface();
-		secondaryShadowLogicKernelInput.res = mTargetResolution;
+		secondaryShadowLogicKernelInput.res = targetResolution;
 		secondaryShadowLogicKernelInput.resolutionScale = 2;
 		secondaryShadowLogicKernelInput.addToSurface = true;
 		secondaryShadowLogicKernelInput.shadowRayHits = mImpl->shadowRayResultBuffer.cudaPtr();

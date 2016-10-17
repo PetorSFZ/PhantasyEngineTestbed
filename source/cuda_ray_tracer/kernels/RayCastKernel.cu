@@ -5,6 +5,7 @@
 #include <phantasy_engine/ray_tracer_common/BVHNode.hpp>
 #include <phantasy_engine/ray_tracer_common/Triangle.hpp>
 
+#include "CudaDeviceHelpers.cuh"
 #include "CudaHelpers.hpp"
 #include "CudaSfzVectorCompatibility.cuh"
 
@@ -895,21 +896,6 @@ static __device__ vec3 calculatePrimaryRayDir(const CameraDef& cam, vec2 loc, ve
 	return normalize(nonNormRayDir);
 }
 
-static __host__ __device__ uint32_t getRaysId(vec2u res, vec2u loc) noexcept
-{
-	const vec2u pixBlockDim(8u, 4u);
-	const uint32_t pixBlockSize = pixBlockDim.x * pixBlockDim.y;
-	vec2u locDim = loc / pixBlockDim;
-	vec2u locFrac;
-	locFrac.x = loc.x % pixBlockDim.x;
-	locFrac.y = loc.y % pixBlockDim.y;
-
-	uint32_t pixBlockIdx = locDim.y * (res.x / pixBlockDim.x) + locDim.x;
-	uint32_t blockRelativeIdx = locFrac.y * pixBlockDim.x + locFrac.x;
-	
-	return pixBlockIdx * pixBlockSize + blockRelativeIdx;
-}
-
 static __global__ void genPrimaryRaysKernel(RayIn* rays, CameraDef cam, vec2i res)
 {
 	static_assert(sizeof(RayIn) == 32, "RayIn is padded");
@@ -928,14 +914,8 @@ static __global__ void genPrimaryRaysKernel(RayIn* rays, CameraDef cam, vec2i re
 
 	// Write ray to array
 	//uint32_t id = loc.y * res.x + loc.x;
-	uint32_t id = getRaysId(vec2u(res), vec2u(loc));
+	uint32_t id = getRayIdx(vec2u(res), blockDim, vec2u(loc));
 	rays[id] = ray;
-}
-
-// Assumes both parameters are normalized
-static __device__ vec3 reflect(vec3 in, vec3 normal) noexcept
-{
-	return in - 2.0f * dot(normal, in) * normal;
 }
 
 static __global__ void genSecondaryRaysKernel(RayIn* rays, vec3 camPos, vec2i res,
@@ -966,7 +946,7 @@ static __global__ void genSecondaryRaysKernel(RayIn* rays, vec3 camPos, vec2i re
 
 	// Write ray to array
 	//uint32_t id = loc.y * res.x + loc.x;
-	uint32_t id = getRaysId(vec2u(res), vec2u(loc));
+	uint32_t id = getRayIdx(vec2u(res), blockDim, vec2u(loc));
 	rays[id] = ray;
 }
 
@@ -981,7 +961,7 @@ static __global__ void writeRayHitsToScreenKernel(cudaSurfaceObject_t surface, v
 
 	// Read rayhit from array
 	//uint32_t id = loc.y * res.x + loc.x;
-	uint32_t id = getRaysId(vec2u(res), vec2u(loc));
+	uint32_t id = getRayIdx(vec2u(res), blockDim, vec2u(loc));
 	RayHit hit = rayHits[id];
 
 	vec4 color = vec4(hit.u, hit.v, hit.t, 1.0f);

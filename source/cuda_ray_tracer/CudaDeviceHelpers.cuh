@@ -46,4 +46,19 @@ inline __device__ vec3 reflect(vec3 in, sfz::vec3 normal) noexcept
 	return in - 2.0f * sfz::dot(normal, in) * normal;
 }
 
+inline __device__ uint32_t getRayIdx(vec2u res, dim3 inBlockDim, vec2u loc) noexcept
+{
+	const vec2u vecBlockDim(inBlockDim.x, inBlockDim.y);
+	const uint32_t pixBlockSize = vecBlockDim.x * vecBlockDim.y;
+	vec2u locDim = loc / vecBlockDim;
+	vec2u locFrac;
+	locFrac.x = loc.x % vecBlockDim.x;
+	locFrac.y = loc.y % vecBlockDim.y;
+
+	uint32_t pixBlockIdx = locDim.y * (res.x / vecBlockDim.x) + locDim.x;
+	uint32_t blockRelativeIdx = locFrac.y * vecBlockDim.x + locFrac.x;
+
+	return pixBlockIdx * pixBlockSize + blockRelativeIdx;
+}
+
 } // namespace phe

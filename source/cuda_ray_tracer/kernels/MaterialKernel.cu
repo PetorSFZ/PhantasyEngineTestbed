@@ -13,7 +13,7 @@
 namespace phe {
 
 using sfz::vec2;
-using sfz::vec2i;
+using sfz::vec2u;
 using sfz::vec3;
 using sfz::vec3i;
 using sfz::vec4;
@@ -22,13 +22,13 @@ using sfz::vec4i;
 // Surface manipulation helpers
 // ------------------------------------------------------------------------------------------------
 
-inline __device__ void writeToSurface(const cudaSurfaceObject_t& surface, vec2i loc, const vec4& data) noexcept
+inline __device__ void writeToSurface(const cudaSurfaceObject_t& surface, vec2u loc, const vec4& data) noexcept
 {
 	float4 dataFloat4 = toFloat4(data);
 	surf2Dwrite(dataFloat4, surface, loc.x * sizeof(float4), loc.y);
 }
 
-inline __device__ vec4 readFromSurface(const cudaSurfaceObject_t& surface, vec2i loc) noexcept {
+inline __device__ vec4 readFromSurface(const cudaSurfaceObject_t& surface, vec2u loc) noexcept {
 	float4 data;
 	surf2Dread(&data, surface, loc.x * sizeof(float4), loc.y);
 	return toSFZ(data);
@@ -156,12 +156,12 @@ static __device__ void shadeHit(uint32_t id, uint32_t numPixels, const vec3& mas
 static __global__ void gBufferMaterialKernel(GBufferMaterialKernelInput input)
 {
 	// Calculate surface coordinates
-	vec2i loc = vec2i(blockIdx.x * blockDim.x + threadIdx.x,
+	vec2u loc = vec2u(blockIdx.x * blockDim.x + threadIdx.x,
 	                  blockIdx.y * blockDim.y + threadIdx.y);
 	if (loc.x >= input.res.x || loc.y >= input.res.y) return;
 
 	GBufferValue gBufferValue = readGBuffer(input.posTex, input.normalTex, input.albedoTex,
-	                                        input.materialTex, loc);
+	                                        input.materialTex, vec2i(loc));
 
 	uint32_t id = loc.y * input.res.x + loc.x;
 	uint32_t numPixels = input.res.x * input.res.y;
@@ -194,11 +194,11 @@ void launchGBufferMaterialKernel(const GBufferMaterialKernelInput& input) noexce
 static __global__ void materialKernel(MaterialKernelInput input)
 {
 	// Calculate surface coordinates
-	vec2i loc = vec2i(blockIdx.x * blockDim.x + threadIdx.x,
+	vec2u loc = vec2u(blockIdx.x * blockDim.x + threadIdx.x,
 	                  blockIdx.y * blockDim.y + threadIdx.y);
 	if (loc.x >= input.res.x || loc.y >= input.res.y) return;
 
-	uint32_t id = loc.y * input.res.x + loc.x;
+	uint32_t id = getRayIdx(input.res, blockDim, loc);
 	uint32_t numPixels = input.res.x * input.res.y;
 
 	RayHitInfo hitInfo = input.rayHitInfos[id];
@@ -290,7 +290,7 @@ inline __device__ vec3 sampleLambertian(const vec2& randVec, const vec3& normal)
 static __global__ void createSecondaryRaysKernel(CreateSecondaryRaysKernelInput input)
 {
 	// Calculate surface coordinates
-	vec2i loc = vec2i(blockIdx.x * blockDim.x + threadIdx.x,
+	vec2u loc = vec2u(blockIdx.x * blockDim.x + threadIdx.x,
 	                  blockIdx.y * blockDim.y + threadIdx.y);
 	if (loc.x >= input.res.x || loc.y >= input.res.y) return;
 
@@ -299,14 +299,14 @@ static __global__ void createSecondaryRaysKernel(CreateSecondaryRaysKernelInput 
 	curandState randState = input.randStates[id];
 	PathState& pathState = input.pathStates[id];
 
-	vec2i doubleLoc = loc * 2;
+	vec2u doubleLoc = loc * 2u;
 	uint32_t random = curand(&randState);
 
 	uint32_t pixel = random % 4;
-	vec2i offset(pixel % 2, pixel / 2);
-	vec2i doubleLocRandomized = doubleLoc + offset;
+	vec2u offset(pixel % 2, pixel / 2);
+	vec2u doubleLocRandomized = doubleLoc + offset;
 
-	GBufferValue gBufferValue = readGBuffer(input.posTex, input.normalTex, input.albedoTex, input.materialTex, doubleLocRandomized);
+	GBufferValue gBufferValue = readGBuffer(input.posTex, input.normalTex, input.albedoTex, input.materialTex, vec2i(doubleLocRandomized));
 
 	pathState.throughput *= gBufferValue.albedo;
 
@@ -357,10 +357,10 @@ void launchCreateSecondaryRaysKernel(const CreateSecondaryRaysKernelInput& input
 // Path initialization kernel
 // ------------------------------------------------------------------------------------------------
 
-static __global__ void initPathStates(vec2i res, PathState* pathStates)
+static __global__ void initPathStates(vec2u res, PathState* pathStates)
 {
 	// Calculate surface coordinates
-	vec2i loc = vec2i(blockIdx.x * blockDim.x + threadIdx.x,
+	vec2u loc = vec2u(blockIdx.x * blockDim.x + threadIdx.x,
 	                  blockIdx.y * blockDim.y + threadIdx.y);
 	if (loc.x >= res.x || loc.y >= res.y) return;
 
@@ -372,7 +372,7 @@ static __global__ void initPathStates(vec2i res, PathState* pathStates)
 	pathState.throughput = vec3(1.0f);
 }
 
-void launchInitPathStatesKernel(vec2i res, PathState* pathStates) noexcept
+void launchInitPathStatesKernel(vec2u res, PathState* pathStates) noexcept
 {
 	// Calculate number of threads and blocks to run
 	dim3 threadsPerBlock(8, 8);
@@ -391,13 +391,13 @@ void launchInitPathStatesKernel(vec2i res, PathState* pathStates) noexcept
 static __global__ void shadowLogicKernel(ShadowLogicKernelInput input)
 {
 	// Calculate surface coordinates
-	vec2i loc = vec2i(blockIdx.x * blockDim.x + threadIdx.x,
+	vec2u loc = vec2u(blockIdx.x * blockDim.x + threadIdx.x,
 	                  blockIdx.y * blockDim.y + threadIdx.y);
 	if (loc.x >= input.res.x || loc.y >= input.res.y) return;
 
 	uint32_t id = loc.y * input.res.x + loc.x;
-	vec2i scaledLoc = loc / int32_t(input.resolutionScale);
-	vec2i scaledRes = input.res / int32_t(input.resolutionScale);
+	vec2u scaledLoc = loc / uint32_t(input.resolutionScale);
+	vec2u scaledRes = input.res / uint32_t(input.resolutionScale);
 	uint32_t scaledID = scaledLoc.y * scaledRes.x + scaledLoc.x;
 	uint32_t scaledNumPixels = scaledRes.x * scaledRes.y;
 
