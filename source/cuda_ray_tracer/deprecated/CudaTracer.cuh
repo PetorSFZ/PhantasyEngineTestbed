@@ -46,7 +46,7 @@ struct CudaTracerParams final {
 	// Static light sources
 	SphereLight* staticSphereLights = nullptr;
 	uint32_t numStaticSphereLights = ~0u;
-
+/*
 	// Dynamic Geometry
 	OuterBVHNode* dynamicOuterBvhNodes = nullptr;
 	BVHNode** dynamicBvhNodes = nullptr;
@@ -54,7 +54,7 @@ struct CudaTracerParams final {
 	TriangleVertices** dynamicTriangleVertices = nullptr;
 	cudaTextureObject_t* dynamicTriangleVerticesTex = nullptr;
 	TriangleData** dynamicTriangleDatas = nullptr;
-	uint32_t numDynBvhs = 0;
+	uint32_t numDynBvhs = 0;*/
 };
 
 void cudaRayTrace(const CudaTracerParams& params) noexcept;

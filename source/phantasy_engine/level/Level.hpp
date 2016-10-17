@@ -10,6 +10,7 @@
 #include "phantasy_engine/rendering/Material.hpp"
 #include "phantasy_engine/rendering/RawImage.hpp"
 #include "phantasy_engine/rendering/RawMesh.hpp"
+#include "phantasy_engine/ray_tracer_common/DynamicBVH.hpp"
 
 namespace phe {
 
@@ -26,6 +27,7 @@ struct Level final {
 	StaticScene staticScene;
 
 	// Dynamic meshes
+	DynamicBVH dynBvh;
 	DynArray<RawMesh> meshes;
 	DynArray<BVH> dynBvhs;
 	DynArray<SphereLight> sphereLights;

@@ -8,6 +8,8 @@
 
 #include <sfz/math/MatrixSupport.hpp>
 
+#include <phantasy_engine/ray_tracer_common/DynamicBVH.hpp>
+
 using namespace sfz;
 
 uint32_t spawnObjectInstance(uint32_t meshId, phe::Level& level, mat4 transform)
@@ -56,6 +58,8 @@ UpdateOp TestbedLogic::update(GameScreen& screen, UpdateState& state) noexcept
 		pos += velocity;
 		screen.level->objects[handle].transform = translationMatrix(pos);
 	}
+
+	screen.level->dynBvh = createDynamicBvh(screen.level->dynBvhs, screen.level->objects);
 
 	// Handle input
 	for (const SDL_Event& event : state.events) {

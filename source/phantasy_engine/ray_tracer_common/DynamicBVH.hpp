@@ -11,19 +11,22 @@
 
 namespace phe {
 
-struct SphereNode {
-	vec3 center;
-	float radius;
-	bool isLeaf;
-	uint32_t leftChildIndex, rightChildIndex;
+struct LeafData {
+	uint32_t bvhIndex;
 	vec3 translation;
 };
 
-struct DynamicBVH {
-	DynArray<SphereNode> nodes;
-	DynArray<uint32_t> leaves;
+struct DynNode {
+	vec3 min, max;
+	bool isLeaf = false;
+	uint32_t leftChildIndex, rightChildIndex;
 };
 
-DynamicBVH createDynamicBvh(DynArray<BVH>& bvhs, DynArray<DynObject>& dynObjects);
+struct DynamicBVH {
+	DynArray<DynNode> nodes;
+	DynArray<LeafData> leaves;
+};
+
+DynamicBVH createDynamicBvh(const DynArray<BVH>& bvhs, const DynArray<DynObject>& dynObjects);
 
 }

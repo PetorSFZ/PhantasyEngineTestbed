@@ -12,33 +12,93 @@ namespace phe {
 
 using namespace sfz;
 
-DynamicBVH createDynamicBvh(DynArray<BVH>& bvhs, DynArray<DynObject>& dynObjects)
+static void fillNode(DynamicBVH& bvh, DynArray<DynNode>& leafNodes, const DynArray<LeafData>& leafDatas)
+{
+	if (leafNodes.size() == 1) {
+		bvh.nodes.add(std::move(leafNodes[0]));
+		return;
+	}
+
+	bvh.nodes.add(DynNode());
+	DynNode& root = bvh.nodes[bvh.nodes.size()-1];
+
+	// Expand AABB to precisely contain children
+	for (const DynNode& leaf : leafNodes) {
+		root.min = min(root.min, leaf.min);
+		root.max = max(root.max, leaf.max);
+	}
+
+	const int nLeaves = leafNodes.size();
+
+	const vec3 diagonal = root.max - root.min;
+	const int splitAxis = diagonal.y > diagonal.x ? (diagonal.z > diagonal.y ? 2 : 1) : 0;
+
+	// Sort along split axis
+	for (int i = 0; i < nLeaves; i++) {
+		int currIndex = i;
+		while (currIndex > 0 && leafNodes[currIndex].min[splitAxis] < leafNodes[currIndex-1].min[splitAxis]) {
+			std::swap(leafNodes[currIndex], leafNodes[--currIndex]);
+		}
+	}
+
+	// Decide which leaves to put in which child
+	const int nRightLeaves = nLeaves / 2;
+	const int nLeftLeaves = nLeaves - nRightLeaves;
+
+	DynArray<DynNode> rightLeaves;
+	DynArray<DynNode> leftLeaves;
+	rightLeaves.setCapacity(nRightLeaves);
+	leftLeaves.setCapacity(nLeftLeaves);
+
+	for (int i = 0; i < nRightLeaves; i++) {
+		rightLeaves.add(std::move(leafNodes[i]));
+	}
+	for (int i = nRightLeaves; i < nLeaves; i++) {
+		leftLeaves.add(std::move(leafNodes[i]));
+	}
+
+	// Recursively fill children
+	root.rightChildIndex = bvh.nodes.size();
+	fillNode(bvh, rightLeaves, leafDatas);
+	root.leftChildIndex = bvh.nodes.size();
+	fillNode(bvh, leftLeaves, leafDatas);
+}
+
+DynamicBVH createDynamicBvh(const DynArray<BVH>& bvhs, const DynArray<DynObject>& dynObjects)
 {
 	int nLeaves = dynObjects.size();
 
-	DynArray<SphereNode> leaves;
-	leaves.setCapacity(nLeaves);
+	DynArray<LeafData> leafDatas;
+	DynArray<DynNode> leafNodes;
+	leafDatas.setCapacity(nLeaves);
+	leafNodes.setCapacity(nLeaves);
 
-	for (DynObject& obj : dynObjects) {
+	for (int i = 0; i < nLeaves; i++) {
+		const DynObject& obj = dynObjects[i];
+		
 		uint32_t bvhIndex = obj.meshIndex;
-		BVH& bvh = bvhs[bvhIndex];
-		BVHNode& root = bvh.nodes[0];
+		const BVH& bvh = bvhs[bvhIndex];
+		const BVHNode& root = bvh.nodes[0];
 
-		vec3 halfDiagonal = (root.rightChildAABBMax() - root.leftChildAABBMin()) / 2.0f;
-
-		SphereNode leaf;
-		leaf.radius = length(halfDiagonal);
-		leaf.center = root.rightChildAABBMin + halfDiagonal;
-		leaf.isLeaf = true;
+		LeafData leaf;
 		leaf.translation = obj.transform.columnAt(3).xyz;
-		leaf.leftChildIndex = bvhIndex;
+		leaf.bvhIndex = bvhIndex;
+		leafDatas.add(leaf);
 
-		leaves.add(leaf);
+		DynNode node;
+		node.isLeaf = true;
+		node.leftChildIndex = i;
+		node.min = min(root.leftChildAABBMin(), root.rightChildAABBMin()) + leafDatas[i].translation;
+		node.max = max(root.leftChildAABBMax(), root.rightChildAABBMax()) + leafDatas[i].translation;
+		leafNodes.add(node);
 	}
 
 	// Recursively construct tree
-
-	return DynamicBVH();
+	DynamicBVH bvh;
+	bvh.leaves = std::move(leafDatas);
+	bvh.nodes.setCapacity(2*nLeaves-1);
+	fillNode(bvh, leafNodes, leafDatas);
+	return bvh;
 }
 
 }

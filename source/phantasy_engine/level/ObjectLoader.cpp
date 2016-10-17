@@ -10,6 +10,7 @@
 #include <sfz/math/MatrixSupport.hpp>
 
 #include "phantasy_engine/util/IOUtil.hpp"
+#include "phantasy_engine/ray_tracer_common/StaticBVHBuilder.hpp"
 
 namespace phe {
 
@@ -189,6 +190,11 @@ uint32_t loadDynObject(const char* basePath, const char* fileName, Level& level,
 	mesh.indices.setCapacity(mesh.indices.size() * 3u);
 
 	level.meshes.add(mesh);
+	// Feels like the wrong place to use BVH construction, but the structure demands
+	// that there is a dynamic BVH for every dynamic mesh.
+	level.dynBvhs.add(buildStaticBVH(mesh));
+	sanitizeBVH(level.dynBvhs[level.dynBvhs.size() - 1]);
+
 	return level.meshes.size() - 1u;
 }
 
