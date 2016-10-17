@@ -163,7 +163,7 @@ static __global__ void gBufferMaterialKernel(GBufferMaterialKernelInput input)
 	GBufferValue gBufferValue = readGBuffer(input.posTex, input.normalTex, input.albedoTex,
 	                                        input.materialTex, vec2i(loc));
 
-	uint32_t id = loc.y * input.res.x + loc.x;
+	uint32_t id = getRayIdx(input.res, blockDim, loc);
 	uint32_t numPixels = input.res.x * input.res.y;
 
 	curandState randState = input.randStates[id];
@@ -209,7 +209,7 @@ static __global__ void materialKernel(MaterialKernelInput input)
 		RayIn dummyRay;
 		setToDummyRay(dummyRay);
 		for (uint32_t i = 0; i < input.numStaticSphereLights; i++) {
-			uint32_t shadowRayID = id * input.numStaticSphereLights + i;
+			uint32_t shadowRayID = id + i * numPixels;
 			input.shadowRays[shadowRayID] = dummyRay;
 			input.lightContributions[shadowRayID] = vec3(0.0f);
 		}
@@ -294,7 +294,7 @@ static __global__ void createSecondaryRaysKernel(CreateSecondaryRaysKernelInput 
 	                  blockIdx.y * blockDim.y + threadIdx.y);
 	if (loc.x >= input.res.x || loc.y >= input.res.y) return;
 
-	uint32_t id = loc.y * input.res.x + loc.x;
+	uint32_t id = getRayIdx(input.res, blockDim, loc);
 
 	curandState randState = input.randStates[id];
 	PathState& pathState = input.pathStates[id];
@@ -365,7 +365,7 @@ static __global__ void initPathStates(vec2u res, PathState* pathStates)
 	if (loc.x >= res.x || loc.y >= res.y) return;
 
 	// Read rayhit from array
-	uint32_t id = loc.y * res.x + loc.x;
+	uint32_t id = getRayIdx(res, blockDim, loc);
 
 	PathState& pathState = pathStates[id];
 	pathState.pathLength = 0;
@@ -395,10 +395,10 @@ static __global__ void shadowLogicKernel(ShadowLogicKernelInput input)
 	                  blockIdx.y * blockDim.y + threadIdx.y);
 	if (loc.x >= input.res.x || loc.y >= input.res.y) return;
 
-	uint32_t id = loc.y * input.res.x + loc.x;
-	vec2u scaledLoc = loc / uint32_t(input.resolutionScale);
-	vec2u scaledRes = input.res / uint32_t(input.resolutionScale);
-	uint32_t scaledID = scaledLoc.y * scaledRes.x + scaledLoc.x;
+	uint32_t id = getRayIdx(input.res, blockDim, loc);
+	vec2u scaledLoc = loc / input.resolutionScale;
+	vec2u scaledRes = input.res / input.resolutionScale;
+	uint32_t scaledID = getRayIdx(scaledRes, blockDim, scaledLoc);
 	uint32_t scaledNumPixels = scaledRes.x * scaledRes.y;
 
 	vec3 color(0.0f);
