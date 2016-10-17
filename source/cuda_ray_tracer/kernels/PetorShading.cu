@@ -20,67 +20,6 @@ static __device__ void writeResult(cudaSurfaceObject_t result, vec2u loc, vec4 v
 	surf2Dwrite(toFloat4(value), result, loc.x * sizeof(float4), loc.y);
 }
 
-// ProccessGBufferGenRaysKernel
-// ------------------------------------------------------------------------------------------------
-
-static __global__ void processGBufferGenRaysKernel(ProcessGBufferGenRaysInput input, vec2i res,
-                                                   RayIn* __restrict__ raysOut)
-{
-	// Calculate surface coordinates
-	vec2u loc = vec2u(blockIdx.x * blockDim.x + threadIdx.x,
-	                  blockIdx.y * blockDim.y + threadIdx.y);
-	if (loc.x >= res.x || loc.y >= res.y) return;
-
-	// Calculate coordinates for the 4 pixel block
-	vec2u loc1 = loc * 2u;
-	vec2u loc2 = loc1 + vec2u(1u, 0u);
-	vec2u loc3 = loc1 + vec2u(0u, 1u);
-	vec2u loc4 = loc1 + vec2u(1u, 1u);
-
-	// Read GBuffer values for the 4 pixel block
-	GBufferValue gval1 = readGBuffer(input.posTex, input.normalTex, input.albedoTex,
-	                                input.materialTex, loc1);
-	GBufferValue gval2 = readGBuffer(input.posTex, input.normalTex, input.albedoTex,
-	                                input.materialTex, loc2);
-	GBufferValue gval3 = readGBuffer(input.posTex, input.normalTex, input.albedoTex,
-	                                input.materialTex, loc3);
-	GBufferValue gval4 = readGBuffer(input.posTex, input.normalTex, input.albedoTex,
-	                                input.materialTex, loc4);
-
-	// Take average or now, but should probably do something stochastic.
-	// Maybe ignore values if they are very far away from each other
-	vec3 pos = (gval1.pos + gval2.pos + gval3.pos + gval4.pos) / 4.0f;
-	vec3 normal = normalize((gval1.normal + gval2.normal + gval3.normal + gval4.normal) / 4.0f);
-
-	// Calculate reflect direction
-	vec3 camDir = normalize(pos - input.camPos);
-	vec3 reflected = reflect(camDir, normal);
-
-	// Create ray
-	RayIn ray;
-	ray.setDir(reflected);
-	ray.setOrigin(pos);
-	ray.setMinDist(0.0001f);
-	ray.setMaxDist(FLT_MAX);
-
-	// Write ray to array
-	uint32_t id = loc.y * res.x + loc.x;
-	raysOut[id] = ray;
-}
-
-void launchProcessGBufferGenRaysKernel(const ProcessGBufferGenRaysInput& input,
-                                       RayIn* raysOut) noexcept
-{
-	vec2i rayTracingRes = input.res / 2;
-	dim3 threadsPerBlock(8, 8);
-	dim3 numBlocks((rayTracingRes.x + threadsPerBlock.x - 1) / threadsPerBlock.x,
-	               (rayTracingRes.y + threadsPerBlock.y - 1) / threadsPerBlock.y);
-
-	processGBufferGenRaysKernel<<<numBlocks,threadsPerBlock>>>(input, rayTracingRes, raysOut);
-	CHECK_CUDA_ERROR(cudaGetLastError());
-	CHECK_CUDA_ERROR(cudaDeviceSynchronize());
-}
-
 // GatherRaysShadeKernel
 // ------------------------------------------------------------------------------------------------
 
@@ -109,8 +48,14 @@ static __global__ void gatherRaysShadeKernel(GatherRaysShadeKernelInput input,
 
 	vec3 color = vec3(0.0f);
 
+	uint32_t baseShadowIdx = (loc.y * input.res.x + loc.x) * input.numStaticSphereLights;
+
 	for (uint32_t i = 0; i < input.numStaticSphereLights; i++) {
-		
+
+		// Check if in shadow or not
+		bool inLight = input.inLights[baseShadowIdx + i];
+		if (!inLight) continue;
+
 		// Retrieve light source
 		SphereLight light = input.staticSphereLights[i];
 		vec3 toLight = light.pos - p;

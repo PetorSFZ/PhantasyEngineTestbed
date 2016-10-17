@@ -35,25 +35,6 @@ struct IncomingLight final {
 	SFZ_CUDA_CALLABLE void setFallofFactor(float val) noexcept { fData1.w = val; }
 };
 
-
-// ProccessGBufferGenRaysKernel
-// ------------------------------------------------------------------------------------------------
-
-struct ProcessGBufferGenRaysInput final {
-	// Camera info
-	vec3 camPos;
-
-	// GBuffer
-	vec2i res;
-	cudaSurfaceObject_t posTex;
-	cudaSurfaceObject_t normalTex;
-	cudaSurfaceObject_t albedoTex;
-	cudaSurfaceObject_t materialTex;
-};
-
-void launchProcessGBufferGenRaysKernel(const ProcessGBufferGenRaysInput& input,
-                                       RayIn* raysOut) noexcept;
-
 // GatherRaysShadeKernel
 // ------------------------------------------------------------------------------------------------
 
@@ -74,6 +55,7 @@ struct GatherRaysShadeKernelInput final {
 
 	// Light sources
 	const SphereLight* staticSphereLights;
+	const bool* __restrict__ inLights;
 	uint32_t numStaticSphereLights;
 };
 

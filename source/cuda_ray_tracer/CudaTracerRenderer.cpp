@@ -457,7 +457,12 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB,
 		
 		uint32_t numRays = (mTargetResolution.x * mTargetResolution.y) / 4; // TODO: More dynamic
 
-		// Generate secondary rays
+		const uint32_t numFullResPixels = mTargetResolution.x * mTargetResolution.y;
+		const uint32_t numHalfResPixels = numFullResPixels / 4;
+		const uint32_t totalNumLights = mImpl->staticSphereLights.size();
+
+
+		// Generate secondary rays and shadow rays
 		GenSecondaryRaysKernelInput genSecondaryRaysInput;
 
 		genSecondaryRaysInput.camPos = mCamera.pos();
@@ -518,6 +523,12 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB,
 		shadeSecondaryHitInput.shadowRayResults = mImpl->psSecondaryShadowRayInLightBuffer.cudaPtr();
 		launchShadeSecondaryHitKernel(shadeSecondaryHitInput, mImpl->psLightStreamBuffer.cudaPtr());
 
+		// Cast primary shadow rays
+		rayCastInput.rays = mImpl->psShadowRayBuffer.cudaPtr();
+		rayCastInput.numRays = numFullResPixels * totalNumLights;
+		launchShadowRayCastKernel(rayCastInput, mImpl->psShadowRayInLightBuffer.cudaPtr(),
+		                          mImpl->glDeviceProperties);
+
 		// GatherRaysShadeKernel
 
 		GatherRaysShadeKernelInput input2;
@@ -534,6 +545,7 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB,
 		input2.numIncomingLights = mImpl->staticSphereLights.size() + 1;
 		
 		input2.staticSphereLights = mImpl->staticSphereLights.cudaPtr();
+		input2.inLights = mImpl->psShadowRayInLightBuffer.cudaPtr();
 		input2.numStaticSphereLights = mImpl->staticSphereLights.size();
 		
 		launchGatherRaysShadeKernel(input2, mImpl->cudaResultTex.cudaSurface());
