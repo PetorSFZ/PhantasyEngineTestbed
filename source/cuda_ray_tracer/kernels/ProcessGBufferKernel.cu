@@ -45,7 +45,7 @@ static __global__ void createReflectRaysKernel(vec3 camPos, vec2i res,
                                                RayIn* raysOut)
 {
 	// Calculate surface coordinates
-	vec2i loc = vec2i(blockIdx.x * blockDim.x + threadIdx.x,
+	vec2u loc = vec2u(blockIdx.x * blockDim.x + threadIdx.x,
 	                  blockIdx.y * blockDim.y + threadIdx.y);
 	if (loc.x >= res.x || loc.y >= res.y) return;
 

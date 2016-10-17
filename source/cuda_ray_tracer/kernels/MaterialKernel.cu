@@ -161,7 +161,7 @@ static __global__ void gBufferMaterialKernel(GBufferMaterialKernelInput input)
 	if (loc.x >= input.res.x || loc.y >= input.res.y) return;
 
 	GBufferValue gBufferValue = readGBuffer(input.posTex, input.normalTex, input.albedoTex,
-	                                        input.materialTex, vec2i(loc));
+	                                        input.materialTex, loc);
 
 	uint32_t id = getRayIdx(input.res, blockDim, loc);
 	uint32_t numPixels = input.res.x * input.res.y;
@@ -306,7 +306,7 @@ static __global__ void createSecondaryRaysKernel(CreateSecondaryRaysKernelInput 
 	vec2u offset(pixel % 2, pixel / 2);
 	vec2u doubleLocRandomized = doubleLoc + offset;
 
-	GBufferValue gBufferValue = readGBuffer(input.posTex, input.normalTex, input.albedoTex, input.materialTex, vec2i(doubleLocRandomized));
+	GBufferValue gBufferValue = readGBuffer(input.posTex, input.normalTex, input.albedoTex, input.materialTex, doubleLocRandomized);
 
 	pathState.throughput *= gBufferValue.albedo;
 

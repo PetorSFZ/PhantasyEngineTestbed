@@ -10,9 +10,7 @@ namespace phe {
 
 using std::uint32_t;
 using sfz::vec2u;
-using sfz::vec2u;
-using sfz::vec3i;
-using sfz::vec3u;
+using sfz::vec3;
 
 static __device__ vec3 linearize(vec3 rgbGamma) noexcept
 {
@@ -34,7 +32,7 @@ __device__ inline GBufferValue readGBuffer(cudaSurfaceObject_t posTex,
                                            cudaSurfaceObject_t normalTex,
                                            cudaSurfaceObject_t albedoTex,
                                            cudaSurfaceObject_t materialTex,
-                                           vec2i loc) noexcept
+                                           vec2u loc) noexcept
 {
 	float4 posTmp = surf2Dread<float4>(posTex, loc.x * sizeof(float4), loc.y);
 	float4 normalTmp = surf2Dread<float4>(normalTex, loc.x * sizeof(float4), loc.y);

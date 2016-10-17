@@ -15,7 +15,7 @@ namespace phe {
 // Static helpers
 // ------------------------------------------------------------------------------------------------
 
-static __device__ void writeResult(cudaSurfaceObject_t result, vec2i loc, vec4 value) noexcept
+static __device__ void writeResult(cudaSurfaceObject_t result, vec2u loc, vec4 value) noexcept
 {
 	surf2Dwrite(toFloat4(value), result, loc.x * sizeof(float4), loc.y);
 }
@@ -27,15 +27,15 @@ static __global__ void processGBufferGenRaysKernel(ProcessGBufferGenRaysInput in
                                                    RayIn* __restrict__ raysOut)
 {
 	// Calculate surface coordinates
-	vec2i loc = vec2i(blockIdx.x * blockDim.x + threadIdx.x,
+	vec2u loc = vec2u(blockIdx.x * blockDim.x + threadIdx.x,
 	                  blockIdx.y * blockDim.y + threadIdx.y);
 	if (loc.x >= res.x || loc.y >= res.y) return;
 
 	// Calculate coordinates for the 4 pixel block
-	vec2i loc1 = loc * 2;
-	vec2i loc2 = loc1 + vec2i(1, 0);
-	vec2i loc3 = loc1 + vec2i(0, 1);
-	vec2i loc4 = loc1 + vec2i(1, 1);
+	vec2u loc1 = loc * 2u;
+	vec2u loc2 = loc1 + vec2u(1u, 0u);
+	vec2u loc3 = loc1 + vec2u(0u, 1u);
+	vec2u loc4 = loc1 + vec2u(1u, 1u);
 
 	// Read GBuffer values for the 4 pixel block
 	GBufferValue gval1 = readGBuffer(input.posTex, input.normalTex, input.albedoTex,
@@ -88,7 +88,7 @@ static __global__ void gatherRaysShadeKernel(GatherRaysShadeKernelInput input,
                                              cudaSurfaceObject_t resultOut)
 {
 	// Calculate surface coordinates
-	vec2i loc = vec2i(blockIdx.x * blockDim.x + threadIdx.x,
+	vec2u loc = vec2u(blockIdx.x * blockDim.x + threadIdx.x,
 	                  blockIdx.y * blockDim.y + threadIdx.y);
 	if (loc.x >= input.res.x || loc.y >= input.res.y) return;
 

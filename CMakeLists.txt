@@ -198,6 +198,8 @@ if(CUDA_TRACER)
 		${CT_INCLUDE_DIR}/deprecated/CudaTracer.cuh
 		 ${CT_SOURCE_DIR}/deprecated/CudaTracer.cu
 
+		${CT_INCLUDE_DIR}/kernels/GenSecondaryRaysKernel.hpp
+		 ${CT_SOURCE_DIR}/kernels/GenSecondaryRaysKernel.cu
 		${CT_INCLUDE_DIR}/kernels/GenSecondaryShadowRaysKernel.hpp
 		 ${CT_SOURCE_DIR}/kernels/GenSecondaryShadowRaysKernel.cu
 		${CT_INCLUDE_DIR}/kernels/InitCurandKernel.hpp

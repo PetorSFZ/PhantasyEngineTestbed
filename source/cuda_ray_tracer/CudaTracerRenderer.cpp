@@ -27,6 +27,7 @@
 #include "CudaGLInterop.hpp"
 #include "CudaHelpers.hpp"
 #include "CudaTextureBuffer.hpp"
+#include "kernels/GenSecondaryRaysKernel.hpp"
 #include "kernels/GenSecondaryShadowRaysKernel.hpp"
 #include "kernels/InitCurandKernel.hpp"
 #include "kernels/MaterialKernel.hpp"
@@ -104,12 +105,17 @@ public:
 	CudaBuffer<curandState> randStates;
 
 	// PetorShading stuff
-	CudaBuffer<RayIn> petorShadingSecondaryRayBuffer;
-	CudaBuffer<RayHit> petorShadingRayHitBuffer;
-	CudaBuffer<RayHitInfo> petorShadingRayHitInfoBuffer;
-	CudaBuffer<RayIn> petorShadingSecondaryShadowRayBuffer;
-	CudaBuffer<bool> petorShadingShadowRayInLightBuffer;
-	CudaBuffer<IncomingLight> petorShadingIncomingLightBuffer;
+	CudaBuffer<RayIn> psSecondaryRayBuffer;
+	CudaBuffer<RayHit> psSecondaryRayHitBuffer;
+	CudaBuffer<RayHitInfo> psSecondaryRayHitInfoBuffer;
+
+	CudaBuffer<RayIn> psShadowRayBuffer;
+	CudaBuffer<bool> psShadowRayInLightBuffer;
+
+	CudaBuffer<RayIn> psSecondaryShadowRayBuffer;
+	CudaBuffer<bool> psSecondaryShadowRayInLightBuffer;
+
+	CudaBuffer<IncomingLight> psLightStreamBuffer;
 
 	CudaTracerRendererImpl() noexcept
 	{
@@ -452,58 +458,65 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB,
 		uint32_t numRays = (mTargetResolution.x * mTargetResolution.y) / 4; // TODO: More dynamic
 
 		// Generate secondary rays
-		ProcessGBufferGenRaysInput input1;
-		input1.camPos = mCamera.pos();
-		input1.res = mTargetResolution;
-		input1.posTex = mImpl->gbuffer.positionSurfaceCuda();
-		input1.normalTex = mImpl->gbuffer.normalSurfaceCuda();
-		input1.albedoTex = mImpl->gbuffer.albedoSurfaceCuda();
-		input1.materialTex = mImpl->gbuffer.materialSurfaceCuda();
-		launchProcessGBufferGenRaysKernel(input1, mImpl->petorShadingSecondaryRayBuffer.cudaPtr());
+		GenSecondaryRaysKernelInput genSecondaryRaysInput;
+
+		genSecondaryRaysInput.camPos = mCamera.pos();
+		
+		genSecondaryRaysInput.res = vec2u(mTargetResolution);
+		genSecondaryRaysInput.posTex = mImpl->gbuffer.positionSurfaceCuda();
+		genSecondaryRaysInput.normalTex = mImpl->gbuffer.normalSurfaceCuda();
+		genSecondaryRaysInput.albedoTex = mImpl->gbuffer.albedoSurfaceCuda();
+		genSecondaryRaysInput.materialTex = mImpl->gbuffer.materialSurfaceCuda();
+
+		genSecondaryRaysInput.staticSphereLights = mImpl->staticSphereLights.cudaPtr();
+		genSecondaryRaysInput.numStaticSphereLights = mImpl->staticSphereLights.size();
+
+		launchGenSecondaryRaysKernel(genSecondaryRaysInput, mImpl->psSecondaryRayBuffer.cudaPtr(),
+		                             mImpl->psShadowRayBuffer.cudaPtr());
 
 		// Ray cast secondary rays
 		RayCastKernelInput rayCastInput;
 		rayCastInput.bvhNodes = mImpl->staticBvhNodes.cudaTexture();
 		rayCastInput.triangleVerts = mImpl->staticTriangleVertices.cudaTexture();
 		rayCastInput.numRays = numRays;
-		rayCastInput.rays = mImpl->petorShadingSecondaryRayBuffer.cudaPtr();
-		launchRayCastKernel(rayCastInput, mImpl->petorShadingRayHitBuffer.cudaPtr(), mImpl->glDeviceProperties);
+		rayCastInput.rays = mImpl->psSecondaryRayBuffer.cudaPtr();
+		launchRayCastKernel(rayCastInput, mImpl->psSecondaryRayHitBuffer.cudaPtr(), mImpl->glDeviceProperties);
 		
 		// "Interpret" secondary rays (i.e. load their materials)
 		InterpretRayHitKernelInput interpretRayHitInput;
-		interpretRayHitInput.rays = mImpl->petorShadingSecondaryRayBuffer.cudaPtr();
-		interpretRayHitInput.rayHits = mImpl->petorShadingRayHitBuffer.cudaPtr();
+		interpretRayHitInput.rays = mImpl->psSecondaryRayBuffer.cudaPtr();
+		interpretRayHitInput.rayHits = mImpl->psSecondaryRayHitBuffer.cudaPtr();
 		interpretRayHitInput.numRays = numRays;
 		interpretRayHitInput.materialsTex = mImpl->materials.cudaTexture();
 		interpretRayHitInput.textures = mImpl->cudaTextures.cudaPtr();
 		interpretRayHitInput.staticTriangleDatas = mImpl->staticTriangleDatas.cudaPtr();
-		launchInterpretRayHitKernel(interpretRayHitInput, mImpl->petorShadingRayHitInfoBuffer.cudaPtr(),
+		launchInterpretRayHitKernel(interpretRayHitInput, mImpl->psSecondaryRayHitInfoBuffer.cudaPtr(),
 		                            mImpl->glDeviceProperties);
 
 		// Generate shadow rays for secondary hits
 		GenSecondaryShadowRaysKernelInput secondaryShadowRayInput;
-		secondaryShadowRayInput.rayHitInfos = mImpl->petorShadingRayHitInfoBuffer.cudaPtr();
+		secondaryShadowRayInput.rayHitInfos = mImpl->psSecondaryRayHitInfoBuffer.cudaPtr();
 		secondaryShadowRayInput.numRayHitInfos = numRays;
 		secondaryShadowRayInput.staticSphereLights = mImpl->staticSphereLights.cudaPtr();
 		secondaryShadowRayInput.numStaticSphereLights = mImpl->staticSphereLights.size();
-		launchGenSecondaryShadowRaysKernel(secondaryShadowRayInput, mImpl->petorShadingSecondaryShadowRayBuffer.cudaPtr());
+		launchGenSecondaryShadowRaysKernel(secondaryShadowRayInput, mImpl->psSecondaryShadowRayBuffer.cudaPtr());
 		
 		// Cast secondary shadow rays
-		rayCastInput.rays = mImpl->petorShadingSecondaryShadowRayBuffer.cudaPtr();
+		rayCastInput.rays = mImpl->psSecondaryShadowRayBuffer.cudaPtr();
 		rayCastInput.numRays = numRays * mImpl->staticSphereLights.size();
-		launchShadowRayCastKernel(rayCastInput, mImpl->petorShadingShadowRayInLightBuffer.cudaPtr(), mImpl->glDeviceProperties);
+		launchShadowRayCastKernel(rayCastInput, mImpl->psSecondaryShadowRayInLightBuffer.cudaPtr(), mImpl->glDeviceProperties);
 
 		// Shade secondary hits and generate outgoing light to primary hits
 		ShadeSecondaryHitKernelInput shadeSecondaryHitInput;
-		shadeSecondaryHitInput.secondaryRays = mImpl->petorShadingSecondaryRayBuffer.cudaPtr();
-		shadeSecondaryHitInput.rayHitInfos = mImpl->petorShadingRayHitInfoBuffer.cudaPtr();
+		shadeSecondaryHitInput.secondaryRays = mImpl->psSecondaryRayBuffer.cudaPtr();
+		shadeSecondaryHitInput.rayHitInfos = mImpl->psSecondaryRayHitInfoBuffer.cudaPtr();
 		shadeSecondaryHitInput.numRayHitInfos = numRays;
 		shadeSecondaryHitInput.res = mTargetResolution;
 		shadeSecondaryHitInput.numIncomingLightsPerPixel = mImpl->staticSphereLights.size() + 1;
 		shadeSecondaryHitInput.staticSphereLights = mImpl->staticSphereLights.cudaPtr();
 		shadeSecondaryHitInput.numStaticSphereLights = mImpl->staticSphereLights.size();
-		shadeSecondaryHitInput.shadowRayResults = mImpl->petorShadingShadowRayInLightBuffer.cudaPtr();
-		launchShadeSecondaryHitKernel(shadeSecondaryHitInput, mImpl->petorShadingIncomingLightBuffer.cudaPtr());
+		shadeSecondaryHitInput.shadowRayResults = mImpl->psSecondaryShadowRayInLightBuffer.cudaPtr();
+		launchShadeSecondaryHitKernel(shadeSecondaryHitInput, mImpl->psLightStreamBuffer.cudaPtr());
 
 		// GatherRaysShadeKernel
 
@@ -517,7 +530,7 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB,
 		input2.albedoTex = mImpl->gbuffer.albedoSurfaceCuda();
 		input2.materialTex = mImpl->gbuffer.materialSurfaceCuda();
 
-		input2.incomingLights = mImpl->petorShadingIncomingLightBuffer.cudaPtr();
+		input2.incomingLights = mImpl->psLightStreamBuffer.cudaPtr();
 		input2.numIncomingLights = mImpl->staticSphereLights.size() + 1;
 		
 		input2.staticSphereLights = mImpl->staticSphereLights.cudaPtr();
@@ -717,21 +730,32 @@ void CudaTracerRenderer::targetResolutionUpdated() noexcept
 
 	launchInitCurandKernel(mTargetResolution, mImpl->randStates.cudaPtr());
 
-	// Petorshading ray memory allocation
-	uint32_t petorShadingNumRays = (mImpl->staticSphereLights.size() + 1)
-	                             * mTargetResolution.x * mTargetResolution.y;
-	mImpl->petorShadingSecondaryRayBuffer.destroy();
-	mImpl->petorShadingSecondaryRayBuffer.create(petorShadingNumRays);
-	mImpl->petorShadingRayHitBuffer.destroy();
-	mImpl->petorShadingRayHitBuffer.create(petorShadingNumRays);
-	mImpl->petorShadingRayHitInfoBuffer.destroy();
-	mImpl->petorShadingRayHitInfoBuffer.create(petorShadingNumRays);
-	mImpl->petorShadingSecondaryShadowRayBuffer.destroy();
-	mImpl->petorShadingSecondaryShadowRayBuffer.create(petorShadingNumRays);
-	mImpl->petorShadingShadowRayInLightBuffer.destroy();
-	mImpl->petorShadingShadowRayInLightBuffer.create(petorShadingNumRays);
-	mImpl->petorShadingIncomingLightBuffer.destroy();
-	mImpl->petorShadingIncomingLightBuffer.create(petorShadingNumRays);
+
+	// Petor shading memory allocation
+	const uint32_t numFullResPixels = mTargetResolution.x * mTargetResolution.y;
+	const uint32_t numHalfResPixels = numFullResPixels / 4;
+	const uint32_t totalNumLights = mImpl->staticSphereLights.size();
+
+
+	mImpl->psSecondaryRayBuffer.destroy();
+	mImpl->psSecondaryRayBuffer.create(numHalfResPixels);
+	mImpl->psSecondaryRayHitBuffer.destroy();
+	mImpl->psSecondaryRayHitBuffer.create(numHalfResPixels);
+	mImpl->psSecondaryRayHitInfoBuffer.destroy();
+	mImpl->psSecondaryRayHitInfoBuffer.create(numHalfResPixels);
+
+	mImpl->psShadowRayBuffer.destroy();
+	mImpl->psShadowRayBuffer.create(numFullResPixels * totalNumLights);
+	mImpl->psShadowRayInLightBuffer.destroy();
+	mImpl->psShadowRayInLightBuffer.create(numFullResPixels * totalNumLights);
+
+	mImpl->psSecondaryShadowRayBuffer.destroy();
+	mImpl->psSecondaryShadowRayBuffer.create(numHalfResPixels * totalNumLights);
+	mImpl->psSecondaryShadowRayInLightBuffer.destroy();
+	mImpl->psSecondaryShadowRayInLightBuffer.create(numHalfResPixels * totalNumLights);
+
+	mImpl->psLightStreamBuffer.destroy();
+	mImpl->psLightStreamBuffer.create(numFullResPixels * (totalNumLights + 1u));
 }
 
 } // namespace phe
