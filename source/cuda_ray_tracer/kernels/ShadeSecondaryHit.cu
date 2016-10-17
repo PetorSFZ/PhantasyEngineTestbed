@@ -23,35 +23,39 @@ static __global__ void shadeSecondaryHitKernel(ShadeSecondaryHitKernelInput inpu
 	RayHitInfo info = input.rayHitInfos[idx];
 
 	vec3 p = info.position();
-	vec3 n = info.normal();
-	vec3 albedo = info.albedo();
-	float roughness = info.roughness();
-	float metallic = info.metallic();
-
-	vec3 v = normalize(ray.origin() - p);
-
-	// Interpolation of normals sometimes makes them face away from the camera. Clamp
-	// these to almost zero, to not break shading calculations.
-	float nDotV = fmaxf(0.001f, dot(n, v));
 
 	vec3 color = vec3(0.0f);
 
-	uint32_t baseShadowIdx = idx * input.numStaticSphereLights;
-	for (uint32_t i = 0; i < input.numStaticSphereLights; i++) {
+	if (info.wasHit()) {
 		
-		// Check if light source is occluded or not
-		bool inLight = input.shadowRayResults[baseShadowIdx + i];
-		if (!inLight) continue;
+		vec3 n = info.normal();
+		vec3 albedo = info.albedo();
+		float roughness = info.roughness();
+		float metallic = info.metallic();
 
-		// Retrieve light source
-		SphereLight light = input.staticSphereLights[i];
-		vec3 toLight = light.pos - p;
-		float toLightDist = length(toLight);
-		vec3 l = toLight / toLightDist;
+		vec3 v = normalize(ray.origin() - p);
 
-		// Shade
-		vec3 shading = shade(p, n, v, albedo, roughness, metallic, l, toLightDist, light.strength, light.range);
-		color += shading * fallofFactor(toLightDist, light.range);
+		// Interpolation of normals sometimes makes them face away from the camera. Clamp
+		// these to almost zero, to not break shading calculations.
+		float nDotV = fmaxf(0.001f, dot(n, v));
+
+		uint32_t baseShadowIdx = idx * input.numStaticSphereLights;
+		for (uint32_t i = 0; i < input.numStaticSphereLights; i++) {
+		
+			// Check if light source is occluded or not
+			bool inLight = input.shadowRayResults[baseShadowIdx + i];
+			if (!inLight) continue;
+
+			// Retrieve light source
+			SphereLight light = input.staticSphereLights[i];
+			vec3 toLight = light.pos - p;
+			float toLightDist = length(toLight);
+			vec3 l = toLight / toLightDist;
+
+			// Shade
+			vec3 shading = shade(p, n, v, albedo, roughness, metallic, l, toLightDist, light.strength, light.range);
+			color += shading * fallofFactor(toLightDist, light.range);
+		}
 	}
 
 	// Calculate incoming light struct to output
