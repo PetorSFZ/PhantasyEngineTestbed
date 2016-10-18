@@ -3,9 +3,12 @@
 #include "TestbedLogic.hpp"
 
 #include <phantasy_engine/Config.hpp>
+#include <phantasy_engine/rendering/Material.hpp>
+#include <phantasy_engine/level/ObjectLoader.hpp>
 
 #include "Helpers.hpp"
 
+#include <sfz/util/IO.hpp>
 #include <sfz/math/MatrixSupport.hpp>
 
 using namespace sfz;
@@ -161,12 +164,27 @@ UpdateOp TestbedLogic::update(GameScreen& screen, UpdateState& state) noexcept
 	// Face buttons
 	if (ctrl.y == ButtonState::DOWN) {
 		vec3 pos = screen.cam.pos();
-		int colour = cfg.getSetting("PhantasyEngineTestbed", "sphereColour")->intValue();
-		int metallic = cfg.getSetting("PhantasyEngineTestbed", "sphereMetallic")->boolValue() ? 1 : 0;
-		int roughness = cfg.getSetting("PhantasyEngineTestbed", "sphereRoughness")->intValue() - 1;
-		uint32_t handle = spawnObjectInstance(1 + (10 * 2 * colour + 10 * metallic + roughness), *screen.level, translationMatrix(pos));
-		instanceHandles.add(handle);
-		objectPositions.put(handle, pos);
+
+		float r = cfg.getSetting("PhantasyEngineTestbed", "sphereColourR")->floatValue();
+		float g = cfg.getSetting("PhantasyEngineTestbed", "sphereColourG")->floatValue();
+		float b = cfg.getSetting("PhantasyEngineTestbed", "sphereColourB")->floatValue();
+
+		float metallic = cfg.getSetting("PhantasyEngineTestbed", "sphereMetallic")->floatValue();
+		float roughness = cfg.getSetting("PhantasyEngineTestbed", "sphereRoughness")->floatValue();
+		
+		StackString192 modelsPath;
+		modelsPath.printf("%sresources/models/", basePath());
+
+		uint32_t objectHandle = phe::loadDynObjectCustomMaterial(modelsPath.str, "sphere.obj", *screen.level, vec3(r, g, b), roughness, metallic);
+		
+		for (RendererAndStatus& renderer : mRenderers) {
+			renderer.renderer->setMaterialsAndTextures(screen.level->materials, screen.level->textures);
+			renderer.baked = false;
+		}
+
+		uint32_t instanceHandle = spawnObjectInstance(objectHandle, *screen.level, translationMatrix(pos));
+		instanceHandles.add(instanceHandle);
+		objectPositions.put(instanceHandle, pos);
 	}
 	if (ctrl.x == ButtonState::DOWN) {
 	}
