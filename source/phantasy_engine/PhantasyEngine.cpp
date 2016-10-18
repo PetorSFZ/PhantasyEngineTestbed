@@ -154,6 +154,10 @@ void PhantasyEngine::init(const char* projectName, const char* iniBasePath, cons
 		sfz::error("OpenGL error: ARB_bindless_texture not available");
 	}
 
+	if (!GLEW_ARB_texture_storage) {
+		sfz::error("OpenGL error: ARB_texture_storage not available");
+	}
+
 	// Enable OpenGL debug message if in debug mode
 #if !defined(SFZ_NO_DEBUG)
 	gl::setupDebugMessages(gl::Severity::MEDIUM, gl::Severity::MEDIUM);

@@ -226,6 +226,7 @@ RenderResult DeferredRenderer::render(Framebuffer& resultFB,
 	auto& gbuffer = mImpl->gbuffer;
 
 	const mat4 viewMatrix = mCamera.viewMatrix();
+	const mat4 invViewMatrix = inverse(viewMatrix);
 	const mat4 projMatrix = mCamera.projMatrix(mTargetResolution);
 	const mat4 invProjMatrix = inverse(projMatrix);
 
@@ -281,6 +282,7 @@ RenderResult DeferredRenderer::render(Framebuffer& resultFB,
 	shadingShader.useProgram();
 
 	gl::setUniform(shadingShader, "uInvProjMatrix", invProjMatrix);
+	gl::setUniform(shadingShader, "uInvViewMatrix", invViewMatrix);
 
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, gbuffer.depthTexture());
@@ -298,7 +300,8 @@ RenderResult DeferredRenderer::render(Framebuffer& resultFB,
 	glBindTexture(GL_TEXTURE_2D, gbuffer.texture(GBUFFER_MATERIAL));
 	gl::setUniform(shadingShader, "uMaterialTexture", 3);
 
-	const int lightPosLoc = glGetUniformLocation(shadingShader.handle(), "uLightPos");
+	const int lightPosVSLoc = glGetUniformLocation(shadingShader.handle(), "uLightPosVS");
+	const int lightPosWSLoc = glGetUniformLocation(shadingShader.handle(), "uLightPosWS");
 	const int lightStrengthLoc = glGetUniformLocation(shadingShader.handle(), "uLightStrength");
 	const int lightRangeLoc = glGetUniformLocation(shadingShader.handle(), "uLightRange");
 
@@ -313,7 +316,8 @@ RenderResult DeferredRenderer::render(Framebuffer& resultFB,
 
 		// Set uniforms
 		const vec3 lightPosVS = transformPoint(viewMatrix, sphereLight.pos);
-		gl::setUniform(lightPosLoc, lightPosVS);
+		gl::setUniform(lightPosVSLoc, lightPosVS);
+		gl::setUniform(lightPosWSLoc, sphereLight.pos);
 		gl::setUniform(lightStrengthLoc, sphereLight.strength);
 		gl::setUniform(lightRangeLoc, sphereLight.range);
 
@@ -328,14 +332,14 @@ RenderResult DeferredRenderer::render(Framebuffer& resultFB,
 	glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
 
 	// Dynamic lights
-	for (const SphereLight& sphereLight : lights) {
+	/*for (const SphereLight& sphereLight : lights) {
 		const vec3 lightPosVS = transformPoint(viewMatrix, sphereLight.pos);
-		gl::setUniform(lightPosLoc, lightPosVS);
+		gl::setUniform(lightPosVSLoc, lightPosVS);
 		gl::setUniform(lightStrengthLoc, sphereLight.strength);
 		gl::setUniform(lightRangeLoc, sphereLight.range);
 
 		mImpl->fullscreenTriangle.render();
-	}
+	}*/
 
 	// Copy depth buffer to result framebuffer
 	// --------------------------------------------------------------------------------------------

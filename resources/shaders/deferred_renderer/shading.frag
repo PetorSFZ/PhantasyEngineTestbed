@@ -12,12 +12,14 @@ out vec4 outFragColor;
 
 // Uniforms
 uniform mat4 uInvProjMatrix;
+uniform mat4 uInvViewMatrix;
 uniform sampler2D uDepthTexture;
 uniform sampler2D uNormalTexture;
 uniform sampler2D uAlbedoTexture;
 uniform sampler2D uMaterialTexture;
 
-uniform vec3 uLightPos;
+uniform vec3 uLightPosVS;
+uniform vec3 uLightPosWS;
 uniform vec3 uLightStrength;
 uniform float uLightRange;
 uniform samplerCube uShadowMap;
@@ -52,11 +54,11 @@ vec4 linearize(vec4 rgbaGamma)
 	return vec4(linearize(rgbaGamma.rgb), rgbaGamma.a);
 }
 
-float sampleShadowMap(vec3 pos)
+float sampleShadowMap(vec3 posVS)
 {
 	const float BIAS = 0.99;
-
-	vec3 toLight = pos - uLightPos;
+	vec3 posWS = (uInvViewMatrix * vec4(posVS, 1.0)).xyz;
+	vec3 toLight = posWS - uLightPosWS;
 	float storedDepth = texture(uShadowMap, toLight).r * uLightRange;
 	if ((dot(toLight, toLight) * BIAS) <= (storedDepth * storedDepth)) {
 		return 1.0;
@@ -114,7 +116,7 @@ void main()
 	vec3 n = texture(uNormalTexture, uvCoord).rgb;
 
 	// Shading parameters
-	vec3 toLight = uLightPos - p;
+	vec3 toLight = uLightPosVS - p;
 	float toLightDist = length(toLight);
 	vec3 l = toLight / toLightDist; // to light
 	vec3 v = normalize(-p); // to view
