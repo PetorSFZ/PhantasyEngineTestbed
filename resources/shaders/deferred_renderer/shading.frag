@@ -20,6 +20,7 @@ uniform sampler2D uMaterialTexture;
 uniform vec3 uLightPos;
 uniform vec3 uLightStrength;
 uniform float uLightRange;
+uniform samplerCube uShadowMap;
 
 // Constants
 // ------------------------------------------------------------------------------------------------
@@ -49,6 +50,19 @@ vec3 linearize(vec3 rgbGamma)
 vec4 linearize(vec4 rgbaGamma)
 {
 	return vec4(linearize(rgbaGamma.rgb), rgbaGamma.a);
+}
+
+float sampleShadowMap(vec3 pos)
+{
+	const float BIAS = 0.99;
+
+	vec3 toLight = pos - uLightPos;
+	float storedDepth = texture(uShadowMap, toLight).r * uLightRange;
+	if ((dot(toLight, toLight) * BIAS) <= (storedDepth * storedDepth)) {
+		return 1.0;
+	} else {
+		return 0.0;
+	}
 }
 
 // PBR shading functions
@@ -147,10 +161,11 @@ void main()
 	vec3 specular = ctD * ctF * ctG / (4.0 * nDotL * nDotV);
 
 	// Calculates light strength
+	float shadow = sampleShadowMap(p);
 	float fallofNumerator = pow(clamp(1.0 - pow(toLightDist / uLightRange, 4), 0.0, 1.0), 2);
 	float fallofDenominator = (toLightDist * toLightDist + 1.0);
 	float falloff = fallofNumerator / fallofDenominator;
-	vec3 light = falloff * uLightStrength;
+	vec3 light = falloff * uLightStrength * shadow;
 
 	// "Solves" reflectance equation under the assumption that the light source is a point light
 	// and that there is no global illumination.

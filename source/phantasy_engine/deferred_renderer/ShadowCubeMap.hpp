@@ -4,12 +4,10 @@
 
 #include <cstdint>
 
-#include <sfz/gl/Framebuffer.hpp>
 #include <sfz/math/Vector.hpp>
 
 namespace phe {
 
-using sfz::gl::FBDepthFormat;
 using sfz::vec2u;
 using std::uint32_t;
 
@@ -25,7 +23,7 @@ public:
 	ShadowCubeMap(const ShadowCubeMap&) = delete;
 	ShadowCubeMap& operator= (const ShadowCubeMap&) = delete;
 
-	ShadowCubeMap(vec2u res, FBDepthFormat depthFormat, bool pcf = true) noexcept;
+	ShadowCubeMap(uint32_t res) noexcept;
 	ShadowCubeMap(ShadowCubeMap&& other) noexcept;
 	ShadowCubeMap& operator= (ShadowCubeMap&& other) noexcept;
 	~ShadowCubeMap() noexcept;
@@ -36,13 +34,20 @@ public:
 	void destroy() noexcept;
 	void swap(ShadowCubeMap& other) noexcept;
 
+	// Getters
+	// --------------------------------------------------------------------------------------------
+
+	vec2u resolution() const noexcept { return mRes; }
+	uint32_t fbo() const noexcept { return mFbo; }
+	uint32_t shadowCubeMap() const noexcept { return mShadowCubeMap; }
 
 private:
 	// Private members
 	// --------------------------------------------------------------------------------------------
 	
-	uint32_t mFBO = 0u;
-	uint32_t mDepthTexture = 0;
+	vec2u mRes = vec2u(0u);
+	uint32_t mFbo = 0u;
+	uint32_t mShadowCubeMap = 0u;
 };
 
 } // namespace phe

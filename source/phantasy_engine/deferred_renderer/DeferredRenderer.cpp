@@ -5,11 +5,13 @@
 #include <sfz/containers/StackString.hpp>
 #include <sfz/gl/IncludeOpenGL.hpp>
 #include <sfz/gl/Program.hpp>
+#include <sfz/math/ProjectionMatrices.hpp>
 #include <sfz/memory/New.hpp>
 #include <sfz/util/IO.hpp>
 
 #include "phantasy_engine/deferred_renderer/GLModel.hpp"
 #include "phantasy_engine/deferred_renderer/GLTexture.hpp"
+#include "phantasy_engine/deferred_renderer/ShadowCubeMap.hpp"
 #include "phantasy_engine/deferred_renderer/SSBO.hpp"
 #include "phantasy_engine/level/SphereLight.hpp"
 #include "phantasy_engine/rendering/FullscreenTriangle.hpp"
@@ -33,7 +35,7 @@ static const uint32_t GBUFFER_MATERIAL = 2;
 class DeferredRendererImpl final {
 public:
 	// Shaders
-	Program gbufferGenShader, shadingShader;
+	Program shadowMapGenShader, gbufferGenShader, shadingShader;
 	
 	// Framebuffers
 	Framebuffer gbuffer;
@@ -49,6 +51,7 @@ public:
 	// Static scene
 	DynArray<GLModel> staticGLModels;
 	DynArray<SphereLight> staticSphereLights;
+	DynArray<ShadowCubeMap> staticShadowMaps;
 
 	// Dynamic scene
 	DynArray<GLModel> dynamicGLModels;
@@ -68,6 +71,12 @@ DeferredRenderer::DeferredRenderer() noexcept
 
 	StackString128 shadersPath;
 	shadersPath.printf("%sresources/shaders/deferred_renderer/", basePath());
+
+	mImpl->shadowMapGenShader = Program::fromFile(shadersPath.str, "shadow_map_gen.vert",
+	                                              "shadow_map_gen.geom", "shadow_map_gen.frag",
+	[](uint32_t shaderProgram) {
+		glBindAttribLocation(shaderProgram, 0, "inPosition");
+	});
 
 	mImpl->gbufferGenShader = Program::fromFile(shadersPath.str, "gbuffer_gen.vert", "gbuffer_gen.frag",
 	[](uint32_t shaderProgram) {
@@ -147,6 +156,50 @@ void DeferredRenderer::setStaticScene(const StaticScene& staticScene) noexcept
 	}
 
 	mImpl->staticSphereLights = staticScene.sphereLights;
+
+	// TODO: STATIC SHADOW MAPS
+	mImpl->staticShadowMaps.clear();
+	for (const SphereLight& light : mImpl->staticSphereLights) {
+		ShadowCubeMap shadowMap(4096u);
+
+		// Note: We don't use reverse-z here, unecessary since we overwrite the depth anyway
+
+		glDisable(GL_BLEND);
+		glEnable(GL_CULL_FACE);
+		glEnable(GL_DEPTH_TEST);
+		glDepthFunc(GL_LESS);
+
+		glBindFramebuffer(GL_FRAMEBUFFER, shadowMap.fbo());
+		glViewport(0, 0, shadowMap.resolution().x, shadowMap.resolution().y);
+		glClearDepth(1.0f);
+		glClear(GL_DEPTH_BUFFER_BIT);
+		
+		mImpl->shadowMapGenShader.useProgram();
+
+		// Model matrix is identity since static scene is defined in world space
+		gl::setUniform(mImpl->shadowMapGenShader, "uModelMatrix", sfz::identityMatrix4<float>());
+
+		// View and projection matrices for each face
+		const mat4 projMatrix = sfz::perspectiveProjectionVkD3d(90.0f, 1.0f, 0.01f, light.range);
+		mat4 viewProjMatrices[6];
+		viewProjMatrices[0] = projMatrix * sfz::viewMatrixGL(light.pos, vec3(1.0f, 0.0f, 0.0f), vec3(0.0f, -1.0f, 0.0f)); // right
+		viewProjMatrices[1] = projMatrix * sfz::viewMatrixGL(light.pos, vec3(-1.0f, 0.0f, 0.0f), vec3(0.0f, -1.0f, 0.0f)); // left
+		viewProjMatrices[2] = projMatrix * sfz::viewMatrixGL(light.pos, vec3(0.0f, 1.0f, 0.0f), vec3(0.0f, 0.0f, 1.0f)); // top
+		viewProjMatrices[3] = projMatrix * sfz::viewMatrixGL(light.pos, vec3(0.0f, -1.0f, 0.0f), vec3(0.0f, 0.0f, -1.0f)); // bottom
+		viewProjMatrices[4] = projMatrix * sfz::viewMatrixGL(light.pos, vec3(0.0f, 0.0f, 1.0f), vec3(0.0f, -1.0f, 0.0f)); // near
+		viewProjMatrices[5] = projMatrix * sfz::viewMatrixGL(light.pos, vec3(0.0f, 0.0f, -1.0f), vec3(0.0f, -1.0f, 0.0f)); // far
+		gl::setUniform(mImpl->shadowMapGenShader, "uViewProjMatrices", viewProjMatrices, 6);
+
+		// Light information
+		gl::setUniform(mImpl->shadowMapGenShader, "uLightPosWS", light.pos);
+		gl::setUniform(mImpl->shadowMapGenShader, "uLightRange", light.range);
+
+		for (const GLModel& model : mImpl->staticGLModels) {
+			model.draw();
+		}
+
+		mImpl->staticShadowMaps.add(std::move(shadowMap));
+	}
 }
 	
 void DeferredRenderer::setDynamicMeshes(const DynArray<RawMesh>& meshes) noexcept
@@ -249,15 +302,30 @@ RenderResult DeferredRenderer::render(Framebuffer& resultFB,
 	const int lightStrengthLoc = glGetUniformLocation(shadingShader.handle(), "uLightStrength");
 	const int lightRangeLoc = glGetUniformLocation(shadingShader.handle(), "uLightRange");
 
+	// Prepare for binding shadow map
+	gl::setUniform(shadingShader, "uShadowMap", 4);
+	glActiveTexture(GL_TEXTURE4);
+
 	// Static lights
-	for (const SphereLight& sphereLight : mImpl->staticSphereLights) {
+	for (uint32_t i = 0; i < mImpl->staticSphereLights.size(); i++) {
+		const SphereLight& sphereLight = mImpl->staticSphereLights[i];
+		const ShadowCubeMap& shadowMap = mImpl->staticShadowMaps[i];
+
+		// Set uniforms
 		const vec3 lightPosVS = transformPoint(viewMatrix, sphereLight.pos);
 		gl::setUniform(lightPosLoc, lightPosVS);
 		gl::setUniform(lightStrengthLoc, sphereLight.strength);
 		gl::setUniform(lightRangeLoc, sphereLight.range);
 
+		// Bind shadow map
+		glBindTexture(GL_TEXTURE_CUBE_MAP, shadowMap.shadowCubeMap());
+
+		// Run light pass
 		mImpl->fullscreenTriangle.render();
 	}
+
+	// Unbind shadow map
+	glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
 
 	// Dynamic lights
 	for (const SphereLight& sphereLight : lights) {

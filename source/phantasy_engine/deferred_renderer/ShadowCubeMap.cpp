@@ -5,52 +5,37 @@
 #include <algorithm>
 
 #include <sfz/gl/IncludeOpenGL.hpp>
+#include <sfz/gl/Framebuffer.hpp>
 
 namespace phe {
 
 // ShadowCubeMap: Constructors & destructors
 // ------------------------------------------------------------------------------------------------
 
-ShadowCubeMap::ShadowCubeMap(vec2u res, FBDepthFormat depthFormat, bool pcf) noexcept
+ShadowCubeMap::ShadowCubeMap(uint32_t res) noexcept
 {
+	mRes = vec2u(res);
+
 	// Generate framebuffer
-	glGenFramebuffers(1, &mFBO);
-	glBindFramebuffer(GL_FRAMEBUFFER, mFBO);
+	glGenFramebuffers(1, &mFbo);
+	glBindFramebuffer(GL_FRAMEBUFFER, mFbo);
 
-	// Generates depth texture
-	glGenTextures(1, &mDepthTexture);
-	glBindTexture(GL_TEXTURE_2D, mDepthTexture);
-	switch (depthFormat) {
-	case FBDepthFormat::F16:
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT16, res.x, res.y, 0,
-		             GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
-		break;
-	case FBDepthFormat::F24:
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, res.x, res.y, 0,
-		             GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
-		break;
-	case FBDepthFormat::F32:
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32, res.x, res.y, 0,
-		             GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
-		break;
-	}
+	// Generate shadow cube map
+	glGenTextures(1, &mShadowCubeMap);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, mShadowCubeMap);
 
-	// Set shadowmap texture min & mag filters (enable/disable pcf)
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, pcf ? GL_LINEAR : GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, pcf ? GL_LINEAR : GL_NEAREST);
+	// Generates float cube map texture of size width * height for each face
+	glTexStorage2D(GL_TEXTURE_CUBE_MAP, 1, GL_DEPTH_COMPONENT32, mRes.x, mRes.y);
 
-	// Set texture wrap mode to CLAMP_TO_BORDER and set border color.
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-	sfz::vec4 borderColor(0.0f);
-	glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor.elements);
+	// Texture parameters
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 
-	// Enable hardware shadow maps (becomes sampler2Dshadow)
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
-
-	// Bind texture to framebuffer
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, mDepthTexture, 0);
+	// Bind shadow map to framebuffer
+	glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, mShadowCubeMap, 0);
 	glDrawBuffer(GL_NONE); // No color buffer
 	glReadBuffer(GL_NONE);
 
@@ -59,7 +44,7 @@ ShadowCubeMap::ShadowCubeMap(vec2u res, FBDepthFormat depthFormat, bool pcf) noe
 	sfz_assert_debug(status);
 
 	// Cleanup
-	glBindTexture(GL_TEXTURE_2D, 0);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
@@ -84,16 +69,18 @@ ShadowCubeMap::~ShadowCubeMap() noexcept
 
 void ShadowCubeMap::destroy() noexcept
 {
-	glDeleteFramebuffers(1, &mFBO);
-	mFBO = 0u;
-	// TODO: MOAR
+	glDeleteTextures(1, &mShadowCubeMap);
+	glDeleteFramebuffers(1, &mFbo);
+	mRes = vec2u(0u);
+	mFbo = 0u;
+	mShadowCubeMap = 0u;
 }
 
 void ShadowCubeMap::swap(ShadowCubeMap& other) noexcept
 {
-	std::swap(this->mFBO, other.mFBO);
-	std::swap(this->mDepthTexture, other.mDepthTexture);
-	// TODO: MOAR
+	std::swap(this->mRes, other.mRes);
+	std::swap(this->mFbo, other.mFbo);
+	std::swap(this->mShadowCubeMap, other.mShadowCubeMap);
 }
 
 } // namespace phe
