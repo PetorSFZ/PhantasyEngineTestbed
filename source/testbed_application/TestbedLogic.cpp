@@ -35,15 +35,19 @@ TestbedLogic::TestbedLogic(DynArray<RendererAndStatus>&& renderers, uint32_t ren
 	objectPositions.put(0, vec3(0, 0, 0));
 
 	const int numBalls = 50;
-	const float distance = 80.0f;
+	const float distance = 91.0f;
 	const float period = (distance / 2.5f) / (2.0f * sfz::PI());
-	const float amplitude = 6.0f;
+	const float amplitude = 5.0f;
+	const float xOffset = -4.0f - (distance / 2.0f);
 
+
+	// 2 * 2 * 51 balls
+	for (int height = 0; height < 2; height++)
 	for (int side = 0; side < 2; side++)
 	for (int i = 0; i <= numBalls; i++) { // Well well well... Don't want one ball missing at the end, do we? Just a little cheat to fix it easily...
 		float xPos = i * (distance / numBalls);
 
-		vec3 pos = vec3(xPos - (distance / 2.0f), 40.0f - abs(sinf(xPos / period) * amplitude), side & 1 ? 7.0f : -11.0f);
+		vec3 pos = vec3(xPos + xOffset, (height & 1 ? 40.0f : 15.0f) - abs(sinf(xPos / period) * amplitude), side & 1 ? 7.0f : -11.0f);
 		uint32_t handle = spawnObjectInstance(i & 1 ? 1 : 2, level, translationMatrix(pos));
 		instanceHandles.add(handle);
 		objectPositions.put(handle, pos);
@@ -66,11 +70,27 @@ UpdateOp TestbedLogic::update(GameScreen& screen, UpdateState& state) noexcept
 	accumulatedTime += 10 * state.delta;
 	if (accumulatedTime > 200 * PI()) accumulatedTime -= 200 * PI();
 
+	const int numBalls = 50;
+	const float distance = 91.0f;
+	const float period = (distance / 2.5f) / (2.0f * sfz::PI());
+
 	// Move balls
-	for (uint32_t handle : instanceHandles) {
+	for (int height = 0; height < 2; height++)
+	for (int side = 0; side < 2; side++)
+	for (int ball = 0; ball <= numBalls; ball++) {
+		int handle = 1 + height * 2 * (numBalls+1) + side * (numBalls+1) + ball;
+		float xPos = ball * (distance / numBalls);
 		vec3& pos = objectPositions[handle];
 		vec3& velocity = screen.level->objects[handle].velocity;
-		velocity = vec3(0.0f);// vec3(0.0f, cos(accumulatedTime) - sin(accumulatedTime / 4), sin(accumulatedTime) - cos(accumulatedTime / 4)) * 10.0f;
+		velocity = vec3((sinf(accumulatedTime / 4.0f + handle)) * sinf(xPos / period) / 10.0f, 0.0f, (sinf(accumulatedTime / 3.0f + handle)) * sinf(xPos / period) / 5.0f);
+		pos += velocity * state.delta;
+		screen.level->objects[handle].transform = translationMatrix(pos);
+	}
+
+	for (int handle = 1 + 2 * 2 * (numBalls+1); handle < instanceHandles.size(); handle++) {
+		vec3& pos = objectPositions[handle];
+		vec3& velocity = screen.level->objects[handle].velocity;
+		velocity = vec3(0.0f, cos(accumulatedTime) - sin(accumulatedTime / 4), sin(accumulatedTime) - cos(accumulatedTime / 4)) * 10.0f;
 		pos += velocity * state.delta;
 		screen.level->objects[handle].transform = translationMatrix(pos);
 	}
