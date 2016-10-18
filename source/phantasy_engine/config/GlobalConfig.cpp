@@ -100,6 +100,15 @@ vec2i GraphicsConfig::getTargetResolution(vec2i drawableDim) const noexcept
 		int32_t w = int32_t(std::round(float(h) * float(drawableDim.x) / float(drawableDim.y)));
 		result = vec2i(w, h);
 	}
+
+	// Round up so width and height are divisible by 8
+	if (result.x % 8 != 0) {
+		result.x += 8 - result.x % 8;
+	}
+	if (result.y % 8 != 0) {
+		result.y += 8 - result.y % 8;
+	}
+
 	return max(result, vec2i(1, 1));
 }
 
