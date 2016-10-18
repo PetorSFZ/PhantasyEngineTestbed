@@ -66,8 +66,7 @@ void CPURayTracerRenderer::addDynamicMesh(const RawMesh& mesh) noexcept
 	sfz::error("CPURayTracerRenderer: addDynamicMesh() not implemented");
 }
 
-RenderResult CPURayTracerRenderer::render(Framebuffer& resultFB,
-                                          const DynArray<DynObject>& objects,
+RenderResult CPURayTracerRenderer::render(const DynArray<DynObject>& objects,
                                           const DynArray<SphereLight>& lights) noexcept
 {
 	// Calculate camera def in order to generate first rays
@@ -125,13 +124,15 @@ RenderResult CPURayTracerRenderer::render(Framebuffer& resultFB,
 	mThreads.clear();
 
 	// Transfer result to resultFB
-	glBindTexture(GL_TEXTURE_2D, resultFB.texture(0));
+	glBindTexture(GL_TEXTURE_2D, mResultFb.texture(0));
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, mTargetResolution.x, mTargetResolution.y, 0, GL_RGBA, GL_FLOAT, mTexture.data());
 	
-	RenderResult tmp;
-	tmp.renderedRes = mTargetResolution;
+	RenderResult result;
+	result.renderedRes = mTargetResolution;
+	result.colorTexture = mResultFb.texture(0);
+	result.depthTexture = mResultFb.depthTexture();
 
-	return tmp;
+	return result;
 }
 
 // CPURayTracerRenderer: Protected virtual methods from BaseRenderer interface
@@ -139,9 +140,15 @@ RenderResult CPURayTracerRenderer::render(Framebuffer& resultFB,
 
 void CPURayTracerRenderer::targetResolutionUpdated() noexcept
 {
+	using gl::FBDepthFormat;
 	using gl::FBTextureFiltering;
 	using gl::FBTextureFormat;
 	using gl::FramebufferBuilder;
+
+	mResultFb = FramebufferBuilder(mTargetResolution)
+		.addTexture(0, FBTextureFormat::RGBA_F16, FBTextureFiltering::LINEAR)
+		.addDepthTexture(FBDepthFormat::F32, FBTextureFiltering::NEAREST)
+		.build();
 
 	mTexture.ensureCapacity(mTargetResolution.x * mTargetResolution.y);
 	mTexture.setSize(mTargetResolution.x * mTargetResolution.y);

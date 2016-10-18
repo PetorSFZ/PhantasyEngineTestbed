@@ -15,11 +15,15 @@ flat in vec4 materialValue;
 layout(location = 0) out vec4 outFragNormal;
 layout(location = 1) out vec4 outFragAlbedo;
 layout(location = 2) out vec4 outFragMaterial;
+layout(location = 3) out vec3 outWorldVelocity;
 
 layout(std430, binding = 1) buffer TextureSSBO
 {
 	sampler2D textures[];
 };
+
+// Uniforms
+uniform vec3 uWorldVelocity;
 
 // Main
 // ------------------------------------------------------------------------------------------------
@@ -56,4 +60,5 @@ void main()
 	}
 
 	outFragMaterial = vec4(roughness, metallic, 0.0, 0.0);
+	outWorldVelocity = uWorldVelocity;
 }

@@ -18,6 +18,7 @@ static const uint32_t GBUFFER_POSITION = 0u;
 static const uint32_t GBUFFER_NORMAL = 1u;
 static const uint32_t GBUFFER_ALBEDO = 2u;
 static const uint32_t GBUFFER_MATERIAL = 3u;
+static const uint32_t GBUFFER_VELOCITY = 4u;
 
 // CudaGLGBuffer: Constructors & destructors
 // ------------------------------------------------------------------------------------------------
@@ -31,8 +32,9 @@ CudaGLGBuffer::CudaGLGBuffer(vec2i resolution) noexcept
 	    .addTexture(GBUFFER_POSITION, FBTextureFormat::RGBA_F32, FBTextureFiltering::NEAREST)
 	    .addTexture(GBUFFER_NORMAL, FBTextureFormat::RGBA_F32, FBTextureFiltering::LINEAR)
 	    .addTexture(GBUFFER_ALBEDO, FBTextureFormat::RGBA_U8, FBTextureFiltering::LINEAR)
-	    .addTexture(GBUFFER_MATERIAL, FBTextureFormat::RGBA_F32, FBTextureFiltering::LINEAR)
-	    .build();
+		.addTexture(GBUFFER_MATERIAL, FBTextureFormat::RGBA_F32, FBTextureFiltering::LINEAR)
+		.addTexture(GBUFFER_VELOCITY, FBTextureFormat::RGBA_F32, FBTextureFiltering::LINEAR)
+		.build();
 
 	// Position texture
 
@@ -221,6 +223,11 @@ uint32_t CudaGLGBuffer::albedoTextureGL() const noexcept
 uint32_t CudaGLGBuffer::materialTextureGL() const noexcept
 {
 	return mFramebuffer.texture(GBUFFER_MATERIAL);
+}
+
+uint32_t CudaGLGBuffer::velocityTextureGL() const noexcept
+{
+	return mFramebuffer.texture(GBUFFER_VELOCITY);
 }
 
 cudaSurfaceObject_t CudaGLGBuffer::positionSurfaceCuda() const noexcept

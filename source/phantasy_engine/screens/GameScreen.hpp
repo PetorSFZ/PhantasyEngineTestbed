@@ -66,6 +66,8 @@ public:
 	GameScreen(SharedPtr<GameLogic> gameLogic, SharedPtr<Level> level,
 	           SharedPtr<BaseRenderer> renderer) noexcept;
 
+	~GameScreen() noexcept;
+
 	// Overriden methods from sfz::BaseScreen
 	// --------------------------------------------------------------------------------------------
 
@@ -81,7 +83,7 @@ public:
 	// Private methods
 	// --------------------------------------------------------------------------------------------
 
-	void reloadFramebuffers(vec2i maxResolution) noexcept;
+	void targetResolutionUpdated(vec2i targetRes) noexcept;
 	void reloadShaders() noexcept;
 	void resetTAA() noexcept;
 	void renderDebugUI() const noexcept;
@@ -89,7 +91,7 @@ public:
 	// Private members
 	// --------------------------------------------------------------------------------------------
 
-	Framebuffer mResultFB[2];
+	uint32_t mPreviousDepthTexture = 0;
 	Framebuffer mGammaCorrectedFB;
 	Framebuffer mVelocityFB[2];
 	Framebuffer mTaaFB[2];

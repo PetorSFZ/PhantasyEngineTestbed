@@ -26,6 +26,7 @@ using gl::Program;
 static const uint32_t GBUFFER_NORMAL = 0;
 static const uint32_t GBUFFER_ALBEDO = 1;
 static const uint32_t GBUFFER_MATERIAL = 2;
+static const uint32_t GBUFFER_VELOCITY = 3;
 
 // DeferredRendererImpl
 // ------------------------------------------------------------------------------------------------
@@ -36,6 +37,7 @@ public:
 	Program gbufferGenShader, shadingShader;
 	
 	// Framebuffers
+	Framebuffer resultFB;
 	Framebuffer gbuffer;
 
 	// Allmighty fullscreen triangle
@@ -164,12 +166,12 @@ void DeferredRenderer::addDynamicMesh(const RawMesh& mesh) noexcept
 	sfz::error("DeferredRenderer: addDynamicMeshes() not implemented");
 }
 
-RenderResult DeferredRenderer::render(Framebuffer& resultFB,
-                                      const DynArray<DynObject>& objects,
+RenderResult DeferredRenderer::render(const DynArray<DynObject>& objects,
                                       const DynArray<SphereLight>& lights) noexcept
 {
 	auto& gbufferGenShader = mImpl->gbufferGenShader;
 	auto& shadingShader = mImpl->shadingShader;
+	auto& resultFb = mImpl->resultFB;
 	auto& gbuffer = mImpl->gbuffer;
 
 	const mat4 viewMatrix = mCamera.viewMatrix();
@@ -197,11 +199,14 @@ RenderResult DeferredRenderer::render(Framebuffer& resultFB,
 
 	const int modelMatrixLoc = glGetUniformLocation(gbufferGenShader.handle(), "uModelMatrix");
 	const int normalMatrixLoc = glGetUniformLocation(gbufferGenShader.handle(), "uNormalMatrix");
+	const int worldVelocityLoc = glGetUniformLocation(gbufferGenShader.handle(), "uWorldVelocity");
 
 	// For the static scene the model matrix should be identity
 	gl::setUniform(modelMatrixLoc, identityMatrix4<float>());
 	gl::setUniform(normalMatrixLoc, inverse(transpose(viewMatrix)));
 
+	// Set velocity of static geometry to 0
+	gl::setUniform(worldVelocityLoc, vec3(0.0f));
 	for (const GLModel& model : mImpl->staticGLModels) {
 		model.draw();
 	}
@@ -209,6 +214,7 @@ RenderResult DeferredRenderer::render(Framebuffer& resultFB,
 	for (const DynObject& obj : objects) {
 		gl::setUniform(modelMatrixLoc, obj.transform);
 		gl::setUniform(normalMatrixLoc, inverse(transpose(viewMatrix * obj.transform)));
+		gl::setUniform(worldVelocityLoc, obj.velocity);
 		const GLModel& model = mImpl->dynamicGLModels[obj.meshIndex];
 		model.draw();
 	}
@@ -224,7 +230,7 @@ RenderResult DeferredRenderer::render(Framebuffer& resultFB,
 	glBlendEquation(GL_FUNC_ADD);
 	glBlendFunc(GL_ONE, GL_ONE);
 
-	resultFB.bindViewportClearColorDepth(vec2i(0.0), mTargetResolution, vec4(0.0f), 0.0f);
+	resultFb.bindViewportClearColorDepth(vec2i(0.0), mTargetResolution, vec4(0.0f), 0.0f);
 	shadingShader.useProgram();
 
 	gl::setUniform(shadingShader, "uInvProjMatrix", invProjMatrix);
@@ -269,18 +275,11 @@ RenderResult DeferredRenderer::render(Framebuffer& resultFB,
 		mImpl->fullscreenTriangle.render();
 	}
 
-	// Copy depth buffer to result framebuffer
-	// --------------------------------------------------------------------------------------------
-
-	glBindFramebuffer(GL_READ_FRAMEBUFFER, gbuffer.fbo());
-	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, resultFB.fbo());
-
-	glBlitFramebuffer(0, 0, mTargetResolution.x, mTargetResolution.y,
-	                  0, 0, mTargetResolution.x, mTargetResolution.y,
-	                  GL_DEPTH_BUFFER_BIT, GL_NEAREST);
-
 	RenderResult tmp;
 	tmp.renderedRes = mTargetResolution;
+	tmp.depthTexture = gbuffer.depthTexture();
+	tmp.colorTexture = mImpl->resultFB.texture(0);
+	tmp.velocityTexture = gbuffer.texture(3);
 	return tmp;
 }
 
@@ -294,11 +293,17 @@ void DeferredRenderer::targetResolutionUpdated() noexcept
 	using gl::FBTextureFormat;
 	using gl::FramebufferBuilder;
 
+	mImpl->resultFB = FramebufferBuilder(mTargetResolution)
+	    .addTexture(0, FBTextureFormat::RGBA_F16, FBTextureFiltering::LINEAR)
+	    .addDepthTexture(FBDepthFormat::F32, FBTextureFiltering::NEAREST)
+	    .build();
+
 	mImpl->gbuffer = FramebufferBuilder(mTargetResolution)
 	    .addDepthTexture(FBDepthFormat::F32, FBTextureFiltering::NEAREST)
 	    .addTexture(GBUFFER_NORMAL, FBTextureFormat::RGB_F16, FBTextureFiltering::LINEAR)
 	    .addTexture(GBUFFER_ALBEDO, FBTextureFormat::RGB_U8, FBTextureFiltering::LINEAR)
 	    .addTexture(GBUFFER_MATERIAL, FBTextureFormat::RG_U8, FBTextureFiltering::LINEAR) // Roughness, metallic
+	    .addTexture(GBUFFER_VELOCITY, FBTextureFormat::RGB_F32, FBTextureFiltering::LINEAR)
 	    .build();
 }
 

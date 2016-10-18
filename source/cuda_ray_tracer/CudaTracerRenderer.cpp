@@ -40,7 +40,7 @@
 namespace phe {
 
 using namespace sfz;
-using sfz::gl::Program;
+using namespace sfz::gl;
 
 // CudaTracerRendererImpl
 // ------------------------------------------------------------------------------------------------
@@ -361,8 +361,7 @@ void CudaTracerRenderer::addDynamicMesh(const RawMesh& mesh) noexcept
 	sfz::error("CudaTracerRenderer: addDynamicMesh() not implemented");
 }
 
-RenderResult CudaTracerRenderer::render(Framebuffer& resultFB,
-                                        const DynArray<DynObject>& objects,
+RenderResult CudaTracerRenderer::render(const DynArray<DynObject>& objects,
                                         const DynArray<SphereLight>& lights) noexcept
 {
 	const mat4 viewMatrix = mCamera.viewMatrix();
@@ -392,6 +391,7 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB,
 
 	const int modelMatrixLoc = glGetUniformLocation(gbufferGenShader.handle(), "uModelMatrix");
 	const int normalMatrixLoc = glGetUniformLocation(gbufferGenShader.handle(), "uNormalMatrix");
+	const int worldVelocityLoc = glGetUniformLocation(gbufferGenShader.handle(), "uWorldVelocity");
 
 	// For the static scene the model matrix should be identity
 	// normalMatrix = inverse(transpose(modelMatrix)) since we want worldspace normals
@@ -400,7 +400,9 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB,
 
 	// Simply skip the draw calls if we are performance testing the ray cast kernel with primary rays
 	if (!(mImpl->rayCastPerfTest->boolValue() && mImpl->rayCastPerfTestPrimaryRays->boolValue())) {
-		
+
+		// Set velocity of static geometry to 0
+		gl::setUniform(worldVelocityLoc, vec3(0.0f));
 		for (const GLModel& model : mImpl->staticGLModels) {
 			model.draw();
 		}
@@ -408,6 +410,7 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB,
 		for (const DynObject& obj : objects) {
 			gl::setUniform(modelMatrixLoc, obj.transform);
 			gl::setUniform(normalMatrixLoc, inverse(transpose(obj.transform)));
+			gl::setUniform(worldVelocityLoc, obj.velocity);
 			const GLModel& model = mImpl->dynamicGLModels[obj.meshIndex];
 			model.draw();
 		}
@@ -664,47 +667,12 @@ RenderResult CudaTracerRenderer::render(Framebuffer& resultFB,
 		launchShadowLogicKernel(secondaryShadowLogicKernelInput);
 	}
 
-	// Transfer result to resultFB
-	// --------------------------------------------------------------------------------------------
-
-	glDisable(GL_BLEND);
-	glEnable(GL_CULL_FACE);
-	glDisable(GL_DEPTH_TEST);
-
-	// Copy result to resultFB
-	resultFB.bindViewport();
-	mImpl->transferShader.useProgram();
-	gl::setUniform(mImpl->transferShader, "uSrcTexture", 0);
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, mImpl->cudaResultTex.glTexture());
-	mImpl->fullscreenTriangle.render();
-
-	// Copy depth from GBuffer to resultFB
-	glBindFramebuffer(GL_READ_FRAMEBUFFER, gbuffer.fbo());
-	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, resultFB.fbo());
-
-	glBlitFramebuffer(0, 0, mTargetResolution.x, mTargetResolution.y,
-	                  0, 0, mTargetResolution.x, mTargetResolution.y,
-	                  GL_DEPTH_BUFFER_BIT, GL_NEAREST);
-
-	// Return result
-	RenderResult tmp;
-	tmp.renderedRes = mTargetResolution;
-	return tmp;
-
-	/*if (objects.size() > 0) {
-		uint32_t numSubBvhs = objects.size();
-		DynArray<BVH> bvhs = DynArray<BVH>(0, numSubBvhs);
-
-		for (const DynObject& object : objects) {
-			BVH bvh = createDynamicBvh(mImpl->dynMeshes[object.meshIndex], object.transform);
-			sanitizeBVH(bvh);
-			bvhs.add(bvh);
-		}
-
-		mImpl->dynamicBvh = createOuterBvh(bvhs);
-		sendDynamicBvhToCuda();
-	}*/
+	RenderResult result;
+	result.renderedRes = mTargetResolution;
+	result.depthTexture = gbuffer.depthTextureGL();
+	result.colorTexture = mImpl->cudaResultTex.glTexture();
+	result.velocityTexture = mImpl->gbuffer.velocityTextureGL();
+	return result;
 }
 
 // CudaTracerRenderer: Protected virtual methods from BaseRenderer interface

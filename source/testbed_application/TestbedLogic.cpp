@@ -54,8 +54,9 @@ UpdateOp TestbedLogic::update(GameScreen& screen, UpdateState& state) noexcept
 	// Move balls
 	for (uint32_t handle : instanceHandles) {
 		vec3& pos = objectPositions[handle];
-		vec3 velocity = vec3(0.0f, cos(accumulatedTime) - sin(accumulatedTime/4), sin(accumulatedTime) - cos(accumulatedTime/4)) * 10.0f * state.delta;
-		//pos += velocity;
+		vec3& velocity = screen.level->objects[handle].velocity;
+		velocity = vec3(0.0f, cos(accumulatedTime) - sin(accumulatedTime/4), sin(accumulatedTime) - cos(accumulatedTime/4)) * 10.0f;
+		pos += velocity * state.delta;
 		screen.level->objects[handle].transform = translationMatrix(pos);
 	}
 

@@ -48,7 +48,8 @@ public:
 	uint32_t normalTextureGL() const noexcept;
 	uint32_t albedoTextureGL() const noexcept;
 	uint32_t materialTextureGL() const noexcept;
-	
+	uint32_t velocityTextureGL() const noexcept;
+
 	cudaSurfaceObject_t positionSurfaceCuda() const noexcept;
 	cudaSurfaceObject_t normalSurfaceCuda() const noexcept;
 	cudaSurfaceObject_t albedoSurfaceCuda() const noexcept;
