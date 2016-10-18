@@ -320,7 +320,7 @@ static __global__ void createSecondaryRaysKernel(CreateSecondaryRaysKernelInput 
 		rayDir = sampleLambertian(vec2(r1, r2), gBufferValue.normal);
 
 		// TODO: Weigh sample according to pdf
-		pathState.throughput *= 0.8f;
+		pathState.throughput *= 0.6f;
 	}
 	else {
 		vec3 fromCamera = normalize(gBufferValue.pos - input.camPos);
@@ -329,7 +329,7 @@ static __global__ void createSecondaryRaysKernel(CreateSecondaryRaysKernelInput 
 		rayDir = sampleGgx(vec2(r1, r2), a, reflection, gBufferValue.normal);
 
 		// TODO: Weigh sample according to pdf
-		pathState.throughput *= 0.8f;
+		pathState.throughput *= 0.6f;
 	}
 	RayIn extensionRay;
 	extensionRay.setOrigin(gBufferValue.pos);
