@@ -40,7 +40,7 @@ TestbedLogic::TestbedLogic(DynArray<RendererAndStatus>&& renderers, uint32_t ren
 	const float amplitude = 6.0f;
 
 	for (int side = 0; side < 2; side++)
-	for (int i = 0; i < numBalls; i++) {
+	for (int i = 0; i <= numBalls; i++) { // Well well well... Don't want one ball missing at the end, do we? Just a little cheat to fix it easily...
 		float xPos = i * (distance / numBalls);
 
 		vec3 pos = vec3(xPos - (distance / 2.0f), 40.0f - abs(sinf(xPos / period) * amplitude), side & 1 ? 7.0f : -11.0f);
