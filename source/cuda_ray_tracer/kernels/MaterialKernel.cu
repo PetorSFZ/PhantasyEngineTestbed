@@ -340,7 +340,7 @@ static __global__ void createSecondaryRaysKernel(CreateSecondaryRaysKernelInput 
 		}
 	} else {
 		// Very incorrect refraction ray made for glass-like appearance of Sponza curtian
-		rayDir = normalize(-gBufferValue.normal + fromCamera);
+		rayDir = normalize(0.8f * fromCamera + 0.2f * (-gBufferValue.normal));
 		pathState.throughput = vec3(1.0f);
 		extensionRay.setMinDist(0.2f);
 	}
