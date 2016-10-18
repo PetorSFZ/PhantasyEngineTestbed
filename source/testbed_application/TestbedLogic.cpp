@@ -179,8 +179,10 @@ UpdateOp TestbedLogic::update(GameScreen& screen, UpdateState& state) noexcept
 		uint32_t objectHandle = phe::loadDynObjectCustomMaterial(modelsPath.str, "sphere.obj", *screen.level, vec3(r, g, b), roughness, metallic);
 		
 		for (RendererAndStatus& renderer : mRenderers) {
-			renderer.renderer->setMaterialsAndTextures(screen.level->materials, screen.level->textures);
-			renderer.baked = false;
+			if (renderer.baked) {
+				renderer.renderer->setMaterialsAndTextures(screen.level->materials, screen.level->textures);
+				renderer.baked = false;
+			}
 		}
 
 		uint32_t instanceHandle = spawnObjectInstance(objectHandle, *screen.level, translationMatrix(pos));
