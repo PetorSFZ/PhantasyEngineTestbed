@@ -47,7 +47,7 @@ void main()
 			return;
 		}
 	}
-	outAlbedo = vec4(albedo.rgb, 1.0);
+	outAlbedo = albedo;
 
 	// Material
 	int roughnessIndex = textureIndices.y;

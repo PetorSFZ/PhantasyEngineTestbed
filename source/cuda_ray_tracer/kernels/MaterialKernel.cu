@@ -172,7 +172,7 @@ static __global__ void gBufferMaterialKernel(GBufferMaterialKernelInput input)
 
 	shadeHit(id, numPixels, vec3(1.0f), randState, input.shadowRays,
 	         input.lightContributions, gBufferValue.normal, toCamera, gBufferValue.pos,
-	         gBufferValue.albedo, gBufferValue.metallic, gBufferValue.roughness,
+	         gBufferValue.albedo.xyz, gBufferValue.metallic, gBufferValue.roughness,
 	         input.staticSphereLights, input.numStaticSphereLights);
 
 	input.randStates[id] = randState;
@@ -307,35 +307,44 @@ static __global__ void createSecondaryRaysKernel(CreateSecondaryRaysKernelInput 
 	vec2u doubleLocRandomized = doubleLoc + offset;
 
 	GBufferValue gBufferValue = readGBuffer(input.posTex, input.normalTex, input.albedoTex, input.materialTex, doubleLocRandomized);
-
-	pathState.throughput *= gBufferValue.albedo;
+	vec3 fromCamera = normalize(gBufferValue.pos - input.camPos);
 
 	float r1 = curand_uniform(&randState);
 	float r2 = curand_uniform(&randState);
 
-	// Probabilistically pick type of sample using russian roulette with roughness as threshold
-	float diffuseOrSpecularSample = curand_uniform(&randState);
-	vec3 rayDir;
-	if (diffuseOrSpecularSample < gBufferValue.roughness) {
-		rayDir = sampleLambertian(vec2(r1, r2), gBufferValue.normal);
 
-		// TODO: Weigh sample according to pdf
-		pathState.throughput *= 0.6f;
-	}
-	else {
-		vec3 fromCamera = normalize(gBufferValue.pos - input.camPos);
-		vec3 reflection = reflect(fromCamera, gBufferValue.normal);
-		float a = gBufferValue.roughness * gBufferValue.roughness;
-		rayDir = sampleGgx(vec2(r1, r2), a, reflection, gBufferValue.normal);
-
-		// TODO: Weigh sample according to pdf
-		pathState.throughput *= 0.6f;
-	}
 	RayIn extensionRay;
 	extensionRay.setOrigin(gBufferValue.pos);
-	extensionRay.setDir(rayDir);
 	extensionRay.setMinDist(0.001f);
 	extensionRay.setMaxDist(FLT_MAX);
+	vec3 rayDir;
+	if (gBufferValue.albedo.w > 0.5f) {
+		// Probabilistically pick type of sample using russian roulette with roughness as threshold
+		float diffuseOrSpecularSample = curand_uniform(&randState);
+
+		if (diffuseOrSpecularSample < gBufferValue.roughness) {
+			pathState.throughput *= gBufferValue.albedo.xyz;
+			rayDir = sampleLambertian(vec2(r1, r2), gBufferValue.normal);
+
+			// TODO: Weigh sample according to pdf
+			pathState.throughput *= 0.6f;
+		}
+		else {
+			pathState.throughput *= gBufferValue.albedo.xyz;
+			vec3 reflection = reflect(fromCamera, gBufferValue.normal);
+			float a = gBufferValue.roughness * gBufferValue.roughness;
+			rayDir = sampleGgx(vec2(r1, r2), a, reflection, gBufferValue.normal);
+
+			// TODO: Weigh sample according to pdf
+			pathState.throughput *= 0.6f;
+		}
+	} else {
+		// Very incorrect refraction ray made for glass-like appearance of Sponza curtian
+		rayDir = normalize(-gBufferValue.normal + fromCamera);
+		pathState.throughput = vec3(1.0f);
+		extensionRay.setMinDist(0.2f);
+	}
+	extensionRay.setDir(rayDir);
 
 	input.extensionRays[id] = extensionRay;
 	input.randStates[id] = randState;

@@ -36,7 +36,7 @@ static __global__ void gatherRaysShadeKernel(GatherRaysShadeKernelInput input,
 	                               input.materialTex, loc);
 	vec3 p = val.pos;
 	vec3 n = val.normal;
-	vec3 albedo = val.albedo;
+	vec3 albedo = val.albedo.xyz;
 	float roughness = val.roughness;
 	float metallic = val.metallic;
 
