@@ -56,7 +56,7 @@ vec4 linearize(vec4 rgbaGamma)
 
 float sampleShadowMap(vec3 posVS)
 {
-	const float BIAS = 0.99;
+	const float BIAS = 0.98;
 	vec3 posWS = (uInvViewMatrix * vec4(posVS, 1.0)).xyz;
 	vec3 toLight = posWS - uLightPosWS;
 	float storedDepth = texture(uShadowMap, toLight).r * uLightRange;

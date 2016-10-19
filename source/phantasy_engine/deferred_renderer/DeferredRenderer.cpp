@@ -157,7 +157,7 @@ void DeferredRenderer::setStaticScene(const StaticScene& staticScene) noexcept
 
 	mImpl->staticSphereLights = staticScene.sphereLights;
 
-	// TODO: STATIC SHADOW MAPS
+	// Static shadow maps
 	mImpl->staticShadowMaps.clear();
 	for (const SphereLight& light : mImpl->staticSphereLights) {
 		ShadowCubeMap shadowMap(4096u);
@@ -180,7 +180,7 @@ void DeferredRenderer::setStaticScene(const StaticScene& staticScene) noexcept
 		gl::setUniform(mImpl->shadowMapGenShader, "uModelMatrix", sfz::identityMatrix4<float>());
 
 		// View and projection matrices for each face
-		const mat4 projMatrix = sfz::perspectiveProjectionVkD3d(90.0f, 1.0f, 0.01f, light.range);
+		const mat4 projMatrix = sfz::scalingMatrix4<float>(1.0f, -1.0f, 1.0f) * sfz::perspectiveProjectionVkD3d(90.0f, 1.0f, 0.01f, light.range);
 		mat4 viewProjMatrices[6];
 		viewProjMatrices[0] = projMatrix * sfz::viewMatrixGL(light.pos, vec3(1.0f, 0.0f, 0.0f), vec3(0.0f, -1.0f, 0.0f)); // right
 		viewProjMatrices[1] = projMatrix * sfz::viewMatrixGL(light.pos, vec3(-1.0f, 0.0f, 0.0f), vec3(0.0f, -1.0f, 0.0f)); // left
