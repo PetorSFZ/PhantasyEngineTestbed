@@ -692,11 +692,11 @@ void CudaTracerRenderer::targetResolutionUpdated() noexcept
 	uint32_t numSecondaryRays = numTargetPixels / 4;
 	uint32_t numSecondaryShadowRays = numSecondaryRays * mImpl->staticSphereLights.size();
 	mImpl->rayBuffer.destroy();
-	mImpl->rayBuffer.create(numSecondaryRays);
+	mImpl->rayBuffer.create(numTargetPixels);
 	mImpl->shadowRayBuffer.destroy();
 	mImpl->shadowRayBuffer.create(numPrimaryShadowRays);
 	mImpl->rayResultBuffer.destroy();
-	mImpl->rayResultBuffer.create(numSecondaryRays);
+	mImpl->rayResultBuffer.create(numTargetPixels);
 	mImpl->shadowRayResultBuffer.destroy();
 	mImpl->shadowRayResultBuffer.create(numPrimaryShadowRays);
 	mImpl->rayHitInfoBuffer.destroy();
