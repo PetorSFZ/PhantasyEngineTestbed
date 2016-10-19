@@ -94,7 +94,7 @@ inline __device__ vec3 shade(const vec3& p, const vec3& n, const vec3& v,
 
 	// Due to some unsolved NaN issues, replace inf,-inf and NaN with black
 	vec3 shaded = (diffuse + specular) * lightStrength * nDotL;
-	if (!isfinite(shaded.x) || !isfinite(shaded.y) | !isfinite(shaded.z)) {
+	if (!isfinite(shaded.x) || !isfinite(shaded.y) || !isfinite(shaded.z)) {
 		shaded = vec3(0.0f);
 	}
 	return shaded;
