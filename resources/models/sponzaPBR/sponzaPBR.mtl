@@ -80,7 +80,7 @@ newmtl 16___Default
 	illum 2
 	Ka 0.0000 0.0000 0.0000
 	Kd 0.5880 0.5880 0.5880
-	Ks 0.8000 0.8000 0.8000
+	Ks 0.0010 0.0010 0.0010
 	Ke 0.0000 0.0000 0.0000
 	map_Kd textures_pbr\gi_flag.tga
 
