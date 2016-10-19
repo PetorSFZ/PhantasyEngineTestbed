@@ -347,12 +347,13 @@ RenderResult DeferredRenderer::render(const DynArray<DynObject>& objects,
 		mImpl->fullscreenTriangle.render();
 	}*/
 
-	RenderResult tmp;
-	tmp.renderedRes = mTargetResolution;
-	tmp.depthTexture = gbuffer.depthTexture();
-	tmp.colorTexture = mImpl->resultFB.texture(0);
-	tmp.velocityTexture = gbuffer.texture(3);
-	return tmp;
+	RenderResult result;
+	result.renderedRes = mTargetResolution;
+	result.depthTexture = gbuffer.depthTexture();
+	result.colorTexture = mImpl->resultFB.texture(0);
+	result.materialTexture = mImpl->gbuffer.texture(GBUFFER_MATERIAL);
+	result.velocityTexture = gbuffer.texture(GBUFFER_VELOCITY);
+	return result;
 }
 
 // DeferredRenderer: Protected virtual methods from BaseRenderer interface

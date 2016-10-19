@@ -72,6 +72,7 @@ GameScreen::GameScreen(SharedPtr<GameLogic> gameLogicIn, SharedPtr<Level> levelI
 	gl::setUniform(mTaaShader, "uHistoryTexture", 1);
 	gl::setUniform(mTaaShader, "uVelocityTexture", 2);
 	gl::setUniform(mTaaShader, "uPrevVelocityTexture", 3);
+	gl::setUniform(mTaaShader, "uMaterialTexture", 4);
 
 	mScalingShader = Program::postProcessFromFile(shadersPath.str, "scaling.frag");
 	glUseProgram(mScalingShader.handle());
@@ -242,6 +243,8 @@ void GameScreen::render(UpdateState& state)
 		glBindTexture(GL_TEXTURE_2D, mVelocityFB[mFBIndex].texture(0));
 		glActiveTexture(GL_TEXTURE3);
 		glBindTexture(GL_TEXTURE_2D, mVelocityFB[prevFBIndex].texture(0));
+		glActiveTexture(GL_TEXTURE4);
+		glBindTexture(GL_TEXTURE_2D, result.materialTexture);
 
 		mFullscreenTriangle.render();
 		currentTexture = mTaaFB[mFBIndex].texture(0);
@@ -357,6 +360,7 @@ void GameScreen::reloadShaders() noexcept
 		gl::setUniform(mTaaShader, "uHistoryTexture", 1);
 		gl::setUniform(mTaaShader, "uVelocityTexture", 2);
 		gl::setUniform(mTaaShader, "uPrevVelocityTexture", 3);
+		gl::setUniform(mTaaShader, "uMaterialTexture", 4);
 	}
 
 	mVelocityShader.reload();

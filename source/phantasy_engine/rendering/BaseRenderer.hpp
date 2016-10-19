@@ -32,6 +32,9 @@ struct RenderResult final {
 	uint32_t colorTexture = 0;
 	// Must be a depth texture with internal format GL_DEPTH_COMPONENT32, or 0 if not available.
 	uint32_t depthTexture = 0;
+	// Should be a texture with roughness in the first channel and metallic the second, or 0 if not
+	// available.
+	uint32_t materialTexture = 0;
 	// Should be a texture with at least three channels containing the world space velocity of the
 	// object at each pixel, or 0 if not available.
 	uint32_t velocityTexture = 0;

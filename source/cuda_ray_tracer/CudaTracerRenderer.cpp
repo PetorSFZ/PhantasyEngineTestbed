@@ -724,6 +724,7 @@ RenderResult CudaTracerRenderer::render(const DynArray<DynObject>& objects,
 	result.renderedRes = mTargetResolution;
 	result.depthTexture = gbuffer.depthTextureGL();
 	result.colorTexture = mImpl->cudaResultTex.glTexture();
+	result.materialTexture = mImpl->gbuffer.materialTextureGL();
 	result.velocityTexture = mImpl->gbuffer.velocityTextureGL();
 	return result;
 }

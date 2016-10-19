@@ -15,6 +15,7 @@ uniform sampler2D uSrcTexture;
 uniform sampler2D uHistoryTexture;
 uniform sampler2D uVelocityTexture;
 uniform sampler2D uPrevVelocityTexture;
+uniform sampler2D uMaterialTexture;
 
 uniform vec2 uResolution;
 
@@ -24,6 +25,7 @@ uniform vec2 uResolution;
 void main()
 {
 	vec3 currentFrameColor = texture(uSrcTexture, uvCoord).rgb;
+	float roughness = texture(uMaterialTexture, uvCoord).r;
 
 	vec3 uvDepthVelocity = texture(uVelocityTexture, uvCoord).rgb;
 	vec2 uvVelocity = uvDepthVelocity.rg;
@@ -46,9 +48,12 @@ void main()
 
 	// Weight history using velocity similar to method in SMAA paper, "SMAA: Enhanced Subpixel
 	// Morphological Antialiasing" [Jimenez12].
-	float velocityFactor = min(1.0, 0.5 * sqrt(abs(length(pixelVelocity) - length(historyPixelVelocity))));
+	float velocityDistrust = min(1.0, 0.5 * sqrt(abs(length(pixelVelocity) - length(historyPixelVelocity))));
 
-	float trust = clamp(1.0 - velocityFactor, 0.0, 1.0);
+	// Trust less if the object has low roughness
+	float roughnessDistrust = mix(3.0, 1.0, roughness);
+
+	float trust = clamp(1.0 - roughnessDistrust * velocityDistrust, 0.0, 1.0);
 
 	vec4 history = texture(uHistoryTexture, historyCoord).rgba;
 	vec3 historyColor = history.rgb;
@@ -62,5 +67,5 @@ void main()
 	float historyBlend = mix(0.0, 1.0 - 1.0 / newHistorySamples, trust);
 
 	outHistory = vec4(mix(currentFrameColor, historyColor, historyBlend), newHistorySamples);
-	outColor = vec4(vec3(outHistory.xyz), 1.0);
+	outColor = vec4(outHistory.xyz, 1.0);
 }
