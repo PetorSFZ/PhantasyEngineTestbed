@@ -216,7 +216,7 @@ UpdateOp TestbedLogic::update(GameScreen& screen, UpdateState& state) noexcept
 		for (RendererAndStatus& renderer : mRenderers) {
 			if (renderer.baked) {
 				renderer.renderer->setMaterialsAndTextures(screen.level->materials, screen.level->textures);
-				renderer.baked = false;
+				renderer.renderer->setDynamicMeshes(screen.level->meshes);
 			}
 		}
 
