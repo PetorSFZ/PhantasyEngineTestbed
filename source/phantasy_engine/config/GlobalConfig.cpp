@@ -101,12 +101,13 @@ vec2i GraphicsConfig::getTargetResolution(vec2i drawableDim) const noexcept
 		result = vec2i(w, h);
 	}
 
-	// Round up so width and height are divisible by 8
-	if (result.x % 8 != 0) {
-		result.x += 8 - result.x % 8;
+	// Round up so width and height are divisible by 16
+	uint32_t resolutionFactor = 16;
+	if (result.x % resolutionFactor != 0) {
+		result.x += resolutionFactor - result.x % resolutionFactor;
 	}
-	if (result.y % 8 != 0) {
-		result.y += 8 - result.y % 8;
+	if (result.y % resolutionFactor != 0) {
+		result.y += resolutionFactor - result.y % resolutionFactor;
 	}
 
 	return max(result, vec2i(1, 1));
