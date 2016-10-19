@@ -4,6 +4,10 @@
 
 #include <cstdint>
 
+#include <cuda.h>
+#include <cuda_runtime.h>
+#include <device_launch_parameters.h>
+
 #include <sfz/math/Vector.hpp>
 
 namespace phe {
@@ -39,7 +43,8 @@ public:
 
 	vec2u resolution() const noexcept { return mRes; }
 	uint32_t fbo() const noexcept { return mFbo; }
-	uint32_t shadowCubeMap() const noexcept { return mShadowCubeMap; }
+	uint32_t shadowCubeMapGL() const noexcept { return mShadowCubeMap; }
+	cudaSurfaceObject_t shadowCubeMapCuda() const noexcept { return mShadowSurface; }
 
 private:
 	// Private members
@@ -48,7 +53,10 @@ private:
 	vec2u mRes = vec2u(0u);
 	uint32_t mFbo = 0u;
 	uint32_t mCubeDepthTexture = 0u;
+
 	uint32_t mShadowCubeMap = 0u;
+	cudaGraphicsResource_t mShadowResource = 0;
+	cudaSurfaceObject_t mShadowSurface = 0;
 };
 
 } // namespace phe

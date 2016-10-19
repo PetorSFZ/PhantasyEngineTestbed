@@ -5,7 +5,11 @@
 #include <algorithm>
 
 #include <sfz/gl/IncludeOpenGL.hpp>
+#include <cuda_gl_interop.h>
+
 #include <sfz/gl/Framebuffer.hpp>
+
+#include "CudaHelpers.hpp"
 
 namespace phe {
 
@@ -68,6 +72,23 @@ ShadowCubeMapCudaGL::ShadowCubeMapCudaGL(uint32_t res) noexcept
 	// Cleanup
 	glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+
+	// https://github.com/nvpro-samples/gl_cuda_interop_pingpong_st
+	CHECK_CUDA_ERROR(cudaGraphicsGLRegisterImage(
+	    &mShadowResource, mShadowCubeMap, GL_TEXTURE_CUBE_MAP,
+	    cudaGraphicsRegisterFlagsReadOnly));
+	CHECK_CUDA_ERROR(cudaGraphicsMapResources(1, &mShadowResource, 0));
+	cudaArray_t cudaArray = 0;
+	CHECK_CUDA_ERROR(cudaGraphicsSubResourceGetMappedArray(&cudaArray, mShadowResource, 0, 0));
+	CHECK_CUDA_ERROR(cudaGraphicsUnmapResources(1, &mShadowResource, 0));
+
+	// Create cuda surface object from binding
+	cudaResourceDesc resDesc;
+	memset(&resDesc, 0, sizeof(cudaResourceDesc));
+	resDesc.resType = cudaResourceTypeArray;
+	resDesc.res.array.array = cudaArray;
+	CHECK_CUDA_ERROR(cudaCreateSurfaceObject(&mShadowSurface, &resDesc));
 }
 
 ShadowCubeMapCudaGL::ShadowCubeMapCudaGL(ShadowCubeMapCudaGL&& other) noexcept
@@ -91,6 +112,15 @@ ShadowCubeMapCudaGL::~ShadowCubeMapCudaGL() noexcept
 
 void ShadowCubeMapCudaGL::destroy() noexcept
 {
+	if (mShadowSurface != 0) {
+		CHECK_CUDA_ERROR(cudaDestroySurfaceObject(mShadowSurface));
+	}
+	if (mShadowResource != 0) {
+		CHECK_CUDA_ERROR(cudaGraphicsUnregisterResource(mShadowResource));
+	}
+	mShadowResource = 0;
+	mShadowSurface = 0;
+
 	glDeleteRenderbuffers(1, &mCubeDepthTexture);
 	glDeleteTextures(1, &mShadowCubeMap);
 	glDeleteFramebuffers(1, &mFbo);
@@ -106,6 +136,8 @@ void ShadowCubeMapCudaGL::swap(ShadowCubeMapCudaGL& other) noexcept
 	std::swap(this->mFbo, other.mFbo);
 	std::swap(this->mCubeDepthTexture, other.mCubeDepthTexture);
 	std::swap(this->mShadowCubeMap, other.mShadowCubeMap);
+	std::swap(this->mShadowResource, other.mShadowResource);
+	std::swap(this->mShadowSurface, other.mShadowSurface);
 }
 
 } // namespace phe
