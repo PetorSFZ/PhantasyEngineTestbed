@@ -64,7 +64,7 @@ static __global__ void gatherRaysShadeKernel(GatherRaysShadeKernelInput input,
 
 		// Shade
 		vec3 shading = shade(p, n, v, albedo, roughness, metallic, l, toLightDist, light.strength, light.range);
-		color += shading * fallofFactor(toLightDist, light.range);
+		color += shading * falloffFactor(toLightDist, light.range);
 	}
 
 	// Shade using secondary rays
@@ -77,7 +77,7 @@ static __global__ void gatherRaysShadeKernel(GatherRaysShadeKernelInput input,
 		vec3 toHitDir = toHit / toHitDist;
 
 		vec3 secondaryShading = shade(p, n, v, albedo, roughness, metallic, toHitDir, toHitDist, info.amount(), FLT_MAX);
-		color += secondaryShading * fallofFactor(toHitDist, 10.0f);
+		color += secondaryShading * falloffFactor(toHitDist, 10.0f);
 	}
 
 	

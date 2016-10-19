@@ -92,10 +92,15 @@ inline __device__ vec3 shade(const vec3& p, const vec3& n, const vec3& v,
 	// Calculate final Cook-Torrance specular value
 	vec3 specular = ctD * ctF * ctG / (4.0f * nDotL * nDotV);
 
-	return (diffuse + specular) * lightStrength * nDotL;
+	// Due to some unsolved NaN issues, replace inf,-inf and NaN with black
+	vec3 shaded = (diffuse + specular) * lightStrength * nDotL;
+	if (!isfinite(shaded.x) || !isfinite(shaded.y) | !isfinite(shaded.z)) {
+		shaded = vec3(0.0f);
+	}
+	return shaded;
 }
 
-inline __device__ float fallofFactor(float toLightDist, float lightRange) noexcept
+inline __device__ float falloffFactor(float toLightDist, float lightRange) noexcept
 {
 	float fallofNumerator = powf(clamp(1.0f - powf(toLightDist / lightRange, 4.0f), 0.0f, 1.0f), 2.0f);
 	float fallofDenominator = (toLightDist * toLightDist + 1.0);

@@ -58,95 +58,56 @@ static __device__ void shadeHit(uint32_t id, uint32_t numPixels, const vec3& mas
 
 	vec3 v = toCamera; // to view
 
-	// Interpolation of normals sometimes makes them face away from the camera. Clamp
-	// these to almost zero, to not break shading calculations.
-	float nDotV = fmaxf(0.001f, dot(n, v));
-
 	for (uint32_t i = 0; i < numStaticSphereLights; i++) {
 		SphereLight light = staticSphereLights[i];
 
-		vec3 color = vec3(0.0f);
-
-		// Initialize shadow ray to dummy. A future improvement would be to only queue up as many
-		// RayIns as are actually needed
-		RayIn shadowRay;
-		setToDummyRay(shadowRay);
-
 		vec3 toLight = light.pos - p;
 		float toLightDist = length(toLight);
+		vec3 l = toLight / toLightDist;
 
-		// Check if surface is in range of light source
-		if (toLightDist <= light.range) {
-			// Shading parameters
-			vec3 l = toLight / toLightDist; // to light (normalized)
-			vec3 h = normalize(l + v); // half vector (normal of microfacet)
+		float falloff = falloffFactor(toLightDist, light.range);
+		vec3 shading = mask * falloff * shade(p, n, v, albedo, roughness, metallic, l, toLightDist, light.strength, light.range);
 
-			// If nDotL is <= 0 then the light source is not in the hemisphere of the surface, i.e.
-			// no shading needs to be performed
-			float nDotL = dot(n, l);
-			if (nDotL > 0.0f) {
-				// Lambert diffuse
-				vec3 diffuse = albedo / sfz::PI();
-
-				// Cook-Torrance specular
-				// Normal distribution function
-				float nDotH = fmaxf(0.0f, dot(n, h)); // max() should be superfluous here
-				float ctD = ggx(nDotH, roughness * roughness);
-
-				// Geometric self-shadowing term
-				float k = powf(roughness + 1.0f, 2.0f) / 8.0f;
-				float ctG = geometricSchlick(nDotL, nDotV, k);
-
-				// Fresnel function
-				// Assume all dielectrics have a f0 of 0.04, for metals we assume f0 == albedo
-				vec3 f0 = lerp(vec3(0.04f), albedo, metallic);
-				vec3 ctF = fresnelSchlick(nDotL, f0);
-
-				// Calculate final Cook-Torrance specular value
-				vec3 specular = ctD * ctF * ctG / (4.0f * nDotL * nDotV);
-
-				// Calculates light strength
-				float fallofNumerator = powf(clamp(1.0f - powf(toLightDist / light.range, 4.0f), 0.0f, 1.0f), 2.0f);
-				float fallofDenominator = (toLightDist * toLightDist + 1.0);
-				float falloff = fallofNumerator / fallofDenominator;
-				vec3 lightContrib = falloff * light.strength;
-
-				// "Solves" reflectance equation under the assumption that the light source is a point light
-				// and that there is no global illumination.
-				color = mask * (diffuse + specular) * lightContrib * nDotL;
-
-				if (light.staticShadows) {
-					// Slightly offset light ray to get stochastic soft shadows
-					vec3 circleU;
-					if (abs(normal.z) > 0.01f) {
-						circleU = normalize(vec3(0.0f, -normal.z, normal.y));
-					}
-					else {
-						circleU = normalize(vec3(-normal.y, normal.x, 0.0f));
-					}
-					vec3 circleV = cross(circleU, l);
-
-					float r1 = curand_uniform(&randState);
-					float r2 = curand_uniform(&randState);
-					float centerDistance = light.radius * (2.0f * r2 - 1.0f);
-					float azimuthAngle = 2.0f * sfz::PI() * r1;
-
-					vec3 lightPosOffset = circleU * cos(azimuthAngle) * centerDistance +
-					                      circleV * sin(azimuthAngle) * centerDistance;
-
-					vec3 offsetLightDiff = light.pos + lightPosOffset - pos;
-					vec3 offsetLightDir = normalize(offsetLightDiff);
-
-					shadowRay.setOrigin(pos);
-					shadowRay.setDir(offsetLightDir);
-					shadowRay.setMinDist(0.001f);
-					shadowRay.setMaxDist(length(offsetLightDiff));
-				}
-			}
-		}
 		uint32_t shadowRayID = id + i * numPixels;
+		lightContributions[shadowRayID] = shading;
+
+		// Avoid casting expensive shadow ray if no light is contributed
+		const float EPSILON = 0.0001;
+		bool contributesLight = shading.x > EPSILON || shading.y > EPSILON || shading.z > EPSILON;
+
+		RayIn shadowRay;
+		if (light.staticShadows && contributesLight) {
+			// Slightly offset light ray to get stochastic soft shadows
+			vec3 circleU;
+			if (abs(normal.z) > 0.01f) {
+				circleU = normalize(vec3(0.0f, -normal.z, normal.y));
+			}
+			else {
+				circleU = normalize(vec3(-normal.y, normal.x, 0.0f));
+			}
+			vec3 circleV = cross(circleU, l);
+
+			float r1 = curand_uniform(&randState);
+			float r2 = curand_uniform(&randState);
+			float centerDistance = light.radius * (2.0f * r2 - 1.0f);
+			float azimuthAngle = 2.0f * sfz::PI() * r1;
+
+			vec3 lightPosOffset = circleU * cos(azimuthAngle) * centerDistance +
+				circleV * sin(azimuthAngle) * centerDistance;
+
+			vec3 offsetLightDiff = light.pos + lightPosOffset - pos;
+			vec3 offsetLightDir = normalize(offsetLightDiff);
+
+			shadowRay.setOrigin(pos);
+			shadowRay.setDir(offsetLightDir);
+			shadowRay.setMinDist(0.001f);
+			shadowRay.setMaxDist(length(offsetLightDiff));
+		} else {
+			// Set shadow ray to dummy. A future improvement would be to only queue up as many RayIns as
+			// are actually needed.
+			setToDummyRay(shadowRay);
+		}
 		shadowRays[shadowRayID] = shadowRay;
-		lightContributions[shadowRayID] = color;
 	}
 }
 

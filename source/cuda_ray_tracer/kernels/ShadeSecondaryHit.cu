@@ -54,7 +54,7 @@ static __global__ void shadeSecondaryHitKernel(ShadeSecondaryHitKernelInput inpu
 
 			// Shade
 			vec3 shading = shade(p, n, v, albedo, roughness, metallic, l, toLightDist, light.strength, light.range);
-			color += shading * fallofFactor(toLightDist, light.range);
+			color += shading * falloffFactor(toLightDist, light.range);
 		}
 	}
 
