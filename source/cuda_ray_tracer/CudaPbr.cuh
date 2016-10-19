@@ -27,7 +27,7 @@ inline __device__ float ggx(float nDotH, float a) noexcept
 {
 	float a2 = a * a;
 	float div = CUDART_PI * powf(nDotH * nDotH * (a2 - 1.0f) + 1.0f, 2.0f);
-	return a2 / div;
+	return a2 / std::max(div, 0.0001f);
 }
 
 // Schlick's model adjusted to fit Smith's method
