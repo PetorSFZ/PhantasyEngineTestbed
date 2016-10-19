@@ -13,6 +13,7 @@
 #include <sfz/containers/DynArray.hpp>
 #include <sfz/containers/StackString.hpp>
 #include <sfz/gl/Program.hpp>
+#include <sfz/math/ProjectionMatrices.hpp>
 #include <sfz/memory/New.hpp>
 #include <sfz/util/IO.hpp>
 
@@ -36,6 +37,7 @@
 #include "kernels/ProcessGBufferKernel.hpp"
 #include "kernels/RayCastKernel.hpp"
 #include "kernels/ShadeSecondaryHit.hpp"
+#include "ShadowCubeMapCudaGL.hpp"
 
 namespace phe {
 
@@ -61,7 +63,7 @@ public:
 	FullscreenTriangle fullscreenTriangle;
 
 	// OpenGL shaders
-	Program gbufferGenShader, transferShader;
+	Program shadowMapGenShader, gbufferGenShader, transferShader;
 
 	// Cuda OpenGL interop textures and framebuffers
 	CudaGLGBuffer gbuffer;
@@ -88,6 +90,7 @@ public:
 
 	// Cuda static light sources
 	CudaBuffer<SphereLight> staticSphereLights;
+	DynArray<ShadowCubeMapCudaGL> staticShadowMaps;
 
 	// Shading buffers
 	CudaBuffer<PathState> pathStates;
@@ -144,6 +147,12 @@ public:
 		{
 			StackString256 shadersPath;
 			shadersPath.printf("%sresources/shaders/cuda_tracer_renderer/", basePath());
+
+			shadowMapGenShader = Program::fromFile(shadersPath.str, "cuda_gl_shadow_map_gen.vert",
+			                                       "cuda_gl_shadow_map_gen.geom", "cuda_gl_shadow_map_gen.frag",
+			[](uint32_t shaderProgram) {
+				glBindAttribLocation(shaderProgram, 0, "inPosition");
+			});
 
 			gbufferGenShader = Program::fromFile(shadersPath.str, "gbuffer_gen.vert",
 			                                     "gbuffer_gen.frag", [](uint32_t shaderProgram) {
@@ -259,6 +268,50 @@ void CudaTracerRenderer::setStaticScene(const StaticScene& staticScene) noexcept
 	// Upload static lights to Cuda
 	mImpl->staticSphereLights = CudaBuffer<SphereLight>(staticScene.sphereLights.data(),
 	                                                    staticScene.sphereLights.size());
+
+	// Static shadow maps
+	mImpl->staticShadowMaps.clear();
+	for (const SphereLight& light : staticScene.sphereLights) {
+		ShadowCubeMapCudaGL shadowMap(4096u);
+
+		// Note: We don't use reverse-z here, unecessary since we overwrite the depth anyway
+
+		glDisable(GL_BLEND);
+		glEnable(GL_CULL_FACE);
+		glEnable(GL_DEPTH_TEST);
+		glDepthFunc(GL_LESS);
+
+		glBindFramebuffer(GL_FRAMEBUFFER, shadowMap.fbo());
+		glViewport(0, 0, shadowMap.resolution().x, shadowMap.resolution().y);
+		glClearDepth(1.0f);
+		glClear(GL_DEPTH_BUFFER_BIT);
+		
+		mImpl->shadowMapGenShader.useProgram();
+
+		// Model matrix is identity since static scene is defined in world space
+		gl::setUniform(mImpl->shadowMapGenShader, "uModelMatrix", sfz::identityMatrix4<float>());
+
+		// View and projection matrices for each face
+		const mat4 projMatrix = sfz::scalingMatrix4<float>(1.0f, -1.0f, 1.0f) * sfz::perspectiveProjectionVkD3d(90.0f, 1.0f, 0.01f, light.range);
+		mat4 viewProjMatrices[6];
+		viewProjMatrices[0] = projMatrix * sfz::viewMatrixGL(light.pos, vec3(1.0f, 0.0f, 0.0f), vec3(0.0f, -1.0f, 0.0f)); // right
+		viewProjMatrices[1] = projMatrix * sfz::viewMatrixGL(light.pos, vec3(-1.0f, 0.0f, 0.0f), vec3(0.0f, -1.0f, 0.0f)); // left
+		viewProjMatrices[2] = projMatrix * sfz::viewMatrixGL(light.pos, vec3(0.0f, 1.0f, 0.0f), vec3(0.0f, 0.0f, 1.0f)); // top
+		viewProjMatrices[3] = projMatrix * sfz::viewMatrixGL(light.pos, vec3(0.0f, -1.0f, 0.0f), vec3(0.0f, 0.0f, -1.0f)); // bottom
+		viewProjMatrices[4] = projMatrix * sfz::viewMatrixGL(light.pos, vec3(0.0f, 0.0f, 1.0f), vec3(0.0f, -1.0f, 0.0f)); // near
+		viewProjMatrices[5] = projMatrix * sfz::viewMatrixGL(light.pos, vec3(0.0f, 0.0f, -1.0f), vec3(0.0f, -1.0f, 0.0f)); // far
+		gl::setUniform(mImpl->shadowMapGenShader, "uViewProjMatrices", viewProjMatrices, 6);
+
+		// Light information
+		gl::setUniform(mImpl->shadowMapGenShader, "uLightPosWS", light.pos);
+		gl::setUniform(mImpl->shadowMapGenShader, "uLightRange", light.range);
+
+		for (const GLModel& model : mImpl->staticGLModels) {
+			model.draw();
+		}
+
+		mImpl->staticShadowMaps.add(std::move(shadowMap));
+	}
 }
 	
 void CudaTracerRenderer::setDynamicMeshes(const DynArray<RawMesh>& meshes) noexcept
