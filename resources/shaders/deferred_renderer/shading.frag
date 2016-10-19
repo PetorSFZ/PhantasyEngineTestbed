@@ -157,7 +157,7 @@ void main()
 	// Fresnel function
 	// Assume all dielectrics have a f0 of 0.04, for metals we assume f0 == albedo
 	vec3 f0 = mix(vec3(0.04), albedo, metallic);
-	vec3 ctF = fresnelSchlick(nDotL, f0);
+	vec3 ctF = fresnelSchlick(nDotV, f0);
 
 	// Calculate final Cook-Torrance specular value
 	vec3 specular = ctD * ctF * ctG / (4.0 * nDotL * nDotV);
@@ -169,8 +169,11 @@ void main()
 	float falloff = fallofNumerator / fallofDenominator;
 	vec3 light = falloff * uLightStrength * shadow;
 
+	vec3 ks = ctF;
+	vec3 kd = (1 - ks) * (1 - metallic);
+
 	// "Solves" reflectance equation under the assumption that the light source is a point light
 	// and that there is no global illumination.
-	vec3 res = (diffuse + specular) * light * nDotL;
+	vec3 res = (kd * diffuse + specular) * light * nDotL;
 	outFragColor = vec4(res, 1.0);
 }

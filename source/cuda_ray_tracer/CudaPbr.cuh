@@ -27,7 +27,7 @@ inline __device__ float ggx(float nDotH, float a) noexcept
 {
 	float a2 = a * a;
 	float div = CUDART_PI * powf(nDotH * nDotH * (a2 - 1.0f) + 1.0f, 2.0f);
-	return a2 / std::max(div, 0.0001f);
+	return a2 / div;
 }
 
 // Schlick's model adjusted to fit Smith's method
@@ -87,13 +87,16 @@ inline __device__ vec3 shade(const vec3& p, const vec3& n, const vec3& v,
 	// Fresnel function
 	// Assume all dielectrics have a f0 of 0.04, for metals we assume f0 == albedo
 	vec3 f0 = lerp(vec3(0.04f), albedo, metallic);
-	vec3 ctF = fresnelSchlick(nDotL, f0);
+	vec3 ctF = fresnelSchlick(nDotV, f0);
 
 	// Calculate final Cook-Torrance specular value
 	vec3 specular = ctD * ctF * ctG / (4.0f * nDotL * nDotV);
 
+	vec3 ks = ctF;
+	vec3 kd = (vec3(1.0f) - ks) * (1.0f - metallic);
+
 	// Due to some unsolved NaN issues, replace inf,-inf and NaN with black
-	vec3 shaded = (diffuse + specular) * lightStrength * nDotL;
+	vec3 shaded = (kd * diffuse + specular) * lightStrength * nDotL;
 	if (!isfinite(shaded.x) || !isfinite(shaded.y) || !isfinite(shaded.z)) {
 		shaded = vec3(0.0f);
 	}

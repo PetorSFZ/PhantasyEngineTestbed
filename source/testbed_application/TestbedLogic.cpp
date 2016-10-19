@@ -90,7 +90,7 @@ UpdateOp TestbedLogic::update(GameScreen& screen, UpdateState& state) noexcept
 	for (int handle = 1 + 2 * 2 * (numBalls+1); handle < instanceHandles.size(); handle++) {
 		vec3& pos = objectPositions[handle];
 		vec3& velocity = screen.level->objects[handle].velocity;
-		velocity = vec3(0.0f, cos(accumulatedTime) - sin(accumulatedTime / 4), sin(accumulatedTime) - cos(accumulatedTime / 4)) * 10.0f;
+		velocity = vec3(0.0f);// vec3(0.0f, cos(accumulatedTime) - sin(accumulatedTime / 4), sin(accumulatedTime) - cos(accumulatedTime / 4)) * 10.0f;
 		pos += velocity * state.delta;
 		screen.level->objects[handle].transform = translationMatrix(pos);
 	}
