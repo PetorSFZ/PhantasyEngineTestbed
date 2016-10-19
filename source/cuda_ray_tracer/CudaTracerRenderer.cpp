@@ -272,7 +272,7 @@ void CudaTracerRenderer::setStaticScene(const StaticScene& staticScene) noexcept
 	// Static shadow maps
 	mImpl->staticShadowMaps.clear();
 	for (const SphereLight& light : staticScene.sphereLights) {
-		ShadowCubeMapCudaGL shadowMap(4096u);
+		ShadowCubeMapCudaGL shadowMap(2096u);
 
 		// Note: We don't use reverse-z here, unecessary since we overwrite the depth anyway
 

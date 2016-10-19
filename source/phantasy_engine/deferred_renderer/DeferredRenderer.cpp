@@ -162,7 +162,7 @@ void DeferredRenderer::setStaticScene(const StaticScene& staticScene) noexcept
 	// Static shadow maps
 	mImpl->staticShadowMaps.clear();
 	for (const SphereLight& light : mImpl->staticSphereLights) {
-		ShadowCubeMap shadowMap(4096u);
+		ShadowCubeMap shadowMap(2096u);
 
 		// Note: We don't use reverse-z here, unecessary since we overwrite the depth anyway
 
