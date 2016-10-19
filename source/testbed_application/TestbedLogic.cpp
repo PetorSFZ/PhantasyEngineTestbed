@@ -81,9 +81,10 @@ UpdateOp TestbedLogic::update(GameScreen& screen, UpdateState& state) noexcept
 		int handle = 1 + height * 2 * (numBalls+1) + side * (numBalls+1) + ball;
 		float xPos = ball * (distance / numBalls);
 		vec3& pos = objectPositions[handle];
+		vec3 prevPos = pos;
 		vec3& velocity = screen.level->objects[handle].velocity;
-		velocity = vec3((sinf(accumulatedTime / 4.0f + handle)) * sinf(xPos / period) / 10.0f, 0.0f, (sinf(accumulatedTime / 3.0f + handle)) * sinf(xPos / period) / 5.0f);
-		pos += velocity * state.delta;
+		pos = objectPositions[handle] + vec3((sinf(accumulatedTime / 8.0f + handle)) * sinf(xPos / period) / 10.0f, 0.0f, (sinf(accumulatedTime / 4.0f + handle)) * sinf(xPos / period) / 10.0f) * state.delta;
+		velocity = (pos - prevPos) / state.delta;
 		screen.level->objects[handle].transform = translationMatrix(pos);
 	}
 
