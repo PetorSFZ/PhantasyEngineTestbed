@@ -63,6 +63,8 @@ GameScreen::GameScreen(SharedPtr<GameLogic> gameLogicIn, SharedPtr<Level> levelI
 	mVelocityShader = Program::postProcessFromFile(shadersPath.str, "velocity_gen.frag");
 	glUseProgram(mVelocityShader.handle());
 	gl::setUniform(mVelocityShader, "uCurrDepthTexture", 0);
+	gl::setUniform(mVelocityShader, "uPrevDepthTexture", 1);
+	gl::setUniform(mVelocityShader, "uWorldVelocityTexture", 2);
 
 	mTaaShader = Program::postProcessFromFile(shadersPath.str, "taa.frag");
 	glUseProgram(mTaaShader.handle());
@@ -83,6 +85,11 @@ GameScreen::GameScreen(SharedPtr<GameLogic> gameLogicIn, SharedPtr<Level> levelI
 	this->renderer->setMaterialsAndTextures(this->level->materials, this->level->textures);
 	this->renderer->setStaticScene(this->level->staticScene);
 	this->renderer->setDynamicMeshes(this->level->meshes);
+}
+
+GameScreen::~GameScreen() noexcept
+{
+	glDeleteTextures(1, &mPreviousDepthTexture);
 }
 
 // GameScreen: Overriden methods from sfz::BaseScreen
@@ -173,9 +180,7 @@ void GameScreen::render(UpdateState& state)
 	// Check if framebuffers / renderer needs to be reloaded
 	if (targetRes != renderer->targetResolution()) {
 		printf("New target resolution: %s, reloading framebuffers\n", toString(targetRes).str);
-		this->reloadFramebuffers(targetRes);
-		renderer->setTargetResolution(targetRes);
-		cam.setAspectRatio(float(targetRes.x) / float(targetRes.y));
+		this->targetResolutionUpdated(targetRes);
 	}
 
 	bool taaEnabled = cfg.graphcisCfg().taa->boolValue();
@@ -184,8 +189,9 @@ void GameScreen::render(UpdateState& state)
 		resetTAA();
 	}
 
+	vec2 pixelOffset(0.0f);
 	if (taaEnabled) {
-		vec2 pixelOffset = HALTON_SEQ[mHaltonIndex] - vec2(0.5f);
+		pixelOffset = HALTON_SEQ[mHaltonIndex] - vec2(0.5f);
 		mHaltonIndex = (mHaltonIndex + 1) % HALTON_LENGTH;
 
 		ViewFrustum jitteredCamera = cam;
@@ -197,37 +203,39 @@ void GameScreen::render(UpdateState& state)
 
 	// Render the level
 	uint32_t prevFBIndex = (mFBIndex + 1) % 2;
-	Framebuffer& resultFB = mResultFB[mFBIndex];
-	Framebuffer& prevResultFB = mResultFB[prevFBIndex];
-	RenderResult res = renderer->render(resultFB, level->objects, level->sphereLights);
+	RenderResult result = renderer->render(level->objects, level->sphereLights);
 
 	glDisable(GL_BLEND);
 	glEnable(GL_CULL_FACE);
 	glDisable(GL_DEPTH_TEST);
 
-	GLuint chainTexture = resultFB.texture(0);
+	GLuint currentTexture = result.colorTexture;
 	if (taaEnabled) {
 		// Generate velocity buffer from depth
 		mVelocityFB[mFBIndex].bindViewport();
 		mVelocityShader.useProgram();
+		gl::setUniform(mVelocityShader, "uDeltaTime", state.delta);
 		gl::setUniform(mVelocityShader, "uCurrInvViewMatrix", inverse(cam.viewMatrix()));
 		gl::setUniform(mVelocityShader, "uCurrInvProjMatrix", inverse(cam.projMatrix(targetRes)));
 		gl::setUniform(mVelocityShader, "uPrevViewMatrix", mPreviousCamera.viewMatrix());
 		gl::setUniform(mVelocityShader, "uPrevProjMatrix", mPreviousCamera.projMatrix(targetRes));
+		gl::setUniform(mVelocityShader, "uJitter", pixelOffset / vec2(targetRes));
 
 		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, resultFB.depthTexture());
+		glBindTexture(GL_TEXTURE_2D, result.depthTexture);
 		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, prevResultFB.depthTexture());
+		glBindTexture(GL_TEXTURE_2D, mPreviousDepthTexture);
+		glActiveTexture(GL_TEXTURE2);
+		glBindTexture(GL_TEXTURE_2D, result.velocityTexture);
 		mFullscreenTriangle.render();
 
 		// Apply TAA
 		mTaaFB[mFBIndex].bindViewport();
 		glUseProgram(mTaaShader.handle());
-		gl::setUniform(mTaaShader, "uResolution", mResultFB->dimensionsFloat());
+		gl::setUniform(mTaaShader, "uResolution", vec2(targetRes));
 
 		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, chainTexture);
+		glBindTexture(GL_TEXTURE_2D, currentTexture);
 		glActiveTexture(GL_TEXTURE1);
 		glBindTexture(GL_TEXTURE_2D, mTaaFB[prevFBIndex].texture(1));
 		glActiveTexture(GL_TEXTURE2);
@@ -236,7 +244,7 @@ void GameScreen::render(UpdateState& state)
 		glBindTexture(GL_TEXTURE_2D, mVelocityFB[prevFBIndex].texture(0));
 
 		mFullscreenTriangle.render();
-		chainTexture = mTaaFB[mFBIndex].texture(0);
+		currentTexture = mTaaFB[mFBIndex].texture(0);
 	}
 
 	// Apply gamma correction
@@ -244,7 +252,7 @@ void GameScreen::render(UpdateState& state)
 	glUseProgram(mGammaCorrectionShader.handle());
 	gl::setUniform(mGammaCorrectionShader, "uGamma", cfg.windowCfg().screenGamma->floatValue());
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, chainTexture);
+	glBindTexture(GL_TEXTURE_2D, currentTexture);
 	mFullscreenTriangle.render();
 
 	// Scale result to screen
@@ -256,7 +264,7 @@ void GameScreen::render(UpdateState& state)
 
 	glUseProgram(mScalingShader.handle());
 	glBindTexture(GL_TEXTURE_2D, mGammaCorrectedFB.texture(0));
-	gl::setUniform(mScalingShader, "uViewportRes", vec2(res.renderedRes));
+	gl::setUniform(mScalingShader, "uViewportRes", vec2(result.renderedRes));
 	gl::setUniform(mScalingShader, "uDstRes", vec2(drawableDim));
 
 	mFullscreenTriangle.render();
@@ -277,6 +285,14 @@ void GameScreen::render(UpdateState& state)
 	mPreviousGraphicsConfig = graphicsConfig;
 
 	SDL_GL_SwapWindow(state.window.ptr());
+
+	// Store this frame's depth texture for use in next frame
+	if (result.depthTexture != 0) {
+		glCopyImageSubData(result.depthTexture, GL_TEXTURE_2D, 0, 0, 0, 0,
+		                   mPreviousDepthTexture, GL_TEXTURE_2D, 0, 0, 0, 0,
+		                   targetRes.x, targetRes.y, 1);
+	}
+
 }
 
 void GameScreen::setRenderer(const SharedPtr<BaseRenderer>& renderer) noexcept
@@ -289,39 +305,44 @@ void GameScreen::setRenderer(const SharedPtr<BaseRenderer>& renderer) noexcept
 // GameScreen: Private methods
 // ------------------------------------------------------------------------------------------------
 
-void GameScreen::reloadFramebuffers(vec2i internalRes) noexcept
+void GameScreen::targetResolutionUpdated(vec2i targetRes) noexcept
 {
 	using gl::FBDepthFormat;
 	using gl::FBTextureFiltering;
 	using gl::FBTextureFormat;
 	using gl::FramebufferBuilder;
 
-	if (mResultFB[0].dimensions() != internalRes) {
-		for (int i = 0; i < 2; i++) {
-			mResultFB[i] = FramebufferBuilder(internalRes)
-			               .addTexture(0, FBTextureFormat::RGBA_F16, FBTextureFiltering::LINEAR)
-			               .addDepthTexture(FBDepthFormat::F32, FBTextureFiltering::NEAREST)
-			               .build();
-		}
+	renderer->setTargetResolution(targetRes);
+	cam.setAspectRatio(float(targetRes.x) / float(targetRes.y));
+	
+	// Create internally stored depth texture of previous frame
+	glDeleteTextures(1, &mPreviousDepthTexture);
+	glGenTextures(1, &mPreviousDepthTexture);
+	glBindTexture(GL_TEXTURE_2D, mPreviousDepthTexture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32, targetRes.x, targetRes.y, 0,
+	             GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
+	if (mVelocityFB[0].dimensions() != targetRes) {
 		for (int i = 0; i < 2; i++) {
-			mVelocityFB[i] = FramebufferBuilder(internalRes)
+			mVelocityFB[i] = FramebufferBuilder(targetRes)
 			                 .addTexture(0, FBTextureFormat::RGB_F16, FBTextureFiltering::LINEAR)
 			                 .build();
 		}
 	}
 
-	if (mTaaFB[0].dimensions() != internalRes) {
+	if (mTaaFB[0].dimensions() != targetRes) {
 		for (int i = 0; i < 2; i++) {
-			mTaaFB[i] = FramebufferBuilder(internalRes)
+			mTaaFB[i] = FramebufferBuilder(targetRes)
 			            .addTexture(0, FBTextureFormat::RGBA_F16, FBTextureFiltering::LINEAR)
 			            .addTexture(1, FBTextureFormat::RGBA_F16, FBTextureFiltering::LINEAR)
 			            .build();
 		}
 	}
 
-	if (mGammaCorrectedFB.dimensions() != internalRes) {
-		mGammaCorrectedFB = FramebufferBuilder(internalRes)
+	if (mGammaCorrectedFB.dimensions() != targetRes) {
+		mGammaCorrectedFB = FramebufferBuilder(targetRes)
 		                    .addTexture(0, FBTextureFormat::RGBA_F16, FBTextureFiltering::LINEAR)
 		                    .build();
 	}
@@ -342,6 +363,8 @@ void GameScreen::reloadShaders() noexcept
 	if (mVelocityShader.isValid()) {
 		glUseProgram(mVelocityShader.handle());
 		gl::setUniform(mVelocityShader, "uCurrDepthTexture", 0);
+		gl::setUniform(mVelocityShader, "uPrevDepthTexture", 1);
+		gl::setUniform(mVelocityShader, "uWorldVelocityTexture", 2);
 	}
 
 	mScalingShader.reload();

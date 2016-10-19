@@ -3,9 +3,12 @@
 #include "TestbedLogic.hpp"
 
 #include <phantasy_engine/Config.hpp>
+#include <phantasy_engine/rendering/Material.hpp>
+#include <phantasy_engine/level/ObjectLoader.hpp>
 
 #include "Helpers.hpp"
 
+#include <sfz/util/IO.hpp>
 #include <sfz/math/MatrixSupport.hpp>
 
 using namespace sfz;
@@ -30,6 +33,25 @@ TestbedLogic::TestbedLogic(DynArray<RendererAndStatus>&& renderers, uint32_t ren
 {
 	instanceHandles.add(spawnObjectInstance(0, level, identityMatrix4<float>()));
 	objectPositions.put(0, vec3(0, 0, 0));
+
+	const int numBalls = 50;
+	const float distance = 91.0f;
+	const float period = (distance / 2.5f) / (2.0f * sfz::PI());
+	const float amplitude = 5.0f;
+	const float xOffset = -4.0f - (distance / 2.0f);
+
+
+	// 2 * 2 * 51 balls
+	for (int height = 0; height < 2; height++)
+	for (int side = 0; side < 2; side++)
+	for (int i = 0; i <= numBalls; i++) { // Well well well... Don't want one ball missing at the end, do we? Just a little cheat to fix it easily...
+		float xPos = i * (distance / numBalls);
+
+		vec3 pos = vec3(xPos + xOffset, (height & 1 ? 40.0f : 15.0f) - abs(sinf(xPos / period) * amplitude), side & 1 ? 7.0f : -11.0f);
+		uint32_t handle = spawnObjectInstance(i & 1 ? 1 : 2, level, translationMatrix(pos));
+		instanceHandles.add(handle);
+		objectPositions.put(handle, pos);
+	}
 }
 
 // TestbedLogic: Overriden methods from GameLogic
@@ -48,11 +70,28 @@ UpdateOp TestbedLogic::update(GameScreen& screen, UpdateState& state) noexcept
 	accumulatedTime += 10 * state.delta;
 	if (accumulatedTime > 200 * PI()) accumulatedTime -= 200 * PI();
 
+	const int numBalls = 50;
+	const float distance = 91.0f;
+	const float period = (distance / 2.5f) / (2.0f * sfz::PI());
+
 	// Move balls
-	for (uint32_t handle : instanceHandles) {
+	for (int height = 0; height < 2; height++)
+	for (int side = 0; side < 2; side++)
+	for (int ball = 0; ball <= numBalls; ball++) {
+		int handle = 1 + height * 2 * (numBalls+1) + side * (numBalls+1) + ball;
+		float xPos = ball * (distance / numBalls);
 		vec3& pos = objectPositions[handle];
-		vec3 velocity = vec3(0.0f, cos(accumulatedTime) - sin(accumulatedTime/4), sin(accumulatedTime) - cos(accumulatedTime/4)) * 10.0f * state.delta;
-		//pos += velocity;
+		vec3& velocity = screen.level->objects[handle].velocity;
+		velocity = vec3((sinf(accumulatedTime / 4.0f + handle)) * sinf(xPos / period) / 10.0f, 0.0f, (sinf(accumulatedTime / 3.0f + handle)) * sinf(xPos / period) / 5.0f);
+		pos += velocity * state.delta;
+		screen.level->objects[handle].transform = translationMatrix(pos);
+	}
+
+	for (int handle = 1 + 2 * 2 * (numBalls+1); handle < instanceHandles.size(); handle++) {
+		vec3& pos = objectPositions[handle];
+		vec3& velocity = screen.level->objects[handle].velocity;
+		velocity = vec3(0.0f, cos(accumulatedTime) - sin(accumulatedTime / 4), sin(accumulatedTime) - cos(accumulatedTime / 4)) * 10.0f;
+		pos += velocity * state.delta;
 		screen.level->objects[handle].transform = translationMatrix(pos);
 	}
 
@@ -161,12 +200,29 @@ UpdateOp TestbedLogic::update(GameScreen& screen, UpdateState& state) noexcept
 	// Face buttons
 	if (ctrl.y == ButtonState::DOWN) {
 		vec3 pos = screen.cam.pos();
-		int colour = cfg.getSetting("PhantasyEngineTestbed", "sphereColour")->intValue();
-		int metallic = cfg.getSetting("PhantasyEngineTestbed", "sphereMetallic")->boolValue() ? 1 : 0;
-		int roughness = cfg.getSetting("PhantasyEngineTestbed", "sphereRoughness")->intValue() - 1;
-		uint32_t handle = spawnObjectInstance(1 + (10 * 2 * colour + 10 * metallic + roughness), *screen.level, translationMatrix(pos));
-		instanceHandles.add(handle);
-		objectPositions.put(handle, pos);
+
+		float r = cfg.getSetting("PhantasyEngineTestbed", "sphereColourR")->floatValue();
+		float g = cfg.getSetting("PhantasyEngineTestbed", "sphereColourG")->floatValue();
+		float b = cfg.getSetting("PhantasyEngineTestbed", "sphereColourB")->floatValue();
+
+		float metallic = cfg.getSetting("PhantasyEngineTestbed", "sphereMetallic")->floatValue();
+		float roughness = cfg.getSetting("PhantasyEngineTestbed", "sphereRoughness")->floatValue();
+		
+		StackString192 modelsPath;
+		modelsPath.printf("%sresources/models/", basePath());
+
+		uint32_t objectHandle = phe::loadDynObjectCustomMaterial(modelsPath.str, "sphere.obj", *screen.level, vec3(r, g, b), roughness, metallic);
+		
+		for (RendererAndStatus& renderer : mRenderers) {
+			if (renderer.baked) {
+				renderer.renderer->setMaterialsAndTextures(screen.level->materials, screen.level->textures);
+				renderer.baked = false;
+			}
+		}
+
+		uint32_t instanceHandle = spawnObjectInstance(objectHandle, *screen.level, translationMatrix(pos));
+		instanceHandles.add(instanceHandle);
+		objectPositions.put(instanceHandle, pos);
 	}
 	if (ctrl.x == ButtonState::DOWN) {
 	}

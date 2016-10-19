@@ -28,6 +28,13 @@ using sfz::identityMatrix4;
 
 struct RenderResult final {
 	vec2i renderedRes = vec2i(0);
+	// Should be a texture with at least three channels, the main output image of the renderer.
+	uint32_t colorTexture = 0;
+	// Must be a depth texture with internal format GL_DEPTH_COMPONENT32, or 0 if not available.
+	uint32_t depthTexture = 0;
+	// Should be a texture with at least three channels containing the world space velocity of the
+	// object at each pixel, or 0 if not available.
+	uint32_t velocityTexture = 0;
 };
 
 // BaseRenderer
@@ -56,11 +63,7 @@ public:
 
 	virtual void addDynamicMesh(const RawMesh& mesh) noexcept = 0;
 
-	/// The resultFB framebuffer is required to have a color texture (rgba 16bit float) and a
-	/// depth texture of type 32bit float, the resolution of the framebuffer must be the same
-	/// as the target resolution of the renderer.
-	virtual RenderResult render(Framebuffer& resultFB,
-	                            const DynArray<DynObject>& objects,
+	virtual RenderResult render(const DynArray<DynObject>& objects,
 	                            const DynArray<SphereLight>& lights) noexcept = 0;
 
 	// Non-virtual methods

@@ -17,11 +17,15 @@ layout(location = 0) out vec4 outPosition;
 layout(location = 1) out vec4 outNormal;
 layout(location = 2) out vec4 outAlbedo;
 layout(location = 3) out vec4 outMaterial;
+layout(location = 4) out vec3 outWorldVelocity;
 
 layout(std430, binding = 1) buffer TextureSSBO
 {
 	sampler2D textures[];
 };
+
+// Uniforms
+uniform vec3 uWorldVelocity;
 
 // Main
 // ------------------------------------------------------------------------------------------------
@@ -43,7 +47,7 @@ void main()
 			return;
 		}
 	}
-	outAlbedo = vec4(albedo.rgb, 1.0);
+	outAlbedo = albedo;
 
 	// Material
 	int roughnessIndex = textureIndices.y;
@@ -59,4 +63,5 @@ void main()
 	}
 
 	outMaterial = vec4(roughness, metallic, 0.0, 0.0);
+	outWorldVelocity = uWorldVelocity;
 }

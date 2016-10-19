@@ -57,8 +57,7 @@ public:
 
 	void addDynamicMesh(const RawMesh& mesh) noexcept override final;
 
-	RenderResult render(Framebuffer& resultFB,
-	                    const DynArray<DynObject>& objects,
+	RenderResult render(const DynArray<DynObject>& objects,
 	                    const DynArray<SphereLight>& lights) noexcept override final;
 
 protected:
@@ -78,6 +77,7 @@ private:
 	// Private members
 	// --------------------------------------------------------------------------------------------
 
+	Framebuffer mResultFb;
 	DynArray<vec4> mTexture;
 	DynArray<std::thread> mThreads;
 	const DynArray<Material>* mMaterials = nullptr;
