@@ -32,9 +32,9 @@ CudaGLGBuffer::CudaGLGBuffer(vec2i resolution) noexcept
 	    .addTexture(GBUFFER_POSITION, FBTextureFormat::RGBA_F32, FBTextureFiltering::NEAREST)
 	    .addTexture(GBUFFER_NORMAL, FBTextureFormat::RGBA_F32, FBTextureFiltering::LINEAR)
 	    .addTexture(GBUFFER_ALBEDO, FBTextureFormat::RGBA_U8, FBTextureFiltering::LINEAR)
-		.addTexture(GBUFFER_MATERIAL, FBTextureFormat::RGBA_F32, FBTextureFiltering::LINEAR)
-		.addTexture(GBUFFER_VELOCITY, FBTextureFormat::RGBA_F32, FBTextureFiltering::LINEAR)
-		.build();
+	    .addTexture(GBUFFER_MATERIAL, FBTextureFormat::RGBA_F32, FBTextureFiltering::LINEAR)
+	    .addTexture(GBUFFER_VELOCITY, FBTextureFormat::RGBA_F32, FBTextureFiltering::LINEAR)
+	    .build();
 
 	// Position texture
 
