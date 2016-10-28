@@ -197,7 +197,7 @@ uint32_t loadDynObject(const char* basePath, const char* fileName, Level& level)
 	return loadDynObject(basePath, fileName, level, identityMatrix4<float>());
 }
 
-uint32_t loadDynObjectCustomMaterial(const char* basePath, const char* fileName, Level& level, vec3& albedo, float roughness, float metallic, const mat4& modelMatrix)
+uint32_t loadDynObjectCustomMaterial(const char* basePath, const char* fileName, Level& level, const vec3& albedo, float roughness, float metallic, const mat4& modelMatrix)
 {
 	uint32_t handle = loadDynObject(basePath, fileName, level, modelMatrix);
 
@@ -215,7 +215,7 @@ uint32_t loadDynObjectCustomMaterial(const char* basePath, const char* fileName,
 	return handle;
 }
 
-uint32_t loadDynObjectCustomMaterial(const char* basePath, const char* fileName, Level& level, vec3& albedo, float roughness, float metallic)
+uint32_t loadDynObjectCustomMaterial(const char* basePath, const char* fileName, Level& level, const vec3& albedo, float roughness, float metallic)
 {
 	return loadDynObjectCustomMaterial(basePath, fileName, level, albedo, roughness, metallic, identityMatrix4<float>());
 }
