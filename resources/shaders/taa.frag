@@ -48,7 +48,7 @@ void main()
 
 	// Weight history using velocity similar to method in SMAA paper, "SMAA: Enhanced Subpixel
 	// Morphological Antialiasing" [Jimenez12].
-	float velocityDistrust = min(1.0, 0.5 * sqrt(abs(length(pixelVelocity) - length(historyPixelVelocity))));
+	float velocityDistrust = min(1.0, 1.2 * sqrt(abs(length(pixelVelocity) - length(historyPixelVelocity))));
 
 	// Trust less if the object has low roughness
 	float roughnessDistrust = mix(3.0, 1.0, roughness);
@@ -64,7 +64,7 @@ void main()
 	float historySamples = history.a;
 	float newHistorySamples = historySamples * trust + 1.0;
 
-	float historyBlend = mix(0.0, 1.0 - 1.0 / newHistorySamples, trust);
+	float historyBlend = 1.0 - 1.0 / newHistorySamples;
 
 	outHistory = vec4(mix(currentFrameColor, historyColor, historyBlend), newHistorySamples);
 	outColor = vec4(outHistory.xyz, 1.0);
