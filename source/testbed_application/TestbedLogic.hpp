@@ -63,5 +63,7 @@ private:
 	uint32_t mCurrentRenderer;
 
 	DynArray<uint32_t> instanceHandles;
+	DynArray<uint32_t> movingInstanceHandles;
+	DynArray<uint32_t> nonmovingInstanceHandles;
 	HashMap<uint32_t, vec3> objectPositions;
 };

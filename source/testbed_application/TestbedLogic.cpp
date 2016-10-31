@@ -88,10 +88,10 @@ UpdateOp TestbedLogic::update(GameScreen& screen, UpdateState& state) noexcept
 		screen.level->objects[handle].transform = translationMatrix(pos);
 	}
 
-	for (int handle = 1 + 2 * 2 * (numBalls+1); handle < instanceHandles.size(); handle++) {
+	for (int handle : movingInstanceHandles) {
 		vec3& pos = objectPositions[handle];
 		vec3& velocity = screen.level->objects[handle].velocity;
-		velocity = vec3(0.0f);// vec3(0.0f, cos(accumulatedTime) - sin(accumulatedTime / 4), sin(accumulatedTime) - cos(accumulatedTime / 4)) * 10.0f;
+		velocity = vec3(0.0f, cos(accumulatedTime) - sin(accumulatedTime / 4), sin(accumulatedTime) - cos(accumulatedTime / 4)) * 10.0f;
 		pos += velocity * state.delta;
 		screen.level->objects[handle].transform = translationMatrix(pos);
 	}
@@ -222,10 +222,34 @@ UpdateOp TestbedLogic::update(GameScreen& screen, UpdateState& state) noexcept
 		}
 
 		uint32_t instanceHandle = spawnObjectInstance(objectHandle, *screen.level, translationMatrix(pos));
-		instanceHandles.add(instanceHandle);
+		nonmovingInstanceHandles.add(instanceHandle);
 		objectPositions.put(instanceHandle, pos);
 	}
 	if (ctrl.x == ButtonState::DOWN) {
+		vec3 pos = screen.cam.pos();
+
+		float r = cfg.getSetting("PhantasyEngineTestbed", "sphereColourR")->floatValue();
+		float g = cfg.getSetting("PhantasyEngineTestbed", "sphereColourG")->floatValue();
+		float b = cfg.getSetting("PhantasyEngineTestbed", "sphereColourB")->floatValue();
+
+		float metallic = cfg.getSetting("PhantasyEngineTestbed", "sphereMetallic")->floatValue();
+		float roughness = cfg.getSetting("PhantasyEngineTestbed", "sphereRoughness")->floatValue();
+
+		StackString192 modelsPath;
+		modelsPath.printf("%sresources/models/", basePath());
+
+		uint32_t objectHandle = phe::loadDynObjectCustomMaterial(modelsPath.str, "sphere.obj", *screen.level, vec3(r, g, b), roughness, metallic);
+
+		for (RendererAndStatus& renderer : mRenderers) {
+			if (renderer.baked) {
+				renderer.renderer->setMaterialsAndTextures(screen.level->materials, screen.level->textures);
+				renderer.renderer->setDynamicMeshes(screen.level->meshes);
+			}
+		}
+
+		uint32_t instanceHandle = spawnObjectInstance(objectHandle, *screen.level, translationMatrix(pos));
+		movingInstanceHandles.add(instanceHandle);
+		objectPositions.put(instanceHandle, pos);
 	}
 	if (ctrl.b == ButtonState::DOWN) {
 	}
@@ -342,6 +366,10 @@ void TestbedLogic::updateEmulatedController(const DynArray<SDL_Event>& events,
 			case 'F':
 				c.y = ButtonState::DOWN;
 				break;
+			case 'g':
+			case 'G':
+				c.x = ButtonState::DOWN;
+				break;
 			case SDLK_ESCAPE:
 				c.back = ButtonState::DOWN;
 				break;
@@ -376,6 +404,14 @@ void TestbedLogic::updateEmulatedController(const DynArray<SDL_Event>& events,
 			case 'e':
 			case 'E':
 				c.rightShoulder = ButtonState::UP;
+				break;
+			case 'f':
+			case 'F':
+				c.y = ButtonState::UP;
+				break;
+			case 'g':
+			case 'G':
+				c.x = ButtonState::UP;
 				break;
 			case SDLK_ESCAPE:
 				c.back = ButtonState::UP;
