@@ -111,6 +111,8 @@ set(PHANTASY_ENGINE_LIB_FILES
 	${PH_INCLUDE_DIR}/level/DynObject.hpp
 	${PH_INCLUDE_DIR}/level/ObjectLoader.hpp
 	 ${PH_SOURCE_DIR}/level/ObjectLoader.cpp
+	${PH_INCLUDE_DIR}/level/SceneGraph.hpp
+	 ${PH_SOURCE_DIR}/level/SceneGraph.cpp
 	${PH_INCLUDE_DIR}/level/SphereLight.hpp
 	${PH_INCLUDE_DIR}/level/SponzaLoader.hpp
 	 ${PH_SOURCE_DIR}/level/SponzaLoader.cpp
