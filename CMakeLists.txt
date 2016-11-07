@@ -298,6 +298,8 @@ if(PHANTASY_ENGINE_BUILD_TESTS)
 	set(PHANTASY_ENGINE_TEST_FILES
 		${TESTS_DIR}/Main_Tests.cpp
 
+		${TESTS_DIR}/level/EntityComponentSystem_Tests.cpp
+
 		${TESTS_DIR}/renderers/ViewFrustum_Tests.cpp
 	)
 	set_directory_source_group(${PHANTASY_ENGINE_TEST_FILES})

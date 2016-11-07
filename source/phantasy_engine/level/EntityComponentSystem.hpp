@@ -6,7 +6,9 @@
 
 namespace phe {
 
+using std::uint8_t;
 using std::uint32_t;
+using std::uint64_t;
 
 // EntityComponentSystem
 // ------------------------------------------------------------------------------------------------
@@ -18,7 +20,7 @@ public:
 	// Constants
 	// --------------------------------------------------------------------------------------------
 
-	constexpr static uint32_t MAX_NUM_COMPONENT_TYPES = 128u;
+	constexpr static uint32_t MAX_NUM_COMPONENT_TYPES = 64u;
 
 	// Constructors & destructors
 	// --------------------------------------------------------------------------------------------
@@ -57,27 +59,46 @@ public:
 	/// by the MAX_NUM_COMPONENT_TYPES constant.
 	uint32_t currentNumComponentTypes() const noexcept;
 
-	// Entity creation/deletion
+	// Entity methods
 	// --------------------------------------------------------------------------------------------
 
 	/// Creates a new entity with no associated components. Index is guaranteed to be smaller than
-	/// the systems maximum number of entities. Indices used for removed entities will be used
+	/// the systems maximum number of entities. Indices used for removed entities will be used.
 	uint32_t createEntity() noexcept;
 
 	/// Deletes an entity. Will remove all associated components and free the index to be reused
 	/// for future entities.
 	void deleteEntity(uint32_t entity) noexcept;
 
-	// Raw (non-typesafe) methods
+	/// Returns the component mask for a given entity.
+	uint64_t componentMask(uint32_t entity) const noexcept;
+
+	// Component methods
 	// --------------------------------------------------------------------------------------------
 
-	/// Specifies a new type of component, returns its index to be used when accessing
+
+	// Raw (non-typesafe) component methods
+	// --------------------------------------------------------------------------------------------
+
+	/// Specifies a new type of component, returns its index to be used when accessing.
 	uint32_t createComponentTypeRaw(uint32_t bytesPerComponent) noexcept;
 	
-	/// Returns pointer to the component of specified type for a given entity. Returns nullptr if
-	/// it does not exist.
-	void* getComponentRaw(uint32_t entity, uint32_t componentType) noexcept;
-	const void* getComponentRaw(uint32_t entity, uint32_t componentType) const noexcept;
+	/// Adds a component of the specified type to the specified entity.
+	void addComponentRaw(uint32_t entity, uint32_t componentType, const uint8_t* component) noexcept;
+
+	/// Removes a component from an entity.
+	void removeComponentRaw(uint32_t entity, uint32_t componentType) noexcept;
+
+	/// Returns the pointer to the internal array of a given type of component.
+	uint8_t* componentArrayRaw(uint32_t componentType) noexcept;
+	const uint8_t* componentArrayRaw(uint32_t componentType) const noexcept;
+
+	/// Returns the number of components of a specific type.
+	uint32_t numComponents(uint32_t componentType) noexcept;
+
+	/// Returns pointer to the component of specified type for a given entity.
+	uint8_t* getComponentRaw(uint32_t entity, uint32_t componentType) noexcept;
+	const uint8_t* getComponentRaw(uint32_t entity, uint32_t componentType) const noexcept;
 
 private:
 	// Private members
