@@ -39,13 +39,13 @@ TEST_CASE("Component creation/deletion", "[EntityComponentSystem]")
 	const uint32_t e2 = ecs.createEntity();
 	const uint32_t e3 = ecs.createEntity();
 
-	REQUIRE(ecs.currentNumComponentTypes() == 0);
+	REQUIRE(ecs.currentNumComponentTypes() == 1);
 	const uint32_t byteComponent = ecs.createComponentTypeRaw(1);
 	REQUIRE(ecs.numComponents(byteComponent) == 0);
-	REQUIRE(ecs.currentNumComponentTypes() == 1);
-	const uint32_t uintComponent = ecs.createComponentTypeRaw(4);
-	REQUIRE(ecs.numComponents(uintComponent) == 1);
 	REQUIRE(ecs.currentNumComponentTypes() == 2);
+	const uint32_t uintComponent = ecs.createComponentTypeRaw(4);
+	REQUIRE(ecs.numComponents(uintComponent) == 0);
+	REQUIRE(ecs.currentNumComponentTypes() == 3);
 
 	uint8_t tmpByte = 'a';
 	ecs.addComponentRaw(e1, byteComponent, &tmpByte);
@@ -54,6 +54,6 @@ TEST_CASE("Component creation/deletion", "[EntityComponentSystem]")
 	ecs.addComponentRaw(e3, byteComponent, &tmpByte);
 	REQUIRE(ecs.numComponents(byteComponent) == 2);
 
-	REQUIRE(*ecs.getComponentRaw(e1, byteComponent) == 'a');
-	REQUIRE(*ecs.getComponentRaw(e3, byteComponent) == 'c');
+	REQUIRE(*(const uint8_t*)ecs.getComponentRaw(e1, byteComponent) == 'a');
+	REQUIRE(*(const uint8_t*)ecs.getComponentRaw(e3, byteComponent) == 'c');
 }

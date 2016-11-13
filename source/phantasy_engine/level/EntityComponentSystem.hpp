@@ -10,6 +10,54 @@ using std::uint8_t;
 using std::uint32_t;
 using std::uint64_t;
 
+// Constants
+// ------------------------------------------------------------------------------------------------
+
+constexpr uint32_t ECS_MAX_NUM_COMPONENT_TYPES = 128;
+constexpr uint32_t ECS_NUM_BYTES_PER_MASK = ECS_MAX_NUM_COMPONENT_TYPES / 8u;
+constexpr uint64_t ECS_ENTITY_EXISTENCE_MASK = 1u;
+
+// EntityMask
+// ------------------------------------------------------------------------------------------------
+
+struct alignas(ECS_NUM_BYTES_PER_MASK) EntityMask final {
+	// Members
+	// --------------------------------------------------------------------------------------------
+
+	uint8_t rawMask[ECS_NUM_BYTES_PER_MASK];
+
+	// Constructors & destructors
+	// --------------------------------------------------------------------------------------------
+
+	EntityMask() noexcept = default;
+	EntityMask(const EntityMask&) noexcept = default;
+	EntityMask& operator= (const EntityMask&) noexcept = default;
+	~EntityMask() noexcept = default;
+
+	static EntityMask empty() noexcept;
+	static EntityMask fromComponentType(uint32_t componentType) noexcept;
+
+	// Operators
+	// --------------------------------------------------------------------------------------------
+
+	bool operator== (const EntityMask& other) const noexcept;
+	bool operator!= (const EntityMask& other) const noexcept;
+
+	EntityMask operator& (const EntityMask& other) const noexcept;
+	EntityMask operator| (const EntityMask& other) const noexcept;
+
+	// Methods
+	// --------------------------------------------------------------------------------------------
+
+	/// Checks whether this mask contains the specified component type or not
+	bool hasComponentType(uint32_t componentType) const noexcept;
+
+	/// Checks whether this mask has all the components in the specified parameter mask
+	bool fulfills(const EntityMask& constraints) const noexcept;
+};
+
+static_assert(sizeof(EntityMask) == ECS_NUM_BYTES_PER_MASK, "EntityMask is padded");
+
 // EntityComponentSystem
 // ------------------------------------------------------------------------------------------------
 
@@ -17,11 +65,7 @@ class EntityComponentSystemImpl; // Pimpl
 
 class EntityComponentSystem final {
 public:
-	// Constants
-	// --------------------------------------------------------------------------------------------
-
-	constexpr static uint32_t MAX_NUM_COMPONENT_TYPES = 64u;
-
+	
 	// Constructors & destructors
 	// --------------------------------------------------------------------------------------------
 
@@ -71,7 +115,7 @@ public:
 	void deleteEntity(uint32_t entity) noexcept;
 
 	/// Returns the component mask for a given entity.
-	uint64_t componentMask(uint32_t entity) const noexcept;
+	const EntityMask& componentMask(uint32_t entity) const noexcept;
 
 	// Component methods
 	// --------------------------------------------------------------------------------------------
@@ -84,21 +128,22 @@ public:
 	uint32_t createComponentTypeRaw(uint32_t bytesPerComponent) noexcept;
 	
 	/// Adds a component of the specified type to the specified entity.
-	void addComponentRaw(uint32_t entity, uint32_t componentType, const uint8_t* component) noexcept;
+	void addComponentRaw(uint32_t entity, uint32_t componentType, const void* component) noexcept;
 
 	/// Removes a component from an entity.
 	void removeComponentRaw(uint32_t entity, uint32_t componentType) noexcept;
 
 	/// Returns the pointer to the internal array of a given type of component.
-	uint8_t* componentArrayRaw(uint32_t componentType) noexcept;
-	const uint8_t* componentArrayRaw(uint32_t componentType) const noexcept;
+	void* componentArrayRaw(uint32_t componentType) noexcept;
+	const void* componentArrayRaw(uint32_t componentType) const noexcept;
 
 	/// Returns the number of components of a specific type.
 	uint32_t numComponents(uint32_t componentType) noexcept;
 
-	/// Returns pointer to the component of specified type for a given entity.
-	uint8_t* getComponentRaw(uint32_t entity, uint32_t componentType) noexcept;
-	const uint8_t* getComponentRaw(uint32_t entity, uint32_t componentType) const noexcept;
+	/// Returns pointer to the component of specified type for a given entity. Returns nullptr if
+	/// component does not exist.
+	void* getComponentRaw(uint32_t entity, uint32_t componentType) noexcept;
+	const void* getComponentRaw(uint32_t entity, uint32_t componentType) const noexcept;
 
 private:
 	// Private members
