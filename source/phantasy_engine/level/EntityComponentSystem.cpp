@@ -14,39 +14,44 @@ namespace phe {
 
 using namespace sfz;
 
-// EntityMask: Constructors & destructors
+// ComponentMask: Constructors & destructors
 // ------------------------------------------------------------------------------------------------
 
-EntityMask EntityMask::empty() noexcept
+ComponentMask ComponentMask::empty() noexcept
 {
-	const __m128i ZERO = _mm_setr_epi64x(0, 0);
-	EntityMask tmp;
-	_mm_store_si128((__m128i*)tmp.rawMask, ZERO);
-	return tmp;
+	return fromRawValue(0, 0);
 }
 
-EntityMask EntityMask::fromComponentType(uint32_t componentType) noexcept
+ComponentMask ComponentMask::fromType(uint32_t componentType) noexcept
 {
 	__m128i val;
 	if (componentType < 64) {
 		uint64_t high = 0;
 		uint64_t low = uint64_t(1) << uint64_t(componentType);
-		val = _mm_setr_epi64x(high, low);
+		val = _mm_setr_epi64x(low, high);
 	}
 	else {
 		uint64_t high = uint64_t(1) << uint64_t(componentType - 64);
 		uint64_t low = 0;
-		val = _mm_setr_epi64x(high, low);
+		val = _mm_setr_epi64x(low, high);
 	}
-	EntityMask tmp;
+	ComponentMask tmp;
 	_mm_store_si128((__m128i*)tmp.rawMask, val);
 	return tmp;
 }
 
-// EntityMask: Operators
+ComponentMask ComponentMask::fromRawValue(uint64_t highBits, uint64_t lowBits) noexcept
+{
+	__m128i val = _mm_setr_epi64x(lowBits, highBits);
+	ComponentMask tmp;
+	_mm_store_si128((__m128i*)tmp.rawMask, val);
+	return tmp;
+}
+
+// ComponentMask: Operators
 // ------------------------------------------------------------------------------------------------
 
-bool EntityMask::operator== (const EntityMask& other) const noexcept
+bool ComponentMask::operator== (const ComponentMask& other) const noexcept
 {
 	__m128i thisReg = _mm_load_si128((const __m128i*)this->rawMask);
 	__m128i otherReg = _mm_load_si128((const __m128i*)other.rawMask);
@@ -55,42 +60,42 @@ bool EntityMask::operator== (const EntityMask& other) const noexcept
 	return uint64_t(_mm_extract_epi64(cmp2, 0)) != uint64_t(0);
 }
 
-bool EntityMask::operator!= (const EntityMask& other) const noexcept
+bool ComponentMask::operator!= (const ComponentMask& other) const noexcept
 {
 	return !(*this == other);
 }
 
-EntityMask EntityMask::operator& (const EntityMask& other) const noexcept
+ComponentMask ComponentMask::operator& (const ComponentMask& other) const noexcept
 {
 	__m128i thisReg = _mm_load_si128((const __m128i*)this->rawMask);
 	__m128i otherReg = _mm_load_si128((const __m128i*)other.rawMask);
 	__m128i comb = _mm_and_si128(thisReg, otherReg);
 
-	EntityMask tmp;
+	ComponentMask tmp;
 	_mm_store_si128((__m128i*)tmp.rawMask, comb);
 	return tmp;
 }
 
-EntityMask EntityMask::operator| (const EntityMask& other) const noexcept
+ComponentMask ComponentMask::operator| (const ComponentMask& other) const noexcept
 {
 	__m128i thisReg = _mm_load_si128((const __m128i*)this->rawMask);
 	__m128i otherReg = _mm_load_si128((const __m128i*)other.rawMask);
 	__m128i disj = _mm_or_si128(thisReg, otherReg);
 
-	EntityMask tmp;
+	ComponentMask tmp;
 	_mm_store_si128((__m128i*)tmp.rawMask, disj);
 	return tmp;
 }
 
-// EntityMask: Methods
+// ComponentMask: Methods
 // ------------------------------------------------------------------------------------------------
 
-bool EntityMask::hasComponentType(uint32_t componentType) const noexcept
+bool ComponentMask::hasComponentType(uint32_t componentType) const noexcept
 {
-	return this->fulfills(EntityMask::fromComponentType(componentType));
+	return this->fulfills(ComponentMask::fromType(componentType));
 }
 
-bool EntityMask::fulfills(const EntityMask& constraints) const noexcept
+bool ComponentMask::fulfills(const ComponentMask& constraints) const noexcept
 {
 	__m128i thisReg = _mm_load_si128((const __m128i*)this->rawMask);
 	__m128i constraintsReg = _mm_load_si128((const __m128i*)constraints.rawMask);
@@ -121,7 +126,7 @@ public:
 	DynArray<uint32_t> freeEntities;
 
 	// Bitmasks used to determine what components an entity has.
-	DynArray<EntityMask> masks;
+	DynArray<ComponentMask> masks;
 
 	// The components
 	DynArray<ComponentType> components;
@@ -138,8 +143,8 @@ public:
 		}
 
 		// Initialize all bitmasks to 0
-		masks = DynArray<EntityMask>(maxNumEntities);
-		memset(masks.data(), 0, maxNumEntities * sizeof(EntityMask));
+		masks = DynArray<ComponentMask>(maxNumEntities);
+		memset(masks.data(), 0, maxNumEntities * sizeof(ComponentMask));
 
 		// Allocate memory for the components and set "existence component"
 		components = DynArray<ComponentType>(1, ECS_MAX_NUM_COMPONENT_TYPES);
@@ -216,8 +221,8 @@ uint32_t EntityComponentSystem::createEntity() noexcept
 	mImpl->freeEntities.removeLast();
 
 	// Sets existence bit
-	EntityMask& mask = mImpl->masks[entity];
-	mask = EntityMask::fromComponentType(0);
+	ComponentMask& mask = mImpl->masks[entity];
+	mask = ComponentMask::fromType(0);
 
 	return entity;
 }
@@ -227,10 +232,10 @@ void EntityComponentSystem::deleteEntity(uint32_t entity) noexcept
 	sfz_assert_debug(entity < mImpl->maxNumEntities);
 
 	// Retrieve mask
-	EntityMask& mask = mImpl->masks[entity];
+	ComponentMask& mask = mImpl->masks[entity];
 	
 	// Check if entity does not exist (first bit is reserved for entity existence)
-	if (mask == EntityMask::empty()) {
+	if (mask == ComponentMask::empty()) {
 		printErrorMessage("EntityComponentSystem: Trying to delete entity that does not exist.");
 		return;
 	}
@@ -243,13 +248,13 @@ void EntityComponentSystem::deleteEntity(uint32_t entity) noexcept
 	}
 
 	// Clear mask
-	mask = EntityMask::empty();
+	mask = ComponentMask::empty();
 
 	// Add entity to list of free entities
 	mImpl->freeEntities.add(entity);
 }
 
-const EntityMask& EntityComponentSystem::componentMask(uint32_t entity) const noexcept
+const ComponentMask& EntityComponentSystem::componentMask(uint32_t entity) const noexcept
 {
 	return mImpl->masks[entity];
 }

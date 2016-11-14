@@ -17,10 +17,10 @@ constexpr uint32_t ECS_MAX_NUM_COMPONENT_TYPES = 128;
 constexpr uint32_t ECS_NUM_BYTES_PER_MASK = ECS_MAX_NUM_COMPONENT_TYPES / 8u;
 constexpr uint64_t ECS_ENTITY_EXISTENCE_MASK = 1u;
 
-// EntityMask
+// ComponentMask
 // ------------------------------------------------------------------------------------------------
 
-struct alignas(ECS_NUM_BYTES_PER_MASK) EntityMask final {
+struct alignas(ECS_NUM_BYTES_PER_MASK) ComponentMask final {
 	// Members
 	// --------------------------------------------------------------------------------------------
 
@@ -29,22 +29,23 @@ struct alignas(ECS_NUM_BYTES_PER_MASK) EntityMask final {
 	// Constructors & destructors
 	// --------------------------------------------------------------------------------------------
 
-	EntityMask() noexcept = default;
-	EntityMask(const EntityMask&) noexcept = default;
-	EntityMask& operator= (const EntityMask&) noexcept = default;
-	~EntityMask() noexcept = default;
+	ComponentMask() noexcept = default;
+	ComponentMask(const ComponentMask&) noexcept = default;
+	ComponentMask& operator= (const ComponentMask&) noexcept = default;
+	~ComponentMask() noexcept = default;
 
-	static EntityMask empty() noexcept;
-	static EntityMask fromComponentType(uint32_t componentType) noexcept;
+	static ComponentMask empty() noexcept;
+	static ComponentMask fromType(uint32_t componentType) noexcept;
+	static ComponentMask fromRawValue(uint64_t highBits, uint64_t lowBits) noexcept;
 
 	// Operators
 	// --------------------------------------------------------------------------------------------
 
-	bool operator== (const EntityMask& other) const noexcept;
-	bool operator!= (const EntityMask& other) const noexcept;
+	bool operator== (const ComponentMask& other) const noexcept;
+	bool operator!= (const ComponentMask& other) const noexcept;
 
-	EntityMask operator& (const EntityMask& other) const noexcept;
-	EntityMask operator| (const EntityMask& other) const noexcept;
+	ComponentMask operator& (const ComponentMask& other) const noexcept;
+	ComponentMask operator| (const ComponentMask& other) const noexcept;
 
 	// Methods
 	// --------------------------------------------------------------------------------------------
@@ -53,10 +54,10 @@ struct alignas(ECS_NUM_BYTES_PER_MASK) EntityMask final {
 	bool hasComponentType(uint32_t componentType) const noexcept;
 
 	/// Checks whether this mask has all the components in the specified parameter mask
-	bool fulfills(const EntityMask& constraints) const noexcept;
+	bool fulfills(const ComponentMask& constraints) const noexcept;
 };
 
-static_assert(sizeof(EntityMask) == ECS_NUM_BYTES_PER_MASK, "EntityMask is padded");
+static_assert(sizeof(ComponentMask) == ECS_NUM_BYTES_PER_MASK, "ComponentMask is padded");
 
 // EntityComponentSystem
 // ------------------------------------------------------------------------------------------------
@@ -115,7 +116,7 @@ public:
 	void deleteEntity(uint32_t entity) noexcept;
 
 	/// Returns the component mask for a given entity.
-	const EntityMask& componentMask(uint32_t entity) const noexcept;
+	const ComponentMask& componentMask(uint32_t entity) const noexcept;
 
 	// Component methods
 	// --------------------------------------------------------------------------------------------
