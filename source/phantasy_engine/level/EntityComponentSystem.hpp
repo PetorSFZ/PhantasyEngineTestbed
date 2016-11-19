@@ -15,7 +15,7 @@ using std::uint64_t;
 
 constexpr uint32_t ECS_MAX_NUM_COMPONENT_TYPES = 128;
 constexpr uint32_t ECS_NUM_BYTES_PER_MASK = ECS_MAX_NUM_COMPONENT_TYPES / 8u;
-constexpr uint64_t ECS_ENTITY_EXISTENCE_MASK = 1u;
+constexpr uint64_t ECS_EXISTENCE_COMPONENT_TYPE = 0u;
 
 // ComponentMask
 // ------------------------------------------------------------------------------------------------
@@ -46,6 +46,7 @@ struct alignas(ECS_NUM_BYTES_PER_MASK) ComponentMask final {
 
 	ComponentMask operator& (const ComponentMask& other) const noexcept;
 	ComponentMask operator| (const ComponentMask& other) const noexcept;
+	ComponentMask operator~ () const noexcept;
 
 	// Methods
 	// --------------------------------------------------------------------------------------------
@@ -118,10 +119,6 @@ public:
 	/// Returns the component mask for a given entity.
 	const ComponentMask& componentMask(uint32_t entity) const noexcept;
 
-	// Component methods
-	// --------------------------------------------------------------------------------------------
-
-
 	// Raw (non-typesafe) component methods
 	// --------------------------------------------------------------------------------------------
 
@@ -132,11 +129,11 @@ public:
 	void addComponentRaw(uint32_t entity, uint32_t componentType, const void* component) noexcept;
 
 	/// Removes a component from an entity.
-	void removeComponentRaw(uint32_t entity, uint32_t componentType) noexcept;
+	void removeComponent(uint32_t entity, uint32_t componentType) noexcept;
 
 	/// Returns the pointer to the internal array of a given type of component.
-	void* componentArrayRaw(uint32_t componentType) noexcept;
-	const void* componentArrayRaw(uint32_t componentType) const noexcept;
+	void* componentArrayPtrRaw(uint32_t componentType) noexcept;
+	const void* componentArrayPtrRaw(uint32_t componentType) const noexcept;
 
 	/// Returns the number of components of a specific type.
 	uint32_t numComponents(uint32_t componentType) noexcept;
@@ -145,6 +142,51 @@ public:
 	/// component does not exist.
 	void* getComponentRaw(uint32_t entity, uint32_t componentType) noexcept;
 	const void* getComponentRaw(uint32_t entity, uint32_t componentType) const noexcept;
+
+	// Component helper methods (not typesafe either)
+	// --------------------------------------------------------------------------------------------
+
+	template<typename T>
+	uint32_t createComponentType() noexcept
+	{
+		static_assert(std::is_pod<T>::value, "Type is not POD");
+		return this->createComponentTypeRaw(sizeof(T));
+	}
+
+	template<typename T>
+	void addComponent(uint32_t entity, uint32_t componentType, const T& component) noexcept
+	{
+		static_assert(std::is_pod<T>::value, "Type is not POD");
+		this->addComponentRaw(entity, componentType, reinterpret_cast<const void*>(&component));
+	}
+
+	template<typename T>
+	T* componentArrayPtr(uint32_t componentType) noexcept
+	{
+		static_assert(std::is_pod<T>::value, "Type is not POD");
+		return reinterpret_cast<T*>(this->componentArrayPtrRaw(componentType));
+	}
+
+	template<typename T>
+	const T* componentArrayPtr(uint32_t componentType) const noexcept
+	{
+		static_assert(std::is_pod<T>::value, "Type is not POD");
+		return reinterpret_cast<const T*>(this->componentArrayPtrRaw(componentType));
+	}
+
+	template<typename T>
+	T* getComponent(uint32_t entity, uint32_t componentType) noexcept
+	{
+		static_assert(std::is_pod<T>::value, "Type is not POD");
+		return reinterpret_cast<T*>(this->getComponentRaw(entity, componentType));
+	}
+
+	template<typename T>
+	const T* getComponent(uint32_t entity, uint32_t componentType) const noexcept
+	{
+		static_assert(std::is_pod<T>::value, "Type is not POD");
+		return reinterpret_cast<const T*>(this->getComponentRaw(entity, componentType));
+	}
 
 private:
 	// Private members

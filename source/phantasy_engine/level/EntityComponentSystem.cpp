@@ -87,6 +87,17 @@ ComponentMask ComponentMask::operator| (const ComponentMask& other) const noexce
 	return tmp;
 }
 
+ComponentMask ComponentMask::operator~ () const noexcept
+{
+	__m128i reg = _mm_load_si128((const __m128i*)this->rawMask);
+	__m128i ones; ones = _mm_cmpeq_epi8(ones, ones);
+	__m128i negated = _mm_xor_si128(reg, ones);
+
+	ComponentMask tmp;
+	_mm_store_si128((__m128i*)tmp.rawMask, negated);
+	return tmp;
+}
+
 // ComponentMask: Methods
 // ------------------------------------------------------------------------------------------------
 
@@ -113,6 +124,7 @@ bool ComponentMask::fulfills(const ComponentMask& constraints) const noexcept
 
 struct ComponentType {
 	uint32_t bytesPerComponent;
+	uint32_t numComponents;
 	DynArray<uint32_t> entityTable;
 	DynArray<uint8_t> data;
 };
@@ -149,6 +161,7 @@ public:
 		// Allocate memory for the components and set "existence component"
 		components = DynArray<ComponentType>(1, ECS_MAX_NUM_COMPONENT_TYPES);
 		components[0].bytesPerComponent = 0;
+		components[0].numComponents = 0;
 	}
 
 	~EntityComponentSystemImpl() noexcept
@@ -243,7 +256,7 @@ void EntityComponentSystem::deleteEntity(uint32_t entity) noexcept
 	// Remove all associated components (skip 0, it is existence flag)
 	for (uint32_t i = 1; i < this->currentNumComponentTypes(); i++) {
 		if (mask.hasComponentType(i)) {
-			this->removeComponentRaw(entity, i);
+			this->removeComponent(entity, i);
 		}
 	}
 
@@ -259,10 +272,6 @@ const ComponentMask& EntityComponentSystem::componentMask(uint32_t entity) const
 	return mImpl->masks[entity];
 }
 
-// EntityComponentSystem: Component methods
-// ------------------------------------------------------------------------------------------------
-
-
 // EntityComponentSystem: Raw (non-typesafe) component methods
 // ------------------------------------------------------------------------------------------------
 
@@ -273,6 +282,7 @@ uint32_t EntityComponentSystem::createComponentTypeRaw(uint32_t bytesPerComponen
 	tmp.bytesPerComponent = bytesPerComponent;
 	tmp.entityTable = DynArray<uint32_t>(maxNumEntities(), ~0u, maxNumEntities());
 	tmp.data.setCapacity(bytesPerComponent * maxNumEntities());
+	tmp.data.setSize(bytesPerComponent * maxNumEntities());
 
 	// Add component type and return index for it
 	mImpl->components.add(std::move(tmp));
@@ -291,9 +301,10 @@ void EntityComponentSystem::addComponentRaw(uint32_t entity, uint32_t componentT
 
 	// If entity does not have component it needs to be added
 	if (componentLoc == ~0u) {
-		componentLoc = compType.data.size();
-		compType.data.setSize(componentLoc + 1);
+		componentLoc = compType.numComponents;
+		compType.numComponents += 1u;
 		compType.entityTable[entity] = componentLoc;
+		mImpl->masks[entity] = mImpl->masks[entity] | ComponentMask::fromType(componentType);
 	}
 
 	// Copy data
@@ -301,7 +312,7 @@ void EntityComponentSystem::addComponentRaw(uint32_t entity, uint32_t componentT
 	memcpy(componentPtr, component, compType.bytesPerComponent);
 }
 
-void EntityComponentSystem::removeComponentRaw(uint32_t entity, uint32_t componentType) noexcept
+void EntityComponentSystem::removeComponent(uint32_t entity, uint32_t componentType) noexcept
 {
 	sfz_assert_debug(componentType < mImpl->components.size());
 	ComponentType& compType = mImpl->components[componentType];
@@ -317,17 +328,32 @@ void EntityComponentSystem::removeComponentRaw(uint32_t entity, uint32_t compone
 	}
 
 	// Remove component
-	compType.data.remove(componentLoc);
+	uint8_t* dstPtr = compType.data.data() + compType.bytesPerComponent * componentLoc;
+	uint8_t* srcPtr = compType.data.data() + compType.bytesPerComponent * (componentLoc + 1u);
+	uint32_t numBytesToMove = (mImpl->maxNumEntities - componentLoc - 1u) * compType.bytesPerComponent;
+	std::memmove(dstPtr, srcPtr, numBytesToMove);
+	compType.numComponents -= 1;
+
 	compType.entityTable[entity] = ~0u;
+	mImpl->masks[entity] = mImpl->masks[entity] & (~ComponentMask::fromType(componentType));
+
+	// Update all indices larger than removed index
+	// TODO: Do something smarter than maxNumEntities
+	for (uint32_t i = 0; i < mImpl->maxNumEntities; i++) {
+		uint32_t compLoc = compType.entityTable[i];
+		if (compLoc != ~0u && compLoc > componentLoc) {
+			compType.entityTable[i] = compLoc - 1u;
+		}
+	}
 }
 
-void* EntityComponentSystem::componentArrayRaw(uint32_t componentType) noexcept
+void* EntityComponentSystem::componentArrayPtrRaw(uint32_t componentType) noexcept
 {
 	sfz_assert_debug(componentType < mImpl->components.size());
 	return mImpl->components[componentType].data.data();
 }
 
-const void* EntityComponentSystem::componentArrayRaw(uint32_t componentType) const noexcept
+const void* EntityComponentSystem::componentArrayPtrRaw(uint32_t componentType) const noexcept
 {
 	sfz_assert_debug(componentType < mImpl->components.size());
 	return mImpl->components[componentType].data.data();
@@ -336,7 +362,7 @@ const void* EntityComponentSystem::componentArrayRaw(uint32_t componentType) con
 uint32_t EntityComponentSystem::numComponents(uint32_t componentType) noexcept
 {
 	sfz_assert_debug(componentType < mImpl->components.size());
-	return mImpl->components[componentType].data.size();
+	return mImpl->components[componentType].numComponents;
 }
 
 void* EntityComponentSystem::getComponentRaw(uint32_t entity, uint32_t componentType) noexcept

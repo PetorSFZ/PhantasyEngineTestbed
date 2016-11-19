@@ -86,6 +86,10 @@ TEST_CASE("Component creation/deletion", "[EntityComponentSystem]")
 	const uint32_t e1 = ecs.createEntity();
 	const uint32_t e2 = ecs.createEntity();
 	const uint32_t e3 = ecs.createEntity();
+	ComponentMask existenceMask = ComponentMask::fromType(ECS_EXISTENCE_COMPONENT_TYPE);
+	REQUIRE(ecs.componentMask(e1) == existenceMask);
+	REQUIRE(ecs.componentMask(e2) == existenceMask);
+	REQUIRE(ecs.componentMask(e3) == existenceMask);
 
 	REQUIRE(ecs.currentNumComponentTypes() == 1);
 	const uint32_t byteComponent = ecs.createComponentTypeRaw(1);
@@ -95,13 +99,61 @@ TEST_CASE("Component creation/deletion", "[EntityComponentSystem]")
 	REQUIRE(ecs.numComponents(uintComponent) == 0);
 	REQUIRE(ecs.currentNumComponentTypes() == 3);
 
-	uint8_t tmpByte = 'a';
-	ecs.addComponentRaw(e1, byteComponent, &tmpByte);
-	REQUIRE(ecs.numComponents(byteComponent) == 1);
-	tmpByte = 'c';
-	ecs.addComponentRaw(e3, byteComponent, &tmpByte);
-	REQUIRE(ecs.numComponents(byteComponent) == 2);
+	ComponentMask byteMask = ComponentMask::fromType(byteComponent);
+	ComponentMask uintMask = ComponentMask::fromType(uintComponent);
+	REQUIRE(existenceMask != byteMask);
+	REQUIRE(existenceMask != uintMask);
+	REQUIRE(byteMask != uintMask);
 
-	REQUIRE(*(const uint8_t*)ecs.getComponentRaw(e1, byteComponent) == 'a');
-	REQUIRE(*(const uint8_t*)ecs.getComponentRaw(e3, byteComponent) == 'c');
+	ComponentMask existenceByteMask = existenceMask | byteMask;
+	ComponentMask existenceUintMask = existenceMask | uintMask;
+	ComponentMask byteUintMask = byteMask | uintMask;
+	ComponentMask existenceByteUintMask = existenceMask | byteUintMask;
+	REQUIRE(existenceByteMask.fulfills(existenceMask));
+	REQUIRE(!existenceByteMask.fulfills(existenceByteUintMask));
+
+	ecs.addComponent<uint8_t>(e1, byteComponent, 'a');
+	REQUIRE(ecs.numComponents(byteComponent) == 1);
+	ecs.addComponent<uint8_t>(e3, byteComponent, 'c');
+	REQUIRE(ecs.numComponents(byteComponent) == 2);
+	REQUIRE(*ecs.getComponent<uint8_t>(e1, byteComponent) == 'a');
+	REQUIRE(*ecs.getComponent<uint8_t>(e3, byteComponent) == 'c');
+	REQUIRE(ecs.componentMask(e1) == existenceByteMask);
+	REQUIRE(ecs.componentMask(e2) == existenceMask);
+	REQUIRE(ecs.componentMask(e3) == existenceByteMask);
+
+	const uint8_t* bytePtr = ecs.componentArrayPtr<uint8_t>(byteComponent);
+	REQUIRE(bytePtr[0] == 'a');
+	REQUIRE(bytePtr[1] == 'c');
+
+	ecs.addComponent<uint32_t>(e1, uintComponent, ~0u);
+	ecs.addComponent<uint32_t>(e3, uintComponent, 42u);
+	REQUIRE(ecs.numComponents(uintComponent) == 2);
+	REQUIRE(*ecs.getComponent<uint32_t>(e1, uintComponent) == ~0u);
+	REQUIRE(*ecs.getComponent<uint32_t>(e3, uintComponent) == 42u);
+	ecs.addComponent(e3, uintComponent, 37u);
+	REQUIRE(ecs.numComponents(uintComponent) == 2);
+	REQUIRE(*ecs.getComponent<uint32_t>(e3, uintComponent) == 37u);
+	REQUIRE(ecs.componentMask(e1) == existenceByteUintMask);
+	REQUIRE(ecs.componentMask(e2) == existenceMask);
+	REQUIRE(ecs.componentMask(e3) == existenceByteUintMask);
+	
+	const uint32_t* uintPtr = ecs.componentArrayPtr<uint32_t>(uintComponent);
+	REQUIRE(uintPtr[0] == ~0u);
+	REQUIRE(uintPtr[1] == 37u);
+
+	ecs.removeComponent(e1, uintComponent);
+	REQUIRE(ecs.numComponents(uintComponent) == 1);
+	REQUIRE(*ecs.getComponent<uint32_t>(e3, uintComponent) == 37u);
+	REQUIRE(ecs.componentMask(e1) == existenceByteMask);
+	REQUIRE(ecs.componentMask(e2) == existenceMask);
+	REQUIRE(ecs.componentMask(e3) == existenceByteUintMask);
+	REQUIRE(uintPtr[0] == 37u);
+
+	ecs.addComponent<uint32_t>(e2, uintComponent, 42u);
+	REQUIRE(ecs.numComponents(uintComponent) == 2);
+	REQUIRE(*ecs.getComponent<uint32_t>(e2, uintComponent) == 42u);
+	REQUIRE(*ecs.getComponent<uint32_t>(e3, uintComponent) == 37u);
+	REQUIRE(uintPtr[0] == 37u);
+	REQUIRE(uintPtr[1] == 42u);
 }
