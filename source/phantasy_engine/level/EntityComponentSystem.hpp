@@ -101,6 +101,11 @@ public:
 	/// Returns the current number of entities in this system
 	uint32_t currentNumEntities() const noexcept;
 
+	/// Gives an upper bound for the index values of the current entities. This value should be
+	/// used when iterating over all entities. Guaranteed to be at least 1 bigger than the
+	/// currently highest index, but not guaranteed to be lower than currentNumEntities().
+	uint32_t entityIndexUpperBound() const noexcept;
+
 	/// Returns the current number of component types in this system. The maximum number is defined
 	/// by the MAX_NUM_COMPONENT_TYPES constant.
 	uint32_t currentNumComponentTypes() const noexcept;

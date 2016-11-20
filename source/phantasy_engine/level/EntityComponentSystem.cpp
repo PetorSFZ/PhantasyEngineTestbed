@@ -134,8 +134,9 @@ public:
 	// The maximum number of entities allowed
 	uint32_t maxNumEntities;
 
-	// All currently free entity indices in this system
-	DynArray<uint32_t> freeEntities;
+	// Keeps track of the next index to allocate, and any eventual unallocated slots
+	uint32_t nextFreeEntity;
+	DynArray<uint32_t> freeSlots;
 
 	// Bitmasks used to determine what components an entity has.
 	DynArray<ComponentMask> masks;
@@ -147,12 +148,9 @@ public:
 	{
 		this->maxNumEntities = maxNumEntities;
 
-		// Create and fill freeEntities with all free indices
-		freeEntities.setCapacity(maxNumEntities);
-		freeEntities.setSize(maxNumEntities);
-		for (uint32_t i = 0; i < maxNumEntities; i++) {
-			freeEntities[i] = maxNumEntities - i - 1u;
-		}
+		// Initialize number of entities
+		this->nextFreeEntity = 0;
+		freeSlots.setCapacity(1024);
 
 		// Initialize all bitmasks to 0
 		masks = DynArray<ComponentMask>(maxNumEntities);
@@ -215,7 +213,12 @@ uint32_t EntityComponentSystem::maxNumEntities() const noexcept
 
 uint32_t EntityComponentSystem::currentNumEntities() const noexcept
 {
-	return mImpl->maxNumEntities - mImpl->freeEntities.size();
+	return mImpl->nextFreeEntity - mImpl->freeSlots.size();
+}
+
+uint32_t EntityComponentSystem::entityIndexUpperBound() const noexcept
+{
+	return mImpl->nextFreeEntity;
 }
 
 uint32_t EntityComponentSystem::currentNumComponentTypes() const noexcept
@@ -228,10 +231,18 @@ uint32_t EntityComponentSystem::currentNumComponentTypes() const noexcept
 
 uint32_t EntityComponentSystem::createEntity() noexcept
 {
-	// Get free entity
-	sfz_assert_release(mImpl->freeEntities.size() > 0);
-	uint32_t entity = mImpl->freeEntities.last();
-	mImpl->freeEntities.removeLast();
+	sfz_assert_debug(this->currentNumEntities() < this->maxNumEntities());
+
+	// Get free entity (prefer from free list)
+	uint32_t entity;
+	if (mImpl->freeSlots.size() > 0u) {
+		entity = mImpl->freeSlots.last();
+		mImpl->freeSlots.removeLast();
+	}
+	else {
+		entity = mImpl->nextFreeEntity;
+		mImpl->nextFreeEntity += 1u;
+	}
 
 	// Sets existence bit
 	ComponentMask& mask = mImpl->masks[entity];
@@ -263,8 +274,13 @@ void EntityComponentSystem::deleteEntity(uint32_t entity) noexcept
 	// Clear mask
 	mask = ComponentMask::empty();
 
-	// Add entity to list of free entities
-	mImpl->freeEntities.add(entity);
+	// Add entity to free list if it is not the highest entity index
+	if ((entity + 1) == mImpl->nextFreeEntity) {
+		mImpl->nextFreeEntity = entity;
+	}
+	else {
+		mImpl->freeSlots.add(entity);
+	}
 }
 
 const ComponentMask& EntityComponentSystem::componentMask(uint32_t entity) const noexcept
@@ -338,8 +354,7 @@ void EntityComponentSystem::removeComponent(uint32_t entity, uint32_t componentT
 	mImpl->masks[entity] = mImpl->masks[entity] & (~ComponentMask::fromType(componentType));
 
 	// Update all indices larger than removed index
-	// TODO: Do something smarter than maxNumEntities
-	for (uint32_t i = 0; i < mImpl->maxNumEntities; i++) {
+	for (uint32_t i = 0; i < this->entityIndexUpperBound(); i++) {
 		uint32_t compLoc = compType.entityTable[i];
 		if (compLoc != ~0u && compLoc > componentLoc) {
 			compType.entityTable[i] = compLoc - 1u;
