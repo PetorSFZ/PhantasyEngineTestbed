@@ -91,10 +91,6 @@ set(PHANTASY_ENGINE_LIB_FILES
 	${PH_INCLUDE_DIR}/config/Setting.hpp
 	 ${PH_SOURCE_DIR}/config/Setting.cpp
 
-	${PH_INCLUDE_DIR}/CPUTracerRenderer.hpp
-	${PH_INCLUDE_DIR}/cpu_tracer_renderer/CPUTracerRenderer.hpp
-	 ${PH_SOURCE_DIR}/cpu_tracer_renderer/CPUTracerRenderer.cpp
-
 	${PH_INCLUDE_DIR}/DeferredRenderer.hpp
 	${PH_INCLUDE_DIR}/deferred_renderer/DeferredRenderer.hpp
 	 ${PH_SOURCE_DIR}/deferred_renderer/DeferredRenderer.cpp

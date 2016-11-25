@@ -45,7 +45,7 @@ int main(int, char**)
 
 	// Retrieve global config and add testbed specific settings
 	GlobalConfig& cfg = GlobalConfig::instance();
-	Setting* renderingBackendSetting = cfg.sanitizeInt("PhantasyEngineTestbed", "renderingBackend", 0, 0, 2);
+	Setting* renderingBackendSetting = cfg.sanitizeInt("PhantasyEngineTestbed", "renderingBackend", 0, 0, 1);
 
 	cfg.sanitizeFloat("PhantasyEngineTestbed", "sphereColourR", 1.0f, 0.0f, 1.0f);
 	cfg.sanitizeFloat("PhantasyEngineTestbed", "sphereColourG", 1.0f, 0.0f, 1.0f);
