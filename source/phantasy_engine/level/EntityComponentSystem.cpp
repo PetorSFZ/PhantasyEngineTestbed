@@ -192,7 +192,7 @@ EntityComponentSystem::~EntityComponentSystem() noexcept
 	this->destroy();
 }
 
-// EntityComponentSystem: State methods & getters
+// EntityComponentSystem: State methods
 // ------------------------------------------------------------------------------------------------
 
 void EntityComponentSystem::destroy() noexcept
@@ -204,26 +204,6 @@ void EntityComponentSystem::destroy() noexcept
 void EntityComponentSystem::swap(EntityComponentSystem& other) noexcept
 {
 	std::swap(this->mImpl, other.mImpl);
-}
-
-uint32_t EntityComponentSystem::maxNumEntities() const noexcept
-{
-	return mImpl->maxNumEntities;
-}
-
-uint32_t EntityComponentSystem::currentNumEntities() const noexcept
-{
-	return mImpl->nextFreeEntity - mImpl->freeSlots.size();
-}
-
-uint32_t EntityComponentSystem::entityIndexUpperBound() const noexcept
-{
-	return mImpl->nextFreeEntity;
-}
-
-uint32_t EntityComponentSystem::currentNumComponentTypes() const noexcept
-{
-	return mImpl->components.size();
 }
 
 // EntityComponentSystem: Entity methods
@@ -288,6 +268,26 @@ const ComponentMask& EntityComponentSystem::componentMask(uint32_t entity) const
 	return mImpl->masks[entity];
 }
 
+const ComponentMask* EntityComponentSystem::componentMaskArrayPtr() const noexcept
+{
+	return mImpl->masks.data();
+}
+
+uint32_t EntityComponentSystem::maxNumEntities() const noexcept
+{
+	return mImpl->maxNumEntities;
+}
+
+uint32_t EntityComponentSystem::currentNumEntities() const noexcept
+{
+	return mImpl->nextFreeEntity - mImpl->freeSlots.size();
+}
+
+uint32_t EntityComponentSystem::entityIndexUpperBound() const noexcept
+{
+	return mImpl->nextFreeEntity;
+}
+
 // EntityComponentSystem: Raw (non-typesafe) component methods
 // ------------------------------------------------------------------------------------------------
 
@@ -303,6 +303,11 @@ uint32_t EntityComponentSystem::createComponentTypeRaw(uint32_t bytesPerComponen
 	// Add component type and return index for it
 	mImpl->components.add(std::move(tmp));
 	return mImpl->components.size() - 1u;
+}
+
+uint32_t EntityComponentSystem::currentNumComponentTypes() const noexcept
+{
+	return mImpl->components.size();
 }
 
 void EntityComponentSystem::addComponentRaw(uint32_t entity, uint32_t componentType,
