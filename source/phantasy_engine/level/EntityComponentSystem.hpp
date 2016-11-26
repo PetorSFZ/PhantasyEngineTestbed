@@ -180,51 +180,6 @@ public:
 	void* getComponentRaw(uint32_t entity, uint32_t componentType) noexcept;
 	const void* getComponentRaw(uint32_t entity, uint32_t componentType) const noexcept;
 
-	// Component helper methods (not typesafe either)
-	// --------------------------------------------------------------------------------------------
-
-	template<typename T>
-	uint32_t createComponentType() noexcept
-	{
-		static_assert(std::is_pod<T>::value, "Type is not POD");
-		return this->createComponentTypeRaw(sizeof(T));
-	}
-
-	template<typename T>
-	void addComponent(uint32_t entity, uint32_t componentType, const T& component) noexcept
-	{
-		static_assert(std::is_pod<T>::value, "Type is not POD");
-		this->addComponentRaw(entity, componentType, reinterpret_cast<const void*>(&component));
-	}
-
-	template<typename T>
-	T* componentArrayPtr(uint32_t componentType) noexcept
-	{
-		static_assert(std::is_pod<T>::value, "Type is not POD");
-		return reinterpret_cast<T*>(this->componentArrayPtrRaw(componentType));
-	}
-
-	template<typename T>
-	const T* componentArrayPtr(uint32_t componentType) const noexcept
-	{
-		static_assert(std::is_pod<T>::value, "Type is not POD");
-		return reinterpret_cast<const T*>(this->componentArrayPtrRaw(componentType));
-	}
-
-	template<typename T>
-	T* getComponent(uint32_t entity, uint32_t componentType) noexcept
-	{
-		static_assert(std::is_pod<T>::value, "Type is not POD");
-		return reinterpret_cast<T*>(this->getComponentRaw(entity, componentType));
-	}
-
-	template<typename T>
-	const T* getComponent(uint32_t entity, uint32_t componentType) const noexcept
-	{
-		static_assert(std::is_pod<T>::value, "Type is not POD");
-		return reinterpret_cast<const T*>(this->getComponentRaw(entity, componentType));
-	}
-
 private:
 	// Private members
 	// --------------------------------------------------------------------------------------------

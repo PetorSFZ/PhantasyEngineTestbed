@@ -4,6 +4,7 @@
 #include <catch.hpp>
 #include <sfz/PopWarnings.hpp>
 
+#include "phantasy_engine/level/EcsComponentAccessor.hpp"
 #include "phantasy_engine/level/EntityComponentSystem.hpp"
 
 using namespace phe;
@@ -95,12 +96,13 @@ TEST_CASE("Component creation/deletion", "[EntityComponentSystem]")
 	const uint32_t byteComponent = ecs.createComponentTypeRaw(1);
 	REQUIRE(ecs.numComponents(byteComponent) == 0);
 	REQUIRE(ecs.currentNumComponentTypes() == 2);
-	const uint32_t uintComponent = ecs.createComponentTypeRaw(4);
-	REQUIRE(ecs.numComponents(uintComponent) == 0);
+
+	EcsComponentAccessor<uint32_t> uintAccessor(ecs);
+	REQUIRE(uintAccessor.numComponents() == 0);
 	REQUIRE(ecs.currentNumComponentTypes() == 3);
 
 	ComponentMask byteMask = ComponentMask::fromType(byteComponent);
-	ComponentMask uintMask = ComponentMask::fromType(uintComponent);
+	ComponentMask uintMask = uintAccessor.mask();
 	REQUIRE(existenceMask != byteMask);
 	REQUIRE(existenceMask != uintMask);
 	REQUIRE(byteMask != uintMask);
@@ -112,48 +114,50 @@ TEST_CASE("Component creation/deletion", "[EntityComponentSystem]")
 	REQUIRE(existenceByteMask.fulfills(existenceMask));
 	REQUIRE(!existenceByteMask.fulfills(existenceByteUintMask));
 
-	ecs.addComponent<uint8_t>(e1, byteComponent, 'a');
+	uint8_t byteTmp = 'a';
+	ecs.addComponentRaw(e1, byteComponent, &byteTmp);
 	REQUIRE(ecs.numComponents(byteComponent) == 1);
-	ecs.addComponent<uint8_t>(e3, byteComponent, 'c');
+	byteTmp = 'c';
+	ecs.addComponentRaw(e3, byteComponent, &byteTmp);
 	REQUIRE(ecs.numComponents(byteComponent) == 2);
-	REQUIRE(*ecs.getComponent<uint8_t>(e1, byteComponent) == 'a');
-	REQUIRE(*ecs.getComponent<uint8_t>(e3, byteComponent) == 'c');
+	REQUIRE(*(const uint8_t*)ecs.getComponentRaw(e1, byteComponent) == 'a');
+	REQUIRE(*(const uint8_t*)ecs.getComponentRaw(e3, byteComponent) == 'c');
 	REQUIRE(ecs.componentMask(e1) == existenceByteMask);
 	REQUIRE(ecs.componentMask(e2) == existenceMask);
 	REQUIRE(ecs.componentMask(e3) == existenceByteMask);
 
-	const uint8_t* bytePtr = ecs.componentArrayPtr<uint8_t>(byteComponent);
+	const uint8_t* bytePtr = (const uint8_t*)ecs.componentArrayPtrRaw(byteComponent);
 	REQUIRE(bytePtr[0] == 'a');
 	REQUIRE(bytePtr[1] == 'c');
 
-	ecs.addComponent<uint32_t>(e1, uintComponent, ~0u);
-	ecs.addComponent<uint32_t>(e3, uintComponent, 42u);
-	REQUIRE(ecs.numComponents(uintComponent) == 2);
-	REQUIRE(*ecs.getComponent<uint32_t>(e1, uintComponent) == ~0u);
-	REQUIRE(*ecs.getComponent<uint32_t>(e3, uintComponent) == 42u);
-	ecs.addComponent(e3, uintComponent, 37u);
-	REQUIRE(ecs.numComponents(uintComponent) == 2);
-	REQUIRE(*ecs.getComponent<uint32_t>(e3, uintComponent) == 37u);
+	uintAccessor.add(e1, ~0u);
+	uintAccessor.add(e3, 42u);
+	REQUIRE(uintAccessor.numComponents() == 2);
+	REQUIRE(*uintAccessor.get(e1) == ~0u);
+	REQUIRE(*uintAccessor.get(e3) == 42u);
+	uintAccessor.add(e3, 37u);
+	REQUIRE(uintAccessor.numComponents() == 2);
+	REQUIRE(*uintAccessor.get(e3) == 37u);
 	REQUIRE(ecs.componentMask(e1) == existenceByteUintMask);
 	REQUIRE(ecs.componentMask(e2) == existenceMask);
 	REQUIRE(ecs.componentMask(e3) == existenceByteUintMask);
 	
-	const uint32_t* uintPtr = ecs.componentArrayPtr<uint32_t>(uintComponent);
+	const uint32_t* uintPtr = uintAccessor.arrayPtr();
 	REQUIRE(uintPtr[0] == ~0u);
 	REQUIRE(uintPtr[1] == 37u);
 
-	ecs.removeComponent(e1, uintComponent);
-	REQUIRE(ecs.numComponents(uintComponent) == 1);
-	REQUIRE(*ecs.getComponent<uint32_t>(e3, uintComponent) == 37u);
+	uintAccessor.remove(e1);
+	REQUIRE(uintAccessor.numComponents() == 1);
+	REQUIRE(*uintAccessor.get(e3) == 37u);
 	REQUIRE(ecs.componentMask(e1) == existenceByteMask);
 	REQUIRE(ecs.componentMask(e2) == existenceMask);
 	REQUIRE(ecs.componentMask(e3) == existenceByteUintMask);
 	REQUIRE(uintPtr[0] == 37u);
 
-	ecs.addComponent<uint32_t>(e2, uintComponent, 42u);
-	REQUIRE(ecs.numComponents(uintComponent) == 2);
-	REQUIRE(*ecs.getComponent<uint32_t>(e2, uintComponent) == 42u);
-	REQUIRE(*ecs.getComponent<uint32_t>(e3, uintComponent) == 37u);
+	uintAccessor.add(e2, 42u);
+	REQUIRE(uintAccessor.numComponents() == 2);
+	REQUIRE(*uintAccessor.get(e2) == 42u);
+	REQUIRE(*uintAccessor.get(e3) == 37u);
 	REQUIRE(uintPtr[0] == 37u);
 	REQUIRE(uintPtr[1] == 42u);
 }

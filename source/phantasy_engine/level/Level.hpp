@@ -16,6 +16,20 @@ namespace phe {
 using sfz::DynArray;
 using sfz::HashMap;
 
+// Built-in component types
+// ------------------------------------------------------------------------------------------------
+
+struct GraphicsComponent final {
+	mat4 transform;
+	uint32_t meshIndex;
+	vec3 velocity; // TODO: Should perhaps not be here?
+};
+
+static_assert(sizeof(GraphicsComponent) == ((4 * 4 + 4) * 4), "GraphicsComponent is padded");
+
+// Level struct
+// ------------------------------------------------------------------------------------------------
+
 struct Level final {
 	// Textures and materials, shared between static and dynamic objects
 	DynArray<RawImage> textures;
