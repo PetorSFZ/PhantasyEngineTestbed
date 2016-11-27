@@ -13,15 +13,28 @@
 
 using namespace sfz;
 
-/*uint32_t spawnObjectInstance(uint32_t meshId, phe::Level& level, mat4 transform)
-{
-	phe::DynObject obj;
-	obj.meshIndex = meshId;
-	obj.transform = transform;
+// Statics
+// ------------------------------------------------------------------------------------------------
 
-	level.objects.add(obj);
-	return level.objects.size() - 1;
-}*/
+static const int numBalls = 50;
+static const float distance = 91.0f;
+static const float period = (distance / 2.5f) / (2.0f * sfz::PI());
+static const float amplitude = 5.0f;
+static const float xOffset = -4.0f - (distance / 2.0f);
+
+static uint32_t spawnObject(uint32_t meshId, phe::Level& level, const mat4& transform) noexcept
+{
+	uint32_t entity = level.ecs.createEntity();
+	
+	phe::RenderComponent rendComp;
+	rendComp.meshIndex = meshId;
+	rendComp.transform = transform;
+	rendComp.velocity = vec3(0.0f);
+
+	level.ecsRenderComponents.add(entity, rendComp);
+
+	return entity;
+}
 
 // TestbedLogic: Constructors & destructors
 // ------------------------------------------------------------------------------------------------
@@ -31,33 +44,25 @@ TestbedLogic::TestbedLogic(DynArray<RendererAndStatus>&& renderers, uint32_t ren
 	mRenderers(std::move(renderers)),
 	mCurrentRenderer(rendererIndex)
 {
-	/*instanceHandles.add(spawnObjectInstance(0, level, identityMatrix4<float>()));
-	objectPositions.put(0, vec3(0, 0, 0));
-
-	const int numBalls = 50;
-	const float distance = 91.0f;
-	const float period = (distance / 2.5f) / (2.0f * sfz::PI());
-	const float amplitude = 5.0f;
-	const float xOffset = -4.0f - (distance / 2.0f);
-
-
+	// Spawn christmas ball entities
 	// 2 * 2 * 51 balls
 	for (int height = 0; height < 2; height++)
 	for (int side = 0; side < 2; side++)
 	for (int i = 0; i <= numBalls; i++) { // Well well well... Don't want one ball missing at the end, do we? Just a little cheat to fix it easily...
+		
+		Ball tmpBall;
 		float xPos = i * (distance / numBalls);
-
-		vec3 pos = vec3(xPos + xOffset, (height & 1 ? 40.0f : 15.0f) - abs(sinf(xPos / period) * amplitude), side & 1 ? 7.0f : -11.0f);
-		uint32_t handle = spawnObjectInstance(i & 1 ? 1 : 2, level, translationMatrix(pos));
-		instanceHandles.add(handle);
-		objectPositions.put(handle, pos);
-	}*/
+		tmpBall.basePos = vec3(xPos + xOffset,
+		                       ((height == 1) ? 40.0f : 15.0f) - abs(sin(xPos / period) * amplitude),
+		                       (side == 1) ? 7.0f : -11.0f);
+		tmpBall.entity = spawnObject(((i % 2) == 0) ? 1 : 2, level, translationMatrix(tmpBall.basePos));
+		tmpBall.timeOffset = xPos;
+		mChristmasBalls.add(tmpBall);
+	}
 }
 
 // TestbedLogic: Overriden methods from GameLogic
 // ------------------------------------------------------------------------------------------------
-
-static float accumulatedTime = 0;
 
 UpdateOp TestbedLogic::update(GameScreen& screen, UpdateState& state) noexcept
 {
@@ -67,34 +72,39 @@ UpdateOp TestbedLogic::update(GameScreen& screen, UpdateState& state) noexcept
 	auto& cfg = phe::GlobalConfig::instance();
 	phe::Setting* renderingBackendSetting = cfg.getSetting("PhantasyEngineTestbed", "renderingBackend");
 
-	/*accumulatedTime += 10 * state.delta;
-	if (accumulatedTime > 200 * PI()) accumulatedTime -= 200 * PI();
+	// Move christmas balls
+	for (Ball& ball : mChristmasBalls) {
+		auto& rendComp = *screen.level->ecsRenderComponents.get(ball.entity);
 
-	const int numBalls = 50;
-	const float distance = 91.0f;
-	const float period = (distance / 2.5f) / (2.0f * sfz::PI());
+		ball.timeOffset += state.delta;
+		if (ball.timeOffset > 200 * PI()) ball.timeOffset -= 200 * PI();
 
-	// Move balls
-	for (int height = 0; height < 2; height++)
-	for (int side = 0; side < 2; side++)
-	for (int ball = 0; ball <= numBalls; ball++) {
-		int handle = 1 + height * 2 * (numBalls+1) + side * (numBalls+1) + ball;
-		float xPos = ball * (distance / numBalls);
-		vec3& pos = objectPositions[handle];
-		vec3 prevPos = pos;
-		vec3& velocity = screen.level->objects[handle].velocity;
-		pos = objectPositions[handle] + vec3((sinf(accumulatedTime / 8.0f + handle)) * sinf(xPos / period) / 10.0f, 0.0f, (sinf(accumulatedTime / 4.0f + handle)) * sinf(xPos / period) / 10.0f) * state.delta;
-		velocity = (pos - prevPos) / state.delta;
-		screen.level->objects[handle].transform = translationMatrix(pos);
+		vec3 pos = ball.basePos;
+		pos += vec3(sin(ball.timeOffset * 0.85f) * 0.045f,
+		            0.0f,
+		            sin(ball.timeOffset * 0.85f) * 0.05f);
+
+		vec3 prevPos = translation(rendComp.transform);
+		rendComp.velocity = (pos - prevPos) / state.delta;
+		rendComp.transform = translationMatrix(pos);
 	}
 
-	for (int handle : movingInstanceHandles) {
-		vec3& pos = objectPositions[handle];
-		vec3& velocity = screen.level->objects[handle].velocity;
-		velocity = vec3(0.0f, cos(accumulatedTime) - sin(accumulatedTime / 4), sin(accumulatedTime) - cos(accumulatedTime / 4)) * 10.0f;
-		pos += velocity * state.delta;
-		screen.level->objects[handle].transform = translationMatrix(pos);
-	}*/
+	// Move balls
+	for (Ball& ball : mMovingBalls) {
+		auto& rendComp = *screen.level->ecsRenderComponents.get(ball.entity);
+
+		ball.timeOffset += state.delta;
+		if (ball.timeOffset > 200 * PI()) ball.timeOffset -= 200 * PI();
+
+		vec3 pos = ball.basePos;
+		pos += vec3(0.0f,
+		            sin(ball.timeOffset * 1.25f) * 3.0f,
+		            cos(ball.timeOffset * 1.25f) * 3.0f);
+
+		vec3 prevPos = translation(rendComp.transform);
+		rendComp.velocity = (pos - prevPos) / state.delta;
+		rendComp.transform = translationMatrix(pos);
+	}
 
 	// Handle input
 	for (const SDL_Event& event : state.events) {
@@ -193,7 +203,7 @@ UpdateOp TestbedLogic::update(GameScreen& screen, UpdateState& state) noexcept
 
 	// Face buttons
 	if (ctrl.y == ButtonState::DOWN) {
-		/*vec3 pos = screen.cam.pos();
+		vec3 pos = screen.cam.pos() + screen.cam.dir() * 4.0f;
 
 		float r = cfg.getSetting("PhantasyEngineTestbed", "sphereColourR")->floatValue();
 		float g = cfg.getSetting("PhantasyEngineTestbed", "sphereColourG")->floatValue();
@@ -205,7 +215,7 @@ UpdateOp TestbedLogic::update(GameScreen& screen, UpdateState& state) noexcept
 		StackString192 modelsPath;
 		modelsPath.printf("%sresources/models/", basePath());
 
-		uint32_t objectHandle = phe::loadDynObjectCustomMaterial(modelsPath.str, "sphere.obj", *screen.level, vec3(r, g, b), roughness, metallic);
+		uint32_t meshHandle = phe::loadDynObjectCustomMaterial(modelsPath.str, "sphere.obj", *screen.level, vec3(r, g, b), roughness, metallic);
 		
 		for (RendererAndStatus& renderer : mRenderers) {
 			if (renderer.baked) {
@@ -214,12 +224,10 @@ UpdateOp TestbedLogic::update(GameScreen& screen, UpdateState& state) noexcept
 			}
 		}
 
-		uint32_t instanceHandle = spawnObjectInstance(objectHandle, *screen.level, translationMatrix(pos));
-		nonmovingInstanceHandles.add(instanceHandle);
-		objectPositions.put(instanceHandle, pos);*/
+		spawnObject(meshHandle, *screen.level, translationMatrix(pos));
 	}
 	if (ctrl.x == ButtonState::DOWN) {
-		/*vec3 pos = screen.cam.pos();
+		vec3 pos = screen.cam.pos() + screen.cam.dir() * 4.0f;
 
 		float r = cfg.getSetting("PhantasyEngineTestbed", "sphereColourR")->floatValue();
 		float g = cfg.getSetting("PhantasyEngineTestbed", "sphereColourG")->floatValue();
@@ -231,7 +239,7 @@ UpdateOp TestbedLogic::update(GameScreen& screen, UpdateState& state) noexcept
 		StackString192 modelsPath;
 		modelsPath.printf("%sresources/models/", basePath());
 
-		uint32_t objectHandle = phe::loadDynObjectCustomMaterial(modelsPath.str, "sphere.obj", *screen.level, vec3(r, g, b), roughness, metallic);
+		uint32_t meshHandle = phe::loadDynObjectCustomMaterial(modelsPath.str, "sphere.obj", *screen.level, vec3(r, g, b), roughness, metallic);
 
 		for (RendererAndStatus& renderer : mRenderers) {
 			if (renderer.baked) {
@@ -240,9 +248,11 @@ UpdateOp TestbedLogic::update(GameScreen& screen, UpdateState& state) noexcept
 			}
 		}
 
-		uint32_t instanceHandle = spawnObjectInstance(objectHandle, *screen.level, translationMatrix(pos));
-		movingInstanceHandles.add(instanceHandle);
-		objectPositions.put(instanceHandle, pos);*/
+		Ball ball;
+		ball.entity = spawnObject(meshHandle, *screen.level, translationMatrix(pos));
+		ball.basePos = pos;
+		ball.timeOffset = 0.0f;
+		mMovingBalls.add(ball);
 	}
 	if (ctrl.b == ButtonState::DOWN) {
 	}

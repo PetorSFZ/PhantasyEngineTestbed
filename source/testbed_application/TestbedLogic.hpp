@@ -20,6 +20,15 @@ using sfz::UpdateOpType;
 using sfz::UpdateState;
 using sfz::vec3;
 
+// Helper structs
+// ------------------------------------------------------------------------------------------------
+
+struct Ball final {
+	uint32_t entity;
+	vec3 basePos;
+	float timeOffset;
+};
+
 // TestbedLogic
 // ------------------------------------------------------------------------------------------------
 
@@ -62,8 +71,6 @@ private:
 	DynArray<RendererAndStatus> mRenderers;
 	uint32_t mCurrentRenderer;
 
-	DynArray<uint32_t> instanceHandles;
-	DynArray<uint32_t> movingInstanceHandles;
-	DynArray<uint32_t> nonmovingInstanceHandles;
-	HashMap<uint32_t, vec3> objectPositions;
+	DynArray<Ball> mChristmasBalls;
+	DynArray<Ball> mMovingBalls;
 };
