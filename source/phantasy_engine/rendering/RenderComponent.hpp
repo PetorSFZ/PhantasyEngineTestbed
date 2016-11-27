@@ -10,13 +10,16 @@ namespace phe {
 using sfz::mat4;
 using sfz::vec3;
 
-// DynObject
+// RenderComponent struct
 // ------------------------------------------------------------------------------------------------
 
-struct DynObject final {
-	uint32_t meshIndex = ~0u;
-	mat4 transform = sfz::identityMatrix4<float>();
-	vec3 velocity = vec3(0.0f);
+/// A struct containing the information necessary to render an entity
+struct RenderComponent final {
+	mat4 transform;
+	uint32_t meshIndex;
+	vec3 velocity; // TODO: Should perhaps not be here?
 };
+
+static_assert(sizeof(RenderComponent) == ((4 * 4 + 4) * 4), "RenderComponent is padded");
 
 } // namespace phe

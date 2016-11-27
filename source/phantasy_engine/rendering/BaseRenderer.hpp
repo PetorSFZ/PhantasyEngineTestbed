@@ -7,11 +7,11 @@
 #include <sfz/math/Matrix.hpp>
 #include <sfz/memory/SmartPointers.hpp>
 
-#include "phantasy_engine/level/DynObject.hpp"
 #include "phantasy_engine/level/StaticScene.hpp"
 #include "phantasy_engine/level/SphereLight.hpp"
 #include "phantasy_engine/rendering/Material.hpp"
 #include "phantasy_engine/rendering/RawImage.hpp"
+#include "phantasy_engine/rendering/RenderComponent.hpp"
 #include "phantasy_engine/rendering/ViewFrustum.hpp"
 
 namespace phe {
@@ -66,7 +66,7 @@ public:
 
 	virtual void addDynamicMesh(const RawMesh& mesh) noexcept = 0;
 
-	virtual RenderResult render(const DynArray<DynObject>& objects,
+	virtual RenderResult render(const RenderComponent* renderComponents, uint32_t numComponents,
 	                            const DynArray<SphereLight>& lights) noexcept = 0;
 
 	// Non-virtual methods

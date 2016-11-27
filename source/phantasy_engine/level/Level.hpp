@@ -5,27 +5,18 @@
 #include <sfz/containers/DynArray.hpp>
 #include <sfz/containers/HashMap.hpp>
 
-#include "phantasy_engine/level/DynObject.hpp"
+#include "phantasy_engine/level/EcsComponentAccessor.hpp"
+#include "phantasy_engine/level/EntityComponentSystem.hpp"
 #include "phantasy_engine/level/StaticScene.hpp"
 #include "phantasy_engine/rendering/Material.hpp"
 #include "phantasy_engine/rendering/RawImage.hpp"
 #include "phantasy_engine/rendering/RawMesh.hpp"
+#include "phantasy_engine/rendering/RenderComponent.hpp"
 
 namespace phe {
 
 using sfz::DynArray;
 using sfz::HashMap;
-
-// Built-in component types
-// ------------------------------------------------------------------------------------------------
-
-struct GraphicsComponent final {
-	mat4 transform;
-	uint32_t meshIndex;
-	vec3 velocity; // TODO: Should perhaps not be here?
-};
-
-static_assert(sizeof(GraphicsComponent) == ((4 * 4 + 4) * 4), "GraphicsComponent is padded");
 
 // Level struct
 // ------------------------------------------------------------------------------------------------
@@ -43,9 +34,9 @@ struct Level final {
 	DynArray<RawMesh> meshes;
 	DynArray<SphereLight> sphereLights;
 
-	// Temporary list of dynamic objects, will not necessarily be stored
-	// like this in the future
-	DynArray<DynObject> objects;
+	// Entity component system
+	EntityComponentSystem ecs;
+	EcsComponentAccessor<RenderComponent> ecsRenderComponents;
 };
 
 } // namespace phe

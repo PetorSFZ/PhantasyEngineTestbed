@@ -219,7 +219,7 @@ void DeferredRenderer::addDynamicMesh(const RawMesh& mesh) noexcept
 	sfz::error("DeferredRenderer: addDynamicMeshes() not implemented");
 }
 
-RenderResult DeferredRenderer::render(const DynArray<DynObject>& objects,
+RenderResult DeferredRenderer::render(const RenderComponent* renderComponents, uint32_t numComponents,
                                       const DynArray<SphereLight>& lights) noexcept
 {
 	auto& gbufferGenShader = mImpl->gbufferGenShader;
@@ -265,7 +265,9 @@ RenderResult DeferredRenderer::render(const DynArray<DynObject>& objects,
 		model.draw();
 	}
 
-	for (const DynObject& obj : objects) {
+	for (uint32_t i = 0; i < numComponents; i++) {
+		const RenderComponent& obj = renderComponents[i];
+
 		gl::setUniform(modelMatrixLoc, obj.transform);
 		gl::setUniform(normalMatrixLoc, inverse(transpose(viewMatrix * obj.transform)));
 		gl::setUniform(worldVelocityLoc, obj.velocity);

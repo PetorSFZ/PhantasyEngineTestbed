@@ -41,7 +41,7 @@ public:
 
 	void addDynamicMesh(const RawMesh& mesh) noexcept override final;
 
-	RenderResult render(const DynArray<DynObject>& objects,
+	RenderResult render(const RenderComponent* renderComponents, uint32_t numComponents,
 	                    const DynArray<SphereLight>& lights) noexcept override final;
 
 protected:

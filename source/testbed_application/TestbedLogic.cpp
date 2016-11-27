@@ -13,7 +13,7 @@
 
 using namespace sfz;
 
-uint32_t spawnObjectInstance(uint32_t meshId, phe::Level& level, mat4 transform)
+/*uint32_t spawnObjectInstance(uint32_t meshId, phe::Level& level, mat4 transform)
 {
 	phe::DynObject obj;
 	obj.meshIndex = meshId;
@@ -21,7 +21,7 @@ uint32_t spawnObjectInstance(uint32_t meshId, phe::Level& level, mat4 transform)
 
 	level.objects.add(obj);
 	return level.objects.size() - 1;
-}
+}*/
 
 // TestbedLogic: Constructors & destructors
 // ------------------------------------------------------------------------------------------------
@@ -31,7 +31,7 @@ TestbedLogic::TestbedLogic(DynArray<RendererAndStatus>&& renderers, uint32_t ren
 	mRenderers(std::move(renderers)),
 	mCurrentRenderer(rendererIndex)
 {
-	instanceHandles.add(spawnObjectInstance(0, level, identityMatrix4<float>()));
+	/*instanceHandles.add(spawnObjectInstance(0, level, identityMatrix4<float>()));
 	objectPositions.put(0, vec3(0, 0, 0));
 
 	const int numBalls = 50;
@@ -51,7 +51,7 @@ TestbedLogic::TestbedLogic(DynArray<RendererAndStatus>&& renderers, uint32_t ren
 		uint32_t handle = spawnObjectInstance(i & 1 ? 1 : 2, level, translationMatrix(pos));
 		instanceHandles.add(handle);
 		objectPositions.put(handle, pos);
-	}
+	}*/
 }
 
 // TestbedLogic: Overriden methods from GameLogic
@@ -67,7 +67,7 @@ UpdateOp TestbedLogic::update(GameScreen& screen, UpdateState& state) noexcept
 	auto& cfg = phe::GlobalConfig::instance();
 	phe::Setting* renderingBackendSetting = cfg.getSetting("PhantasyEngineTestbed", "renderingBackend");
 
-	accumulatedTime += 10 * state.delta;
+	/*accumulatedTime += 10 * state.delta;
 	if (accumulatedTime > 200 * PI()) accumulatedTime -= 200 * PI();
 
 	const int numBalls = 50;
@@ -94,7 +94,7 @@ UpdateOp TestbedLogic::update(GameScreen& screen, UpdateState& state) noexcept
 		velocity = vec3(0.0f, cos(accumulatedTime) - sin(accumulatedTime / 4), sin(accumulatedTime) - cos(accumulatedTime / 4)) * 10.0f;
 		pos += velocity * state.delta;
 		screen.level->objects[handle].transform = translationMatrix(pos);
-	}
+	}*/
 
 	// Handle input
 	for (const SDL_Event& event : state.events) {
@@ -114,13 +114,6 @@ UpdateOp TestbedLogic::update(GameScreen& screen, UpdateState& state) noexcept
 				if (mCurrentRenderer != 1) {
 					renderingBackendSetting->setInt(1);
 					mCurrentRenderer = 1;
-					screen.setRenderer(mRenderers[mCurrentRenderer].renderer);
-				}
-				break;
-			case SDLK_F3:
-				if (mCurrentRenderer != 2) {
-					renderingBackendSetting->setInt(2);
-					mCurrentRenderer = 2;
 					screen.setRenderer(mRenderers[mCurrentRenderer].renderer);
 				}
 				break;
@@ -200,7 +193,7 @@ UpdateOp TestbedLogic::update(GameScreen& screen, UpdateState& state) noexcept
 
 	// Face buttons
 	if (ctrl.y == ButtonState::DOWN) {
-		vec3 pos = screen.cam.pos();
+		/*vec3 pos = screen.cam.pos();
 
 		float r = cfg.getSetting("PhantasyEngineTestbed", "sphereColourR")->floatValue();
 		float g = cfg.getSetting("PhantasyEngineTestbed", "sphereColourG")->floatValue();
@@ -223,10 +216,10 @@ UpdateOp TestbedLogic::update(GameScreen& screen, UpdateState& state) noexcept
 
 		uint32_t instanceHandle = spawnObjectInstance(objectHandle, *screen.level, translationMatrix(pos));
 		nonmovingInstanceHandles.add(instanceHandle);
-		objectPositions.put(instanceHandle, pos);
+		objectPositions.put(instanceHandle, pos);*/
 	}
 	if (ctrl.x == ButtonState::DOWN) {
-		vec3 pos = screen.cam.pos();
+		/*vec3 pos = screen.cam.pos();
 
 		float r = cfg.getSetting("PhantasyEngineTestbed", "sphereColourR")->floatValue();
 		float g = cfg.getSetting("PhantasyEngineTestbed", "sphereColourG")->floatValue();
@@ -249,7 +242,7 @@ UpdateOp TestbedLogic::update(GameScreen& screen, UpdateState& state) noexcept
 
 		uint32_t instanceHandle = spawnObjectInstance(objectHandle, *screen.level, translationMatrix(pos));
 		movingInstanceHandles.add(instanceHandle);
-		objectPositions.put(instanceHandle, pos);
+		objectPositions.put(instanceHandle, pos);*/
 	}
 	if (ctrl.b == ButtonState::DOWN) {
 	}

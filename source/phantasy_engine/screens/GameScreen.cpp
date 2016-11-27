@@ -204,7 +204,7 @@ void GameScreen::render(UpdateState& state)
 
 	// Render the level
 	uint32_t prevFBIndex = (mFBIndex + 1) % 2;
-	RenderResult result = renderer->render(level->objects, level->sphereLights);
+	RenderResult result = renderer->render(level->ecsRenderComponents.arrayPtr(), level->ecsRenderComponents.numComponents(), level->sphereLights);
 
 	glDisable(GL_BLEND);
 	glEnable(GL_CULL_FACE);

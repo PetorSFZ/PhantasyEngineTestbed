@@ -107,7 +107,6 @@ set(PHANTASY_ENGINE_LIB_FILES
 	${PH_INCLUDE_DIR}/level/EcsComponentAccessor.hpp
 	${PH_INCLUDE_DIR}/level/EntityComponentSystem.hpp
 	 ${PH_SOURCE_DIR}/level/EntityComponentSystem.cpp
-	${PH_INCLUDE_DIR}/level/DynObject.hpp
 	${PH_INCLUDE_DIR}/level/ObjectLoader.hpp
 	 ${PH_SOURCE_DIR}/level/ObjectLoader.cpp
 	${PH_INCLUDE_DIR}/level/SceneGraph.hpp
@@ -141,6 +140,7 @@ set(PHANTASY_ENGINE_LIB_FILES
 	${PH_INCLUDE_DIR}/rendering/RawImage.hpp
 	 ${PH_SOURCE_DIR}/rendering/RawImage.cpp
 	${PH_INCLUDE_DIR}/rendering/RawMesh.hpp
+	${PH_INCLUDE_DIR}/rendering/RenderComponent.hpp
 	${PH_INCLUDE_DIR}/rendering/ViewFrustum.hpp
 	 ${PH_SOURCE_DIR}/rendering/ViewFrustum.cpp
 
