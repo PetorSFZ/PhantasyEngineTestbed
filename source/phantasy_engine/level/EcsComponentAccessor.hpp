@@ -6,13 +6,15 @@
 
 #include <sfz/math/Matrix.hpp>
 #include <sfz/math/Vector.hpp>
+#include <sfz/memory/SmartPointers.hpp>
 
 #include "phantasy_engine/level/EntityComponentSystem.hpp"
 
 namespace phe {
 
-using sfz::vec3;
 using sfz::mat4;
+using sfz::SharedPtr;
+using sfz::vec3;
 
 // EcsComponentAccessor
 // ------------------------------------------------------------------------------------------------
@@ -28,10 +30,12 @@ public:
 	EcsComponentAccessor() noexcept = default;
 	EcsComponentAccessor(const EcsComponentAccessor&) noexcept = default;
 	EcsComponentAccessor& operator= (const EcsComponentAccessor&) noexcept = default;
+	EcsComponentAccessor(EcsComponentAccessor&&) noexcept = default;
+	EcsComponentAccessor& operator= (EcsComponentAccessor&&) noexcept = default;
 	~EcsComponentAccessor() noexcept = default;
 	
 	/// Creates a new component type of the specified class in the parameter ecs.
-	EcsComponentAccessor(EntityComponentSystem& ecs) noexcept;
+	explicit EcsComponentAccessor(const SharedPtr<EntityComponentSystem>& ecsPtr) noexcept;
 
 	// Component accessor methods
 	// --------------------------------------------------------------------------------------------
@@ -64,7 +68,7 @@ private:
 	// Private members
 	// --------------------------------------------------------------------------------------------
 
-	EntityComponentSystem* mEcsPtr = nullptr;
+	SharedPtr<EntityComponentSystem> mEcsPtr;
 	uint32_t mComponentType = ~0u;
 };
 
@@ -72,11 +76,11 @@ private:
 // ------------------------------------------------------------------------------------------------
 
 template<typename T>
-EcsComponentAccessor<T>::EcsComponentAccessor<T>(EntityComponentSystem& ecs) noexcept
+EcsComponentAccessor<T>::EcsComponentAccessor(const SharedPtr<EntityComponentSystem>& ecsPtr) noexcept
 {
 	static_assert(std::is_pod<T>::value, "Type is not POD");
-	mEcsPtr = &ecs;
-	mComponentType = ecs.createComponentTypeRaw(sizeof(T));
+	mEcsPtr = ecsPtr;
+	mComponentType = mEcsPtr->createComponentTypeRaw(sizeof(T));
 }
 
 // EcsComponentAccessor implementation: Component accessor methods

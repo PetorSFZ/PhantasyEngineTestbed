@@ -30,8 +30,7 @@ static uint32_t spawnObject(uint32_t meshId, phe::Level& level, const mat4& tran
 	rendComp.meshIndex = meshId;
 	rendComp.transform = transform;
 	rendComp.velocity = vec3(0.0f);
-
-	level.ecsRenderComponents.add(entity, rendComp);
+	level.ecs.renderComponents.add(entity, rendComp);
 
 	return entity;
 }
@@ -74,7 +73,7 @@ UpdateOp TestbedLogic::update(GameScreen& screen, UpdateState& state) noexcept
 
 	// Move christmas balls
 	for (Ball& ball : mChristmasBalls) {
-		auto& rendComp = *screen.level->ecsRenderComponents.get(ball.entity);
+		auto& rendComp = *screen.level->ecs.renderComponents.get(ball.entity);
 
 		ball.timeOffset += state.delta;
 		if (ball.timeOffset > 200 * PI()) ball.timeOffset -= 200 * PI();
@@ -91,7 +90,7 @@ UpdateOp TestbedLogic::update(GameScreen& screen, UpdateState& state) noexcept
 
 	// Move balls
 	for (Ball& ball : mMovingBalls) {
-		auto& rendComp = *screen.level->ecsRenderComponents.get(ball.entity);
+		auto& rendComp = *screen.level->ecs.renderComponents.get(ball.entity);
 
 		ball.timeOffset += state.delta;
 		if (ball.timeOffset > 200 * PI()) ball.timeOffset -= 200 * PI();

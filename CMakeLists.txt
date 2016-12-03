@@ -105,6 +105,8 @@ set(PHANTASY_ENGINE_LIB_FILES
 
 	${PH_INCLUDE_DIR}/level/Level.hpp
 	${PH_INCLUDE_DIR}/level/EcsComponentAccessor.hpp
+	${PH_INCLUDE_DIR}/level/EcsWrapper.hpp
+	 ${PH_SOURCE_DIR}/level/EcsWrapper.cpp
 	${PH_INCLUDE_DIR}/level/EntityComponentSystem.hpp
 	 ${PH_SOURCE_DIR}/level/EntityComponentSystem.cpp
 	${PH_INCLUDE_DIR}/level/ObjectLoader.hpp

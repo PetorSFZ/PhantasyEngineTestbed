@@ -171,20 +171,9 @@ public:
 // EntityComponentSystem: Constructors & destructors
 // ------------------------------------------------------------------------------------------------
 
-EntityComponentSystem::EntityComponentSystem(uint32_t maxNumEntitiesIn) noexcept
+EntityComponentSystem::EntityComponentSystem(uint32_t maxNumEntities) noexcept
 {
-	mImpl = sfz_new<EntityComponentSystemImpl>(maxNumEntitiesIn);
-}
-
-EntityComponentSystem::EntityComponentSystem(EntityComponentSystem&& other) noexcept
-{
-	this->swap(other);
-}
-
-EntityComponentSystem& EntityComponentSystem::operator= (EntityComponentSystem&& other) noexcept
-{
-	this->swap(other);
-	return *this;
+	this->create(maxNumEntities);
 }
 
 EntityComponentSystem::~EntityComponentSystem() noexcept
@@ -195,15 +184,16 @@ EntityComponentSystem::~EntityComponentSystem() noexcept
 // EntityComponentSystem: State methods
 // ------------------------------------------------------------------------------------------------
 
+void EntityComponentSystem::create(uint32_t maxNumEntities) noexcept
+{
+	this->destroy();
+	mImpl = sfz_new<EntityComponentSystemImpl>(maxNumEntities);
+}
+
 void EntityComponentSystem::destroy() noexcept
 {
 	sfz_delete(mImpl);
 	mImpl = nullptr;
-}
-
-void EntityComponentSystem::swap(EntityComponentSystem& other) noexcept
-{
-	std::swap(this->mImpl, other.mImpl);
 }
 
 // EntityComponentSystem: Entity methods
@@ -299,6 +289,7 @@ uint32_t EntityComponentSystem::createComponentTypeRaw(uint32_t bytesPerComponen
 	tmp.entityTable = DynArray<uint32_t>(maxNumEntities(), ~0u, maxNumEntities());
 	tmp.data.setCapacity(bytesPerComponent * maxNumEntities());
 	tmp.data.setSize(bytesPerComponent * maxNumEntities());
+	tmp.numComponents = 0u;
 
 	// Add component type and return index for it
 	mImpl->components.add(std::move(tmp));

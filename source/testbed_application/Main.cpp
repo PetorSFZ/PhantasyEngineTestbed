@@ -89,8 +89,7 @@ int main(int, char**)
 	
 	// Create level struct and initialize ECS system
 	SharedPtr<Level> level = makeShared<Level>();
-	level->ecs = EntityComponentSystem(8192);
-	level->ecsRenderComponents = EcsComponentAccessor<RenderComponent>(level->ecs);
+	level->ecs = EcsWrapper(8192);
 
 	using time_point = std::chrono::high_resolution_clock::time_point;
 	using FloatSecond = std::chrono::duration<float>;

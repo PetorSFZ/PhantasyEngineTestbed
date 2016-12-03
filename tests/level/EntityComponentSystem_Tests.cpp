@@ -5,6 +5,7 @@
 #include <sfz/PopWarnings.hpp>
 
 #include "phantasy_engine/level/EcsComponentAccessor.hpp"
+#include "phantasy_engine/level/EcsWrapper.hpp"
 #include "phantasy_engine/level/EntityComponentSystem.hpp"
 
 using namespace phe;
@@ -83,23 +84,24 @@ TEST_CASE("Entity creation/deletion", "[EntityComponentSystem]")
 
 TEST_CASE("Component creation/deletion", "[EntityComponentSystem]")
 {
-	EntityComponentSystem ecs(10);
-	const uint32_t e1 = ecs.createEntity();
-	const uint32_t e2 = ecs.createEntity();
-	const uint32_t e3 = ecs.createEntity();
-	ComponentMask existenceMask = ComponentMask::fromType(ECS_EXISTENCE_COMPONENT_TYPE);
-	REQUIRE(ecs.componentMask(e1) == existenceMask);
-	REQUIRE(ecs.componentMask(e2) == existenceMask);
-	REQUIRE(ecs.componentMask(e3) == existenceMask);
+	sfz::SharedPtr<EntityComponentSystem> ecs = sfz::makeShared<EntityComponentSystem>(10);
 
-	REQUIRE(ecs.currentNumComponentTypes() == 1);
-	const uint32_t byteComponent = ecs.createComponentTypeRaw(1);
-	REQUIRE(ecs.numComponents(byteComponent) == 0);
-	REQUIRE(ecs.currentNumComponentTypes() == 2);
+	const uint32_t e1 = ecs->createEntity();
+	const uint32_t e2 = ecs->createEntity();
+	const uint32_t e3 = ecs->createEntity();
+	ComponentMask existenceMask = ComponentMask::fromType(ECS_EXISTENCE_COMPONENT_TYPE);
+	REQUIRE(ecs->componentMask(e1) == existenceMask);
+	REQUIRE(ecs->componentMask(e2) == existenceMask);
+	REQUIRE(ecs->componentMask(e3) == existenceMask);
+
+	REQUIRE(ecs->currentNumComponentTypes() == 1);
+	const uint32_t byteComponent = ecs->createComponentTypeRaw(1);
+	REQUIRE(ecs->numComponents(byteComponent) == 0);
+	REQUIRE(ecs->currentNumComponentTypes() == 2);
 
 	EcsComponentAccessor<uint32_t> uintAccessor(ecs);
 	REQUIRE(uintAccessor.numComponents() == 0);
-	REQUIRE(ecs.currentNumComponentTypes() == 3);
+	REQUIRE(ecs->currentNumComponentTypes() == 3);
 
 	ComponentMask byteMask = ComponentMask::fromType(byteComponent);
 	ComponentMask uintMask = uintAccessor.mask();
@@ -115,18 +117,18 @@ TEST_CASE("Component creation/deletion", "[EntityComponentSystem]")
 	REQUIRE(!existenceByteMask.fulfills(existenceByteUintMask));
 
 	uint8_t byteTmp = 'a';
-	ecs.addComponentRaw(e1, byteComponent, &byteTmp);
-	REQUIRE(ecs.numComponents(byteComponent) == 1);
+	ecs->addComponentRaw(e1, byteComponent, &byteTmp);
+	REQUIRE(ecs->numComponents(byteComponent) == 1);
 	byteTmp = 'c';
-	ecs.addComponentRaw(e3, byteComponent, &byteTmp);
-	REQUIRE(ecs.numComponents(byteComponent) == 2);
-	REQUIRE(*(const uint8_t*)ecs.getComponentRaw(e1, byteComponent) == 'a');
-	REQUIRE(*(const uint8_t*)ecs.getComponentRaw(e3, byteComponent) == 'c');
-	REQUIRE(ecs.componentMask(e1) == existenceByteMask);
-	REQUIRE(ecs.componentMask(e2) == existenceMask);
-	REQUIRE(ecs.componentMask(e3) == existenceByteMask);
+	ecs->addComponentRaw(e3, byteComponent, &byteTmp);
+	REQUIRE(ecs->numComponents(byteComponent) == 2);
+	REQUIRE(*(const uint8_t*)ecs->getComponentRaw(e1, byteComponent) == 'a');
+	REQUIRE(*(const uint8_t*)ecs->getComponentRaw(e3, byteComponent) == 'c');
+	REQUIRE(ecs->componentMask(e1) == existenceByteMask);
+	REQUIRE(ecs->componentMask(e2) == existenceMask);
+	REQUIRE(ecs->componentMask(e3) == existenceByteMask);
 
-	const uint8_t* bytePtr = (const uint8_t*)ecs.componentArrayPtrRaw(byteComponent);
+	const uint8_t* bytePtr = (const uint8_t*)ecs->componentArrayPtrRaw(byteComponent);
 	REQUIRE(bytePtr[0] == 'a');
 	REQUIRE(bytePtr[1] == 'c');
 
@@ -138,9 +140,9 @@ TEST_CASE("Component creation/deletion", "[EntityComponentSystem]")
 	uintAccessor.add(e3, 37u);
 	REQUIRE(uintAccessor.numComponents() == 2);
 	REQUIRE(*uintAccessor.get(e3) == 37u);
-	REQUIRE(ecs.componentMask(e1) == existenceByteUintMask);
-	REQUIRE(ecs.componentMask(e2) == existenceMask);
-	REQUIRE(ecs.componentMask(e3) == existenceByteUintMask);
+	REQUIRE(ecs->componentMask(e1) == existenceByteUintMask);
+	REQUIRE(ecs->componentMask(e2) == existenceMask);
+	REQUIRE(ecs->componentMask(e3) == existenceByteUintMask);
 	
 	const uint32_t* uintPtr = uintAccessor.arrayPtr();
 	REQUIRE(uintPtr[0] == ~0u);
@@ -149,9 +151,9 @@ TEST_CASE("Component creation/deletion", "[EntityComponentSystem]")
 	uintAccessor.remove(e1);
 	REQUIRE(uintAccessor.numComponents() == 1);
 	REQUIRE(*uintAccessor.get(e3) == 37u);
-	REQUIRE(ecs.componentMask(e1) == existenceByteMask);
-	REQUIRE(ecs.componentMask(e2) == existenceMask);
-	REQUIRE(ecs.componentMask(e3) == existenceByteUintMask);
+	REQUIRE(ecs->componentMask(e1) == existenceByteMask);
+	REQUIRE(ecs->componentMask(e2) == existenceMask);
+	REQUIRE(ecs->componentMask(e3) == existenceByteUintMask);
 	REQUIRE(uintPtr[0] == 37u);
 
 	uintAccessor.add(e2, 42u);

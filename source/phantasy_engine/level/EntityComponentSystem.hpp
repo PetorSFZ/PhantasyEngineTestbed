@@ -103,21 +103,21 @@ public:
 	EntityComponentSystem() noexcept = default;
 	EntityComponentSystem(const EntityComponentSystem&) = delete;
 	EntityComponentSystem& operator= (const EntityComponentSystem&) = delete;
+	EntityComponentSystem(EntityComponentSystem&&) = delete;
+	EntityComponentSystem& operator= (EntityComponentSystem&&) = delete;
 
-	EntityComponentSystem(uint32_t maxNumEntities) noexcept;
-	EntityComponentSystem(EntityComponentSystem&& other) noexcept;
-	EntityComponentSystem& operator= (EntityComponentSystem&& other) noexcept;
+	/// Creates an ECS using the default constructor and then calls create() on it.
+	explicit EntityComponentSystem(uint32_t maxNumEntities) noexcept;
 	~EntityComponentSystem() noexcept;
 
 	// State methods
 	// --------------------------------------------------------------------------------------------
 
+	/// Creates a new EntityComponentSystem. Will first destroy() the existing one.
+	void create(uint32_t maxNumEntities) noexcept;
+
 	/// Destroys this EntityComponentSystem, called automatically in the destructor.
 	void destroy() noexcept;
-
-	/// Swaps the contents of this EntityComponentSystem with another, same as using a move
-	/// constructor.
-	void swap(EntityComponentSystem& other) noexcept;
 
 	/// Checks whether this EntityComponentSystem is valid or not. If it is not valid then all
 	/// methods except for destroy() and swap() is undefined and should under no circumstances be
