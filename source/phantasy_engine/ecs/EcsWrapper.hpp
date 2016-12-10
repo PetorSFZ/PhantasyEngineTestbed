@@ -4,8 +4,8 @@
 
 #include <sfz/memory/SmartPointers.hpp>
 
-#include "phantasy_engine/level/EcsComponentAccessor.hpp"
-#include "phantasy_engine/level/EntityComponentSystem.hpp"
+#include "phantasy_engine/ecs/EcsComponentAccessor.hpp"
+#include "phantasy_engine/ecs/EntityComponentSystem.hpp"
 #include "phantasy_engine/rendering/RenderComponent.hpp"
 
 namespace phe {

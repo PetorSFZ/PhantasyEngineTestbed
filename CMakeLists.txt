@@ -103,12 +103,14 @@ set(PHANTASY_ENGINE_LIB_FILES
 	${PH_INCLUDE_DIR}/deferred_renderer/SSBO.hpp
 	 ${PH_SOURCE_DIR}/deferred_renderer/SSBO.cpp
 
+	${PH_INCLUDE_DIR}/ECS.hpp
+	${PH_INCLUDE_DIR}/ecs/EcsComponentAccessor.hpp
+	${PH_INCLUDE_DIR}/ecs/EcsWrapper.hpp
+	 ${PH_SOURCE_DIR}/ecs/EcsWrapper.cpp
+	${PH_INCLUDE_DIR}/ecs/EntityComponentSystem.hpp
+	 ${PH_SOURCE_DIR}/ecs/EntityComponentSystem.cpp
+
 	${PH_INCLUDE_DIR}/level/Level.hpp
-	${PH_INCLUDE_DIR}/level/EcsComponentAccessor.hpp
-	${PH_INCLUDE_DIR}/level/EcsWrapper.hpp
-	 ${PH_SOURCE_DIR}/level/EcsWrapper.cpp
-	${PH_INCLUDE_DIR}/level/EntityComponentSystem.hpp
-	 ${PH_SOURCE_DIR}/level/EntityComponentSystem.cpp
 	${PH_INCLUDE_DIR}/level/ObjectLoader.hpp
 	 ${PH_SOURCE_DIR}/level/ObjectLoader.cpp
 	${PH_INCLUDE_DIR}/level/SceneGraph.hpp

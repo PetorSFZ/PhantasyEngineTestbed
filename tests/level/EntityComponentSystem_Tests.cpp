@@ -4,9 +4,9 @@
 #include <catch.hpp>
 #include <sfz/PopWarnings.hpp>
 
-#include "phantasy_engine/level/EcsComponentAccessor.hpp"
-#include "phantasy_engine/level/EcsWrapper.hpp"
-#include "phantasy_engine/level/EntityComponentSystem.hpp"
+#include "phantasy_engine/ecs/EcsComponentAccessor.hpp"
+#include "phantasy_engine/ecs/EcsWrapper.hpp"
+#include "phantasy_engine/ecs/EntityComponentSystem.hpp"
 
 using namespace phe;
 

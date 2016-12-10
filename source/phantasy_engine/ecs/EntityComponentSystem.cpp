@@ -1,6 +1,6 @@
 // See 'LICENSE_PHANTASY_ENGINE' for copyright and contributors.
 
-#include "phantasy_engine/level/EntityComponentSystem.hpp"
+#include "phantasy_engine/ecs/EntityComponentSystem.hpp"
 
 #include <algorithm>
 

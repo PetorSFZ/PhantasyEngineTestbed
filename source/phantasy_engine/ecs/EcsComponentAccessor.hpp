@@ -8,7 +8,7 @@
 #include <sfz/math/Vector.hpp>
 #include <sfz/memory/SmartPointers.hpp>
 
-#include "phantasy_engine/level/EntityComponentSystem.hpp"
+#include "phantasy_engine/ecs/EntityComponentSystem.hpp"
 
 namespace phe {
 

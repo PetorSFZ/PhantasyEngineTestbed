@@ -5,7 +5,7 @@
 #include <sfz/containers/DynArray.hpp>
 #include <sfz/containers/HashMap.hpp>
 
-#include "phantasy_engine/level/EcsWrapper.hpp"
+#include "phantasy_engine/ecs/EcsWrapper.hpp"
 #include "phantasy_engine/level/StaticScene.hpp"
 #include "phantasy_engine/rendering/Material.hpp"
 #include "phantasy_engine/rendering/RawImage.hpp"
