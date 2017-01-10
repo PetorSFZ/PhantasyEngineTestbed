@@ -16,6 +16,7 @@
 #include <sfz/util/IO.hpp>
 
 #include "phantasy_engine/Config.hpp"
+#include "phantasy_engine/sound/SoundSession.hpp"
 
 namespace phe {
 
@@ -52,6 +53,7 @@ public:
 	// --------------------------------------------------------------------------------------------
 
 	sdl::Session sdlSession;
+	sdl::SoundSession sdlMixerSession;
 	sdl::Window window;
 	gl::Context glContext;
 
@@ -103,7 +105,7 @@ void PhantasyEngine::init(const char* projectName, const char* iniBasePath, cons
 
 	// Start SDL session and create window
 	mImpl->sdlSession = Session({SDLInitFlags::EVENTS, SDLInitFlags::VIDEO, SDLInitFlags::AUDIO,
-	                             SDLInitFlags::GAMECONTROLLER}, {});
+	                             SDLInitFlags::GAMECONTROLLER});
 	mImpl->window = Window(projectName, wCfg.width->intValue(), wCfg.height->intValue(),
 	                       {WindowFlags::OPENGL, WindowFlags::RESIZABLE, WindowFlags::ALLOW_HIGHDPI});
 
@@ -162,6 +164,9 @@ void PhantasyEngine::init(const char* projectName, const char* iniBasePath, cons
 #if !defined(SFZ_NO_DEBUG)
 	gl::setupDebugMessages(gl::Severity::MEDIUM, gl::Severity::MEDIUM);
 #endif
+
+	// Init SDL_mixer
+	mImpl->sdlMixerSession = SoundSession({});
 
 	initImGui();
 }

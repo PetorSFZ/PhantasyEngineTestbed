@@ -28,6 +28,11 @@ if(NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
 	set(CMAKE_BUILD_TYPE Release)
 endif()
 
+# Require 64bit compiler
+if(NOT (CMAKE_SIZEOF_VOID_P EQUAL 8))
+	message(FATAL_ERROR "Can only compile in 64bit mode")
+endif()
+
 # Compiler flags
 if(MSVC)
 	# MSVC flags
@@ -49,6 +54,10 @@ set(INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/source)
 set(TESTS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/tests)
 set(EXTERNALS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/externals)
 set(RUNTIME_DIR ${CMAKE_CURRENT_SOURCE_DIR}/runtime)
+set(CMAKE_MODULES ${CMAKE_CURRENT_LIST_DIR}/cmake)
+
+# Adds our cmake modules to module path.
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_MODULES})
 
 # Dependencies
 # ------------------------------------------------------------------------------------------------
@@ -66,6 +75,9 @@ add_subdirectory(${EXTERNALS_DIR}/stb_image)
 # imgui
 add_subdirectory(${EXTERNALS_DIR}/imgui)
 
+# SDL2_mixer
+find_package(SDL2_mixer REQUIRED) # ${SDL2_MIXER_INCLUDE_DIRS}, ${SDL2_MIXER_LIBRARIES}
+
 # Include directories
 include_directories(
 	${INCLUDE_DIR}
@@ -73,6 +85,7 @@ include_directories(
 	${ASSIMP_INCLUDE_DIRS}
 	${STB_IMAGE_INCLUDE_DIRS}
 	${IMGUI_INCLUDE_DIRS}
+	${SDL2_MIXER_INCLUDE_DIRS}
 )
 
 # Phantasy Engine Library
@@ -165,6 +178,14 @@ set(PHANTASY_ENGINE_LIB_FILES
 	${PH_INCLUDE_DIR}/screens/GameScreen.hpp
 	 ${PH_SOURCE_DIR}/screens/GameScreen.cpp
 
+	${PH_INCLUDE_DIR}/Sound.hpp
+	${PH_INCLUDE_DIR}/sound/Music.hpp
+	 ${PH_SOURCE_DIR}/sound/Music.cpp
+	${PH_INCLUDE_DIR}/sound/SoundEffect.hpp
+	 ${PH_SOURCE_DIR}/sound/SoundEffect.cpp
+	${PH_INCLUDE_DIR}/sound/SoundSession.hpp
+	 ${PH_SOURCE_DIR}/sound/SoundSession.cpp
+
 	${PH_INCLUDE_DIR}/util/IOUtil.hpp
 	 ${PH_SOURCE_DIR}/util/IOUtil.cpp)
 set_directory_source_group(${PHANTASY_ENGINE_LIB_FILES})
@@ -177,6 +198,7 @@ target_link_libraries(
 	${ASSIMP_LIBRARIES}
 	${STB_IMAGE_LIBRARIES}
 	${IMGUI_LIBRARIES}
+	${SDL2_MIXER_LIBRARIES}
 )
 
 # CUDA Tracer Renderer Library

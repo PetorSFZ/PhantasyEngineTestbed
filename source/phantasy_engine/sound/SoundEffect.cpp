@@ -16,9 +16,11 @@
 //    misrepresented as being the original software.
 // 3. This notice may not be removed or altered from any source distribution.
 
-#include "sfz/sdl/Music.hpp"
+#include "phantasy_engine/sound/SoundEffect.hpp"
 
 #include <algorithm>
+#include <cmath>
+#include <cstring>
 
 #include "sfz/Assert.hpp"
 
@@ -26,52 +28,52 @@ namespace sfz {
 
 namespace sdl {
 
-// Music: Constructor functions
+// SoundEffect: Constructor functions
 // ------------------------------------------------------------------------------------------------
 
-Music Music::fromFile(const char* completePath) noexcept
+SoundEffect SoundEffect::fromFile(const char* completePath) noexcept
 {
-	Music tmp = Music::fromFileNoLoad(completePath);
+	SoundEffect tmp = SoundEffect::fromFileNoLoad(completePath);
 	tmp.load();
 	return std::move(tmp);
 }
 
-Music Music::fromFileNoLoad(const char* completePath) noexcept
+SoundEffect SoundEffect::fromFileNoLoad(const char* completePath) noexcept
 {
-	Music tmp;
+	SoundEffect tmp;
 	tmp.mFilePath = DynString(completePath);
 	return std::move(tmp);
 }
 
-// Music: Constructors & destructors
+// SoundEffect: Constructors & destructors
 // ------------------------------------------------------------------------------------------------
 
-Music::Music(Music&& other) noexcept
+SoundEffect::SoundEffect(SoundEffect&& other) noexcept
 {
-	std::swap(this->mMusicPtr, other.mMusicPtr);
+	std::swap(this->mChunkPtr, other.mChunkPtr);
 	this->mFilePath.swap(other.mFilePath);
 }
 
-Music& Music::operator= (Music&& other) noexcept
+SoundEffect& SoundEffect::operator= (SoundEffect&& other) noexcept
 {
-	std::swap(this->mMusicPtr, other.mMusicPtr);
+	std::swap(this->mChunkPtr, other.mChunkPtr);
 	this->mFilePath.swap(other.mFilePath);
 	return *this;
 }
 
-Music::~Music() noexcept
+SoundEffect::~SoundEffect() noexcept
 {
 	this->unload();
 }
 
-// Music: Public methods
+// SoundEffect: Public methods
 // ------------------------------------------------------------------------------------------------
 
-bool Music::load() noexcept
+bool SoundEffect::load() noexcept
 {
 	// Check if we have a path
 	if (mFilePath.str() == nullptr) {
-		printErrorMessage("%s", "Attempting to load sdl::Music without path.");
+		printErrorMessage("%s", "Attempting to load() sdl::SoundEffect without path.");
 		return false;
 	}
 
@@ -80,54 +82,46 @@ bool Music::load() noexcept
 		this->unload();
 	}
 
-	Mix_Music* tmpPtr = Mix_LoadMUS(mFilePath.str());
+	Mix_Chunk* tmpPtr = Mix_LoadWAV(mFilePath.str());
 
 	// If load failed we print an error and return false
 	if (tmpPtr == NULL) {
-		printErrorMessage("Mix_LoadMUS() failed for: %s, error: %s",
-		                   mFilePath.str(), Mix_GetError());
+		printErrorMessage("Mix_LoadWAV() failed for \"%s\", error: %s",
+		                  mFilePath.str(), Mix_GetError());
 		return false;
 	}
 	
 	// If load was succesful we return true
-	mMusicPtr = tmpPtr;
+	mChunkPtr = tmpPtr;
 	return true;
 }
 
-void Music::unload() noexcept
+void SoundEffect::unload() noexcept
 {
 	// The documentation doesn't say anything about freeing nullptr
-	if (mMusicPtr == nullptr) return;
-	// Note, if music is fading out this will block until it is complete
-	Mix_FreeMusic(mMusicPtr);
-	mMusicPtr = nullptr;
+	if (mChunkPtr == nullptr) return;
+	// TODO: It's a bad idea to free a chunk that is still being played. Maybe check?
+	Mix_FreeChunk(mChunkPtr);
+	mChunkPtr = nullptr;
 }
 
-void Music::play() noexcept
+void SoundEffect::play() noexcept
 {
-	if (this->mMusicPtr == nullptr) return;
-	// TODO: 2nd argument is number of loops. -1 is forever, 0 is 0 times.
-	int res = Mix_PlayMusic(this->mMusicPtr, -1);
-	if (res == -1) {
-		sfz::printErrorMessage("Mix_PlayMusic() failed, error: %s", Mix_GetError());
-	}
+	if (!this->isLoaded()) return;
+	// Channel to play on, or -1 for the first free unreserved channel. 
+	Mix_PlayChannel(-1, this->mChunkPtr, 0);
+	// Returns channel being played on, ignore for now
 }
 
-// Music functions
-// ------------------------------------------------------------------------------------------------
-
-void stopMusic(int fadeOutLengthMs) noexcept
+void SoundEffect::setVolume(float volume) noexcept
 {
-	if (Mix_PlayingMusic()) {
-		if (fadeOutLengthMs <= 0) {
-			Mix_HaltMusic();
-			return;
-		}
+	sfz_assert_debug(0.0f <= volume);
+	sfz_assert_debug(volume <= 1.0f);
 
-		if (Mix_FadeOutMusic(fadeOutLengthMs) == 0) {
-			sfz::printErrorMessage("Mix_FadeOutMusic() failed, error: %s", Mix_GetError());
-		}
-	}
+	if (!this->isLoaded()) return;
+
+	int volumeInt = int(std::round(volume * MIX_MAX_VOLUME));
+	Mix_VolumeChunk(this->mChunkPtr, volumeInt);
 }
 
 } // namespace sdl

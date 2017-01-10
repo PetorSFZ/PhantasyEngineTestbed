@@ -20,7 +20,7 @@
 
 #include <initializer_list>
 
-#include <SDL.h>
+#include <SDL_mixer.h>
 
 namespace sfz {
 
@@ -31,43 +31,38 @@ using std::initializer_list;
 // Enums
 // ------------------------------------------------------------------------------------------------
 
-/// SDL2 init flags (https://wiki.libsdl.org/SDL_Init)
-enum class SDLInitFlags : Uint32 {
-	TIMER = SDL_INIT_TIMER,
-	AUDIO = SDL_INIT_AUDIO,
-	VIDEO = SDL_INIT_VIDEO,
-	JOYSTICK = SDL_INIT_JOYSTICK,
-	HAPTIC = SDL_INIT_HAPTIC,
-	GAMECONTROLLER = SDL_INIT_GAMECONTROLLER,
-	EVENTS = SDL_INIT_EVENTS,
-	EVERYTHING = SDL_INIT_EVERYTHING,
-	NOPARACHUTE = SDL_INIT_NOPARACHUTE
+/// SDL2_mixer init flags
+enum class MixInitFlags {
+	FLAC = MIX_INIT_FLAC,
+	MOD = MIX_INIT_MOD,
+	MP3 = MIX_INIT_MP3,
+	OGG = MIX_INIT_OGG
 };
 
-// Session class
+// SoundSession class
 // ------------------------------------------------------------------------------------------------
 
-/// Initializes SDL2 upon construction and cleans up upon destruction. This object must be kept
-/// alive as long as SDL is used.
-///
-/// https://wiki.libsdl.org/SDL_Init
-/// https://wiki.libsdl.org/SDL_Quit
-class Session final {
+/// Initializes SDL2_mixer upon construction and cleans up upon destruction. This object must be
+/// kept alive as long as SDL2_mixer is used. An ordinary sfz::sdl::Session needs to be alive
+/// during the whole lifetime of a SoundSession.
+class SoundSession final {
 public:
 	// Constructors & destructors
 	// --------------------------------------------------------------------------------------------
 
 	// Copying not allowed
-	Session(const Session&) = delete;
-	Session& operator= (const Session&) = delete;
+	SoundSession(const SoundSession&) = delete;
+	SoundSession& operator= (const SoundSession&) = delete;
 
-	Session() noexcept = default;
-	Session(Session&& other) noexcept;
-	Session& operator= (Session&& other) noexcept;
+	SoundSession() noexcept = default;
+	SoundSession(SoundSession&& other) noexcept;
+	SoundSession& operator= (SoundSession&& other) noexcept;
 
-	/// Initializes SDL2 with the specified flags
-	Session(initializer_list<SDLInitFlags> sdlInitFlags) noexcept;
-	~Session() noexcept;
+	/// Initializes SDL2_mixer with the specified flags
+	/// SDL_mixer will open audio with: 44.1KHz, signed 16bit, system byte order, stereo audio,
+	/// 1024 byte chunks. Additionally 64 mixing channels will be allocated.
+	explicit SoundSession(initializer_list<MixInitFlags> mixInitFlags) noexcept;
+	~SoundSession() noexcept;
 
 private:
 	// Private members

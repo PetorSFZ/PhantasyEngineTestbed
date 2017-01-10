@@ -18,8 +18,6 @@
 
 #pragma once
 
-#include "sfz/sdl/ButtonState.hpp"
-#include "sfz/sdl/GameController.hpp"
-#include "sfz/sdl/Mouse.hpp"
-#include "sfz/sdl/Session.hpp"
-#include "sfz/sdl/Window.hpp"
+#include "phantasy_engine/sound/Music.hpp"
+#include "phantasy_engine/sound/SoundEffect.hpp"
+#include "phantasy_engine/sound/SoundSession.hpp"

@@ -4,6 +4,13 @@ This is an early work in progress game engine. Of note is an experimental real-t
 
 ## Building
 
+### Requirements
+
+Same as sfzCore, but in addition also:
+
+- __SDL2_Mixer__ (In SDL2 environment variable)
+
+
 Create a directory called `build`, then run the following command:
 
 	cmake .. -G "Visual Studio 14 2015 Win64" -DCUDA_TRACER=TRUE -DPHANTASY_ENGINE_BUILD_TESTS=TRUE
