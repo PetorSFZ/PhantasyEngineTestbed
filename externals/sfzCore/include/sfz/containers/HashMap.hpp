@@ -25,6 +25,7 @@
 #include <new> // Placement new
 
 #include "sfz/Assert.hpp"
+#include "sfz/containers/HashTableKeyDescriptor.hpp"
 #include "sfz/memory/Allocators.hpp"
 
 namespace sfz {
@@ -52,13 +53,19 @@ using std::uint8_t;
 /// current number of placeholders can be queried by the placeholders() method. Both size and 
 /// placeholders count as load when checking if the HashMap needs to be rehashed or not.
 ///
+/// An alternate key type can be specified in the HashTableKeyDescriptor. This alt key can be used
+/// in most methods instead of the normal key type. This is mostly useful when string classes are
+/// used as keys, then const char* can be used as an alt key type. This removes the need to create
+/// a temporary key object (which might need to allocate memory). As specified in the
+/// HashTableKeyDescriptor documentation, the normal key type needs to be constructable using an
+/// alt key.
+///
 /// \param K the key type
 /// \param V the value type
-/// \param Hash the hash function (by default std::hash)
-/// \param KeyEqual the function used to compare keys (by default operator ==)
+/// \param Descr the HashTableKeyDescriptor (by default sfz::HashTableKeyDescriptor)
 /// \param Allocator the sfz allocator used to allocate memory
-template<typename K, typename V, typename Hash = std::hash<K>,
-         typename KeyEqual = std::equal_to<K>, typename Allocator = StandardAllocator>
+template<typename K, typename V, typename Descr = HashTableKeyDescriptor<K>,
+         typename Allocator = StandardAllocator>
 class HashMap {
 public:
 	// Constants
@@ -79,6 +86,16 @@ public:
 	/// rehash with capacity increase.
 	static constexpr float MAX_SIZE_KEEP_CAPACITY_FACTOR = 0.35f;
 
+	// Typedefs
+	// --------------------------------------------------------------------------------------------
+
+	using KeyHash = typename Descr::KeyHash;
+	using KeyEqual = typename Descr::KeyEqual;
+
+	using AltK = typename Descr::AltKeyT;
+	using AltKeyHash = typename Descr::AltKeyHash;
+	using AltKeyKeyEqual = typename Descr::AltKeyKeyEqual;
+
 	// Constructors & destructors
 	// --------------------------------------------------------------------------------------------
 
@@ -87,7 +104,7 @@ public:
 	/// HashMap by default constructor and then calling rehash with the suggested capacity.
 	explicit HashMap(uint32_t suggestedCapacity) noexcept;
 
-	HashMap() noexcept;
+	HashMap() noexcept = default;
 	HashMap(const HashMap& other) noexcept;
 	HashMap& operator= (const HashMap& other) noexcept;
 	HashMap(HashMap&& other) noexcept;
@@ -108,39 +125,54 @@ public:
 	/// capacity.
 	uint32_t placeholders() const noexcept { return mPlaceholders; }
 
-	/// Returns pointer to the element associated with the given key. The pointer is owned by this
-	/// HashMap and will not necessarily be valid if any non-const operations are done to this
-	/// HashMap that can change the internal capacity, so make a copy if you intend to keep the
-	/// value. Returns nullptr if no element is associated with the given key.
+	/// Returns pointer to the element associated with the given key, or nullptr if no such element
+	/// exists. The pointer is owned by this HashMap and will not be valid if it is rehashed,
+	/// which can automatically occur if for example keys are inserted via put() or operator[].
+	/// Instead it is recommended to make a copy of the returned value. This method is guaranteed
+	/// to never change the state of the HashMap (by causing a rehash), the pointer returned can
+	/// however be used to modify the stored value for an element.
 	V* get(const K& key) noexcept;
-
-	/// Returns pointer to the element associated with the given key. The pointer is owned by this
-	/// HashMap and will not necessarily be valid if any non-const operations are done to this
-	/// HashMap that can change the internal capacity, so make a copy if you intend to keep the
-	/// value. Returns nullptr if no element is associated with the given key.
 	const V* get(const K& key) const noexcept;
+	V* get(const AltK& key) noexcept;
+	const V* get(const AltK& key) const noexcept;
 
 	// Public methods
 	// --------------------------------------------------------------------------------------------
 
 	/// Adds the specified key value pair to this HashMap. If a value is already associated with
-	/// the given key it will be replaced with the new value. Will call ensureProperlyHashed().
-	void put(const K& key, const V& value) noexcept;
-
-	/// Adds the specified key value pair to this HashMap. If a value is already associated with
-	/// the given key it will be replaced with the new value. Will call ensureProperlyHashed().
-	void put(const K& key, V&& value) noexcept;
+	/// the given key it will be replaced with the new value. Returns a reference to the element
+	/// set. As usual, the reference will be invalidated if the HashMap is rehashed, so be careful.
+	/// This method will always call ensureProperlyHashed(), which might trigger a rehash.
+	///
+	/// In particular the following scenario presents a dangerous trap:
+	/// V& ref1 = m.put(key1, value1);
+	/// V& ref2 = m.put(key2, value2);
+	/// At this point only ref2 is guaranteed to be valid, as the second call might have triggered
+	/// a rehash. In this particular example consider ignoring the reference returned and instead
+	/// retrieve pointers via the get() method (which is guaranteed to not cause a rehash) after
+	/// all the keys have been inserted.
+	V& put(const K& key, const V& value) noexcept;
+	V& put(const K& key, V&& value) noexcept;
+	V& put(K&& key, const V& value) noexcept;
+	V& put(K&& key, V&& value) noexcept;
+	V& put(const AltK& key, const V& value) noexcept;
+	V& put(const AltK& key, V&& value) noexcept;
 
 	/// Access operator, will return a reference to the element associated with the given key. If
-	/// no such element exists it will be created with the default constructor. As always, the
-	/// reference will be invalidated if the HashMap is resized. So store a copy if you intend to
-	/// keep it. Will call ensureProperlyHashed() if capacity is 0 or if adding a key value pair
-	/// to the HashMap.
+	/// no such element exists it will be created with the default constructor. This method is
+	/// implemented by a call to get(), and then a call to put() if no element existed. In
+	/// practice this means that this function is guaranteed to not rehash if the requested
+	/// element already exists. This might be dangerous to rely on, so get() should be preferred
+	/// if rehashing needs to be avoided. As always, the reference will be invalidated if the
+	/// HashMap is rehashed.
 	V& operator[] (const K& key) noexcept;
+	V& operator[] (K&& key) noexcept;
+	V& operator[] (const AltK& key) noexcept;
 
 	/// Attempts to remove the element associated with the given key. Returns false if this
-	/// HashMap contains no such element. 
+	/// HashMap contains no such element. Guaranteed to not rehash.
 	bool remove(const K& key) noexcept;
+	bool remove(const AltK& key) noexcept;
 
 	/// Swaps the contents of two HashMaps
 	void swap(HashMap& other) noexcept;
@@ -283,7 +315,24 @@ private:
 	/// sent back through the firstFreeSlot parameter, if no free slot is found it will be set to
 	/// ~0. Whether the found free slot is a placeholder slot or not is sent back through the
 	/// isPlaceholder parameter.
-	uint32_t findElementIndex(const K& key, bool& elementFound, uint32_t& firstFreeSlot, bool& isPlaceholder) const noexcept;
+	/// KT: The key type, either K or AltK
+	/// KeyHash: Hasher for KeyT
+	/// KeyEqual: Comparer for KeyT and K (I.e. KeyEqual for K and AltKeyKeyEqual for AltK)
+	template<typename KT, typename Hash, typename Equal>
+	uint32_t findElementIndex(const KT& key, bool& elementFound, uint32_t& firstFreeSlot,
+	                          bool& isPlaceholder) const noexcept;
+	
+	/// Internal shared implementation of all get() methods
+	template<typename KT, typename Hash, typename Equal>
+	V* getInternal(const KT& key) const noexcept;
+
+	/// Internal shared implementation of all put() methods
+	template<typename KT, typename VT, typename Hash, typename Equal>
+	V& putInternal(KT&& key, VT&& value) noexcept;
+
+	/// Internal shared implementation of all remove() methods
+	template<typename KT, typename Hash, typename Equal>
+	bool removeInternal(const KT& key) noexcept;
 
 	// Private members
 	// --------------------------------------------------------------------------------------------

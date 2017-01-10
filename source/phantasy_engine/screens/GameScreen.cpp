@@ -7,6 +7,7 @@
 
 #include <sfz/gl/IncludeOpenGL.hpp>
 #include <sfz/util/IO.hpp>
+#include <sfz/math/MathPrimitiveToStrings.hpp>
 #include <sfz/math/Vector.hpp>
 
 #include "phantasy_engine/config/GlobalConfig.hpp"

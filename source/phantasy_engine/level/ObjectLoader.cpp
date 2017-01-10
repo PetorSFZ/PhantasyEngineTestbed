@@ -6,8 +6,7 @@
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 
-#include <sfz/containers/DynString.hpp>
-#include <sfz/math/MatrixSupport.hpp>
+#include <sfz/strings/DynString.hpp>
 
 #include "phantasy_engine/util/IOUtil.hpp"
 
@@ -194,7 +193,7 @@ uint32_t loadDynObject(const char* basePath, const char* fileName, Level& level,
 
 uint32_t loadDynObject(const char* basePath, const char* fileName, Level& level)
 {
-	return loadDynObject(basePath, fileName, level, identityMatrix4<float>());
+	return loadDynObject(basePath, fileName, level, mat4::identity());
 }
 
 uint32_t loadDynObjectCustomMaterial(const char* basePath, const char* fileName, Level& level, const vec3& albedo, float roughness, float metallic, const mat4& modelMatrix)
@@ -217,7 +216,7 @@ uint32_t loadDynObjectCustomMaterial(const char* basePath, const char* fileName,
 
 uint32_t loadDynObjectCustomMaterial(const char* basePath, const char* fileName, Level& level, const vec3& albedo, float roughness, float metallic)
 {
-	return loadDynObjectCustomMaterial(basePath, fileName, level, albedo, roughness, metallic, identityMatrix4<float>());
+	return loadDynObjectCustomMaterial(basePath, fileName, level, albedo, roughness, metallic, mat4::identity());
 }
 
 }

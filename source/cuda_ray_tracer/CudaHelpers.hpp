@@ -5,7 +5,7 @@
 #include <cuda_runtime.h>
 
 #include <sfz/Assert.hpp>
-#include <sfz/CUDACallable.hpp>
+#include <sfz/CudaCompatibility.hpp>
 
 // Macros
 // ------------------------------------------------------------------------------------------------

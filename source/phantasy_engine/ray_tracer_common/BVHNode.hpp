@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <sfz/CUDACallable.hpp>
+#include <sfz/CudaCompatibility.hpp>
 #include <sfz/math/Vector.hpp>
 
 namespace phe {
@@ -42,32 +42,32 @@ struct BVHNode {
 	// Getters
 	// --------------------------------------------------------------------------------------------
 
-	SFZ_CUDA_CALLABLE vec3 leftChildAABBMin() const noexcept
+	SFZ_CUDA_CALL vec3 leftChildAABBMin() const noexcept
 	{ 
 		return fData[0].xyz;
 	}
 
-	SFZ_CUDA_CALLABLE vec3 leftChildAABBMax() const noexcept
+	SFZ_CUDA_CALL vec3 leftChildAABBMax() const noexcept
 	{
 		return vec3(fData[0].w, fData[1].xy);
 	}
 
-	SFZ_CUDA_CALLABLE vec3 rightChildAABBMin() const noexcept
+	SFZ_CUDA_CALL vec3 rightChildAABBMin() const noexcept
 	{
 		return vec3(fData[1].zw, fData[2].x);
 	}
 
-	SFZ_CUDA_CALLABLE vec3 rightChildAABBMax() const noexcept
+	SFZ_CUDA_CALL vec3 rightChildAABBMax() const noexcept
 	{
 		return fData[2].yzw;
 	}
 
-	SFZ_CUDA_CALLABLE int32_t leftChildIndexRaw() const noexcept
+	SFZ_CUDA_CALL int32_t leftChildIndexRaw() const noexcept
 	{
 		return iData.x;
 	}
 
-	SFZ_CUDA_CALLABLE int32_t rightChildIndexRaw() const noexcept
+	SFZ_CUDA_CALL int32_t rightChildIndexRaw() const noexcept
 	{
 		return iData.y;
 	}
@@ -84,22 +84,22 @@ struct BVHNode {
 		return (index < 0) ? ~index : index;
 	}
 
-	SFZ_CUDA_CALLABLE int32_t leftChildNumTriangles() const noexcept
+	SFZ_CUDA_CALL int32_t leftChildNumTriangles() const noexcept
 	{
 		 return iData.z;
 	}
 
-	SFZ_CUDA_CALLABLE int32_t rightChildNumTriangles() const noexcept
+	SFZ_CUDA_CALL int32_t rightChildNumTriangles() const noexcept
 	{
 		return iData.w;
 	}
 
-	SFZ_CUDA_CALLABLE bool leftChildIsLeaf() const noexcept
+	SFZ_CUDA_CALL bool leftChildIsLeaf() const noexcept
 	{
 		return leftChildNumTriangles() != 0;
 	}
 
-	SFZ_CUDA_CALLABLE bool rightChildIsLeaf() const noexcept
+	SFZ_CUDA_CALL bool rightChildIsLeaf() const noexcept
 	{
 		return rightChildNumTriangles() != 0;
 	}
@@ -107,39 +107,39 @@ struct BVHNode {
 	// Setters
 	// --------------------------------------------------------------------------------------------
 
-	SFZ_CUDA_CALLABLE void setLeftChildAABB(const vec3& min, const vec3& max) noexcept
+	SFZ_CUDA_CALL void setLeftChildAABB(const vec3& min, const vec3& max) noexcept
 	{
 		fData[0].xyz = min;
 		fData[0].w = max.x;
 		fData[1].xy = max.yz;
 	}
 
-	SFZ_CUDA_CALLABLE void setRightChildAABB(const vec3& min, const vec3& max) noexcept
+	SFZ_CUDA_CALL void setRightChildAABB(const vec3& min, const vec3& max) noexcept
 	{
 		fData[1].zw = min.xy;
 		fData[2].x = min.z;
 		fData[2].yzw = max;
 	}
 
-	SFZ_CUDA_CALLABLE void setLeftChildInner(int32_t nodeIndex) noexcept
+	SFZ_CUDA_CALL void setLeftChildInner(int32_t nodeIndex) noexcept
 	{
 		iData.x = nodeIndex;
 		iData.z = 0;
 	}
 
-	SFZ_CUDA_CALLABLE void setLeftChildLeaf(int32_t triangleIndex, int32_t numTriangles) noexcept
+	SFZ_CUDA_CALL void setLeftChildLeaf(int32_t triangleIndex, int32_t numTriangles) noexcept
 	{
 		iData.x = triangleIndex;
 		iData.z = numTriangles;
 	}
 
-	SFZ_CUDA_CALLABLE void setRightChildInner(int32_t nodeIndex) noexcept
+	SFZ_CUDA_CALL void setRightChildInner(int32_t nodeIndex) noexcept
 	{
 		iData.y = nodeIndex;
 		iData.w = 0u;
 	}
 
-	SFZ_CUDA_CALLABLE void setRightChildLeaf(int32_t triangleIndex, int32_t numTriangles) noexcept
+	SFZ_CUDA_CALL void setRightChildLeaf(int32_t triangleIndex, int32_t numTriangles) noexcept
 	{
 		iData.y = triangleIndex;
 		iData.w = numTriangles;

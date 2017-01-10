@@ -60,10 +60,10 @@ inline bool pointInside(const OBB& box, const vec3& point) noexcept
 {
 	// Modified closest point algorithm from Real-Time Collision Detection (Section 5.1.4)
 	const vec3 distToPoint = point - box.position();
-	const std::array<vec3,3>& axes = box.axes();
+	const OBBAxes& axes = box.axes();
 	float dist;
-	for (size_t i = 0; i < 3; i++) {
-		dist = dot(distToPoint, axes[i]);
+	for (uint32_t i = 0; i < 3; i++) {
+		dist = dot(distToPoint, axes.axes[i]);
 		if (dist > box.halfExtents()[i]) return false;
 		if (dist < -box.halfExtents()[i]) return false;
 	}
@@ -73,7 +73,7 @@ inline bool pointInside(const OBB& box, const vec3& point) noexcept
 inline bool pointInside(const Sphere& sphere, const vec3& point) noexcept
 {
 	const vec3 distToPoint = point - sphere.position;
-	return squaredLength(distToPoint) < (sphere.radius * sphere.radius);
+	return dot(distToPoint, distToPoint) < (sphere.radius * sphere.radius);
 }
 
 inline bool pointInside(const Circle& circle, vec2 point) noexcept
@@ -81,7 +81,8 @@ inline bool pointInside(const Circle& circle, vec2 point) noexcept
 	// If the length from the circles center to the specified point is shorter than or equal to
 	// the radius then the Circle overlaps the point. Both sides of the equation is squared to
 	// avoid somewhat expensive sqrt() function.
-	return squaredLength(point - circle.pos) <= (circle.radius*circle.radius);
+	vec2 dist = point - circle.pos;
+	return dot(dist, dist) <= (circle.radius*circle.radius);
 }
 
 inline bool pointInside(const AABB2D& rect, vec2 point) noexcept
@@ -107,15 +108,15 @@ inline bool intersects(const OBB& a, const OBB& b) noexcept
 	// OBB vs OBB SAT (Separating Axis Theorem) test from Real-Time Collision Detection
 	// (chapter 4.4.1 OBB-OBB Intersection)
 
-	const std::array<vec3,3>& aU = a.axes();
+	const OBBAxes& aU = a.axes();
 	const vec3& aE = a.halfExtents();
-	const std::array<vec3,3>& bU = b.axes();
+	const OBBAxes& bU = b.axes();
 	const vec3& bE = b.halfExtents();
 
 	// Compute the rotation matrix from b to a
 	mat3 R;
-	for (size_t i = 0; i < 3; i++) {
-		for (size_t j = 0; j < 3; j++) {
+	for (uint32_t i = 0; i < 3; i++) {
+		for (uint32_t j = 0; j < 3; j++) {
 			R.set(i, j, dot(aU[i], bU[j]));
 		}
 	}
@@ -123,8 +124,8 @@ inline bool intersects(const OBB& a, const OBB& b) noexcept
 	// Compute common subexpressions, epsilon term to counteract arithmetic errors
 	const float EPSILON = 0.00001f;
 	mat3 AbsR;
-	for (size_t i = 0; i < 3; i++) {
-		for (size_t j = 0; j < 3; j++) {
+	for (uint32_t i = 0; i < 3; i++) {
+		for (uint32_t j = 0; j < 3; j++) {
 			AbsR.set(i, j, std::abs(R.at(i, j)) + EPSILON);
 		}
 	}
@@ -136,14 +137,14 @@ inline bool intersects(const OBB& a, const OBB& b) noexcept
 	float ra, rb;
 
 	// Test axes L = aU[0], aU[1], aU[2]
-	for (size_t i = 0; i < 3; i++) {
+	for (uint32_t i = 0; i < 3; i++) {
 		ra = aE[i];
 		rb = bE[0]*AbsR.at(i,0) + bE[1]*AbsR.at(i,1) + bE[2]*AbsR.at(i,2);
 		if (std::abs(t[i]) > ra + rb) return false;
 	}
 
 	// Test axes L = bU[0], bU[1], bU[2]
-	for (size_t i = 0; i < 3; i++) {
+	for (uint32_t i = 0; i < 3; i++) {
 		ra = aE[0]*AbsR.at(0,i) + aE[1]*AbsR.at(1,i) + aE[2]*AbsR.at(2,i);
 		rb = bE[i];
 		if (std::abs(t[0]*R.at(0,i) + t[1]*R.at(1,i) + t[2]*R.at(2,i)) > ra + rb) return false;
@@ -212,7 +213,7 @@ inline bool overlaps(const Circle& lhs, const Circle& rhs) noexcept
 	// If the length between the center of the two circles is less than or equal to the the sum of
 	// the circle's radiuses they overlap. Both sides of the equation is squared to avoid somewhat 
 	// expensive sqrt() function.
-	float distSquared = squaredLength(lhs.pos - rhs.pos);
+	float distSquared = dot(lhs.pos - rhs.pos, lhs.pos - rhs.pos);
 	float radiusSum = lhs.radius + rhs.radius;
 	return distSquared <= (radiusSum * radiusSum);
 }
@@ -235,7 +236,7 @@ inline bool overlaps(const Circle& circle, const AABB2D& rect) noexcept
 	// squared to avoid somewhat expensive sqrt() function.
 	vec2 e{max(rect.min - circle.pos, 0.0f)};
 	e += max(circle.pos - rect.max, 0.0f);
-	return squaredLength(e) <= circle.radius * circle.radius;
+	return dot(e, e) <= circle.radius * circle.radius;
 }
 
 inline bool overlaps(const AABB2D& rect, const Circle& circle) noexcept
@@ -348,6 +349,46 @@ inline bool abovePlane(const Plane& plane, const Sphere& sphere) noexcept
 inline bool belowPlane(const Plane& plane, const Sphere& sphere) noexcept
 {
 	return detail::belowPlane(plane, sphere.position, sphere.radius);
+}
+
+// Closest point tests
+// ------------------------------------------------------------------------------------------------
+
+inline vec3 closestPoint(const AABB& aabb, const vec3& point) noexcept
+{
+	return sfz::min(sfz::max(point, aabb.min), aabb.max);
+}
+
+inline vec3 closestPoint(const OBB& obb, const vec3& point) noexcept
+{
+	// Algorithm from Real-Time Collision Detection (Section 5.1.4)
+	const vec3 distToPoint = point - obb.position();
+	vec3 res = obb.position();;
+
+	float dist;
+	for (uint32_t i = 0; i < 3; i++) {
+		dist = dot(distToPoint, obb.axes()[i]);
+		if (dist > obb.halfExtents()[i]) dist = obb.halfExtents()[i];
+		if (dist < -obb.halfExtents()[i]) dist = -obb.halfExtents()[i];
+		res += (dist * obb.axes()[i]);
+	}
+
+	return res;
+}
+
+inline vec3 closestPoint(const Plane& plane, const vec3& point) noexcept
+{
+	return point - plane.signedDistance(point) * plane.normal();
+}
+
+inline vec3 closestPoint(const Sphere& sphere, const vec3& point) noexcept
+{
+	const vec3 distToPoint = point - sphere.position;
+	vec3 res = point;
+	if (dot(distToPoint, distToPoint) > (sphere.radius * sphere.radius)) {
+		res = sphere.position + normalize(distToPoint) * sphere.radius;
+	}
+	return res;
 }
 
 } // namespace sfz

@@ -23,15 +23,15 @@ struct RayIn final {
 	vec4 data1;
 	vec4 data2;
 
-	SFZ_CUDA_CALLABLE vec3 origin() const noexcept { return data1.xyz; }
-	SFZ_CUDA_CALLABLE vec3 dir() const noexcept { return data2.xyz; }
-	SFZ_CUDA_CALLABLE float minDist() const noexcept { return data1.w; }
-	SFZ_CUDA_CALLABLE float maxDist() const noexcept { return data2.w; }
+	SFZ_CUDA_CALL vec3 origin() const noexcept { return data1.xyz; }
+	SFZ_CUDA_CALL vec3 dir() const noexcept { return data2.xyz; }
+	SFZ_CUDA_CALL float minDist() const noexcept { return data1.w; }
+	SFZ_CUDA_CALL float maxDist() const noexcept { return data2.w; }
 
-	SFZ_CUDA_CALLABLE void setOrigin(const vec3& origin) noexcept { data1.xyz = origin; }
-	SFZ_CUDA_CALLABLE void setDir(const vec3& dir) noexcept { data2.xyz = dir; }
-	SFZ_CUDA_CALLABLE void setMinDist(float dist) noexcept { data1.w = dist; }
-	SFZ_CUDA_CALLABLE void setMaxDist(float dist) noexcept { data2.w = dist; }
+	SFZ_CUDA_CALL void setOrigin(const vec3& origin) noexcept { data1.xyz = origin; }
+	SFZ_CUDA_CALL void setDir(const vec3& dir) noexcept { data2.xyz = dir; }
+	SFZ_CUDA_CALL void setMinDist(float dist) noexcept { data1.w = dist; }
+	SFZ_CUDA_CALL void setMaxDist(float dist) noexcept { data2.w = dist; }
 };
 
 static_assert(sizeof(RayIn) == 32, "RayIn is padded");

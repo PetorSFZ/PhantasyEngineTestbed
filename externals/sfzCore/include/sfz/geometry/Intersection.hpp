@@ -83,6 +83,14 @@ inline bool abovePlane(const Plane& plane, const Sphere& sphere) noexcept;
 /// Checks whether Sphere intersects with or is in negative half-space of plane.
 inline bool belowPlane(const Plane& plane, const Sphere& sphere) noexcept;
 
+// Closest point tests
+// ------------------------------------------------------------------------------------------------
+
+inline vec3 closestPoint(const AABB& aabb, const vec3& point) noexcept;
+inline vec3 closestPoint(const OBB& obb, const vec3& point) noexcept;
+inline vec3 closestPoint(const Plane& plane, const vec3& point) noexcept;
+inline vec3 closestPoint(const Sphere& sphere, const vec3& point) noexcept;
+
 } // namespace sfz
 
 #include "sfz/geometry/Intersection.inl"

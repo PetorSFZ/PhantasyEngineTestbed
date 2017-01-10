@@ -20,9 +20,8 @@
 #include "catch.hpp"
 #include "sfz/PopWarnings.hpp"
 
-#include <string>
-
 #include "sfz/containers/HashMap.hpp"
+#include "sfz/Strings.hpp"
 
 using namespace sfz;
 
@@ -37,9 +36,9 @@ TEST_CASE("HashMap: Default constructor", "[sfz::HashMap]")
 TEST_CASE("HashMap: Copy constructors", "[sfz::HashMap]")
 {
 	HashMap<int,int> m1(1);
-	m1.put(1, 2);
-	m1.put(2, 3);
-	m1.put(3, 4);
+	REQUIRE(m1.put(1, 2) == 2);
+	REQUIRE(m1.put(2, 3) == 3);
+	REQUIRE(m1.put(3, 4) == 4);
 	REQUIRE(m1.size() == 3);
 	REQUIRE(m1.capacity() != 0);
 	REQUIRE(m1.placeholders() == 0);
@@ -159,7 +158,7 @@ TEST_CASE("HashMap: Rehashing in put()", "[sfz::HashMap]")
 	REQUIRE(m1.capacity() == 0);
 
 	for (int i = 0; i < 256; ++i) {
-		m1.put(i, i + 1);
+		REQUIRE(m1.put(i, i + 1) == (i + 1));
 		REQUIRE(m1.size() == uint32_t(i+1));
 	}
 
@@ -207,9 +206,19 @@ struct ZeroHash {
 	}
 };
 
+struct ZeroHashDescriptor final {
+	using KeyT = int;
+	using KeyHash = ZeroHash;
+	using KeyEqual = std::equal_to<int>;
+
+	using AltKeyT = NO_ALT_KEY_TYPE;
+	using AltKeyHash = NO_ALT_KEY_TYPE;
+	using AltKeyKeyEqual = NO_ALT_KEY_TYPE;
+};
+
 TEST_CASE("HashMap: Hashing conflicts", "[sfz::HashMap]")
 {
-	HashMap<int,int,ZeroHash> m;
+	HashMap<int,int,ZeroHashDescriptor> m;
 	REQUIRE(m.size() == 0);
 	REQUIRE(m.capacity() == 0);
 	REQUIRE(m.placeholders() == 0);
@@ -336,24 +345,232 @@ TEST_CASE("Empty HashMap", "[sfz::HashMap]")
 	}
 }
 
-TEST_CASE("Actual HashMap error case", "[sfz::HashMap]")
+TEST_CASE("HashMap with strings", "[sfz::HashMap]")
 {
-	HashMap<std::string,uint32_t> mapping(0);
-	
-	const uint32_t NUM_TESTS = 100;
-
-	for (uint32_t i = 0; i < NUM_TESTS; i++) {
-		std::string str = "str" + std::to_string(i);
-		mapping.put(str, i);
+	SECTION("const char*") {
+		HashMap<const char*, uint32_t> m(0);
+		m.put("foo", 1);
+		m.put("bar", 2);
+		m.put("car", 3);
+		REQUIRE(m.get("foo") != nullptr);
+		REQUIRE(*m.get("foo") == 1);
+		REQUIRE(m.get("bar") != nullptr);
+		REQUIRE(*m.get("bar") == 2);
+		REQUIRE(m.get("car") != nullptr);
+		REQUIRE(*m.get("car") == 3);
 	}
-	
-	REQUIRE(mapping.size() == NUM_TESTS);
-	REQUIRE(mapping.capacity() >= mapping.size());
+	SECTION("DynString") {
+		HashMap<DynString,uint32_t> m(0);
 
-	for (uint32_t i = 0; i < NUM_TESTS; i++) {
-		std::string str = "str" + std::to_string(i);
-		uint32_t* ptr = mapping.get(str);
+		const uint32_t NUM_TESTS = 100;
+		for (uint32_t i = 0; i < NUM_TESTS; i++) {
+			DynString tmp("", 20);
+			tmp.printf("str%u", i);
+			m.put(tmp, i);
+		}
+
+		REQUIRE(m.size() == NUM_TESTS);
+		REQUIRE(m.capacity() >= m.size());
+
+		for (uint32_t i = 0; i < NUM_TESTS; i++) {
+			DynString tmp("", 20);
+			tmp.printf("str%u", i);
+			uint32_t* ptr = m.get(tmp);
+			REQUIRE(ptr != nullptr);
+			REQUIRE(*ptr == i);
+
+			uint32_t* ptr2 = m.get(tmp.str()); // alt key variant
+			REQUIRE(ptr2 != nullptr);
+			REQUIRE(*ptr2 == i);
+			REQUIRE(*ptr2 == *ptr);
+		}
+
+		REQUIRE(m.get("str0") != nullptr);
+		REQUIRE(*m.get("str0") == 0);
+		REQUIRE(m.remove("str0"));
+		REQUIRE(m.get("str0") == nullptr);
+
+		m["str0"] = 3;
+		REQUIRE(m["str0"] == 3);
+	}
+	SECTION("StackString") {
+		HashMap<StackString,uint32_t> m(0);
+
+		const uint32_t NUM_TESTS = 100;
+		for (uint32_t i = 0; i < NUM_TESTS; i++) {
+			StackString tmp;
+			tmp.printf("str%u", i);
+			m.put(tmp, i);
+		}
+
+		REQUIRE(m.size() == NUM_TESTS);
+		REQUIRE(m.capacity() >= m.size());
+
+		for (uint32_t i = 0; i < NUM_TESTS; i++) {
+			StackString tmp;
+			tmp.printf("str%u", i);
+			uint32_t* ptr = m.get(tmp);
+			REQUIRE(ptr != nullptr);
+			REQUIRE(*ptr == i);
+
+			uint32_t* ptr2 = m.get(tmp.str); // alt key variant
+			REQUIRE(ptr2 != nullptr);
+			REQUIRE(*ptr2 == i);
+			REQUIRE(*ptr2 == *ptr);
+		}
+
+		REQUIRE(m.get("str0") != nullptr);
+		REQUIRE(*m.get("str0") == 0);
+		REQUIRE(m.remove("str0"));
+		REQUIRE(m.get("str0") == nullptr);
+
+		m["str0"] = 3;
+		REQUIRE(m["str0"] == 3);
+	}
+}
+
+struct MoveTestStruct {
+	int value = 0;
+	bool moved = false;
+
+	MoveTestStruct() = default;
+	MoveTestStruct(const MoveTestStruct&) = default;
+	MoveTestStruct& operator= (const MoveTestStruct&) = default;
+
+	MoveTestStruct(int value) : value(value) { }
+
+	MoveTestStruct(MoveTestStruct&& other)
+	{
+		*this = std::move(other);
+	}
+
+	MoveTestStruct& operator= (MoveTestStruct&& other)
+	{
+		this->value = other.value;
+		this->moved = true;
+		other.value = 0;
+		other.moved = true;
+		return *this;
+	}
+
+	bool operator== (const MoveTestStruct& other) const
+	{
+		return this->value == other.value;
+	}
+};
+
+namespace std {
+
+template<>
+struct hash<MoveTestStruct> {
+	inline size_t operator() (const MoveTestStruct& val) const
+	{
+		return size_t(val.value);
+	}
+};
+
+}
+
+TEST_CASE("Perfect forwarding in put()", "[sfz::HashMap]")
+{
+	HashMap<MoveTestStruct, MoveTestStruct> m;
+
+	SECTION("const ref, const ref") {
+		MoveTestStruct k = 2;
+		MoveTestStruct v = 3;
+		REQUIRE(!k.moved);
+		REQUIRE(!v.moved);
+		m.put(k, v);
+		REQUIRE(!k.moved);
+		REQUIRE(k.value == 2);
+		REQUIRE(!v.moved);
+		REQUIRE(v.value == 3);
+		
+		MoveTestStruct* ptr = m.get(k);
 		REQUIRE(ptr != nullptr);
-		REQUIRE(*ptr == i);
+		REQUIRE(ptr->value == 3);
+
+		MoveTestStruct* ptr2 = m.get(MoveTestStruct(2));
+		REQUIRE(ptr2 != nullptr);
+		REQUIRE(ptr2->value == 3);
+	}
+	SECTION("const ref, rvalue") {
+		MoveTestStruct k = 2;
+		MoveTestStruct v = 3;
+		REQUIRE(!k.moved);
+		REQUIRE(!v.moved);
+		m.put(k, std::move(v));
+		REQUIRE(!k.moved);
+		REQUIRE(k.value == 2);
+		REQUIRE(v.moved);
+		REQUIRE(v.value == 0);
+		
+		MoveTestStruct* ptr = m.get(k);
+		REQUIRE(ptr != nullptr);
+		REQUIRE(ptr->value == 3);
+
+		MoveTestStruct* ptr2 = m.get(MoveTestStruct(2));
+		REQUIRE(ptr2 != nullptr);
+		REQUIRE(ptr2->value == 3);
+	}
+	SECTION("rvalue, const ref") {
+		MoveTestStruct k = 2;
+		MoveTestStruct v = 3;
+		REQUIRE(!k.moved);
+		REQUIRE(!v.moved);
+		m.put(std::move(k), v);
+		REQUIRE(k.moved);
+		REQUIRE(k.value == 0);
+		REQUIRE(!v.moved);
+		REQUIRE(v.value == 3);
+		
+		MoveTestStruct* ptr = m.get(k);
+		REQUIRE(ptr == nullptr);
+
+		MoveTestStruct* ptr2 = m.get(MoveTestStruct(2));
+		REQUIRE(ptr2 != nullptr);
+		REQUIRE(ptr2->value == 3);
+	}
+	SECTION("rvalue, rvalue") {
+		MoveTestStruct k = 2;
+		MoveTestStruct v = 3;
+		REQUIRE(!k.moved);
+		REQUIRE(!v.moved);
+		m.put(std::move(k), std::move(v));
+		REQUIRE(k.moved);
+		REQUIRE(k.value == 0);
+		REQUIRE(v.moved);
+		REQUIRE(v.value == 0);
+		
+		MoveTestStruct* ptr = m.get(k);
+		REQUIRE(ptr == nullptr);
+
+		MoveTestStruct* ptr2 = m.get(MoveTestStruct(2));
+		REQUIRE(ptr2 != nullptr);
+		REQUIRE(ptr2->value == 3);
+	}
+	SECTION("altKey, const ref") {
+		HashMap<StackString, MoveTestStruct> m2;
+		MoveTestStruct v(2);
+		REQUIRE(!v.moved);
+		m2.put("foo", v);
+		REQUIRE(!v.moved);
+		REQUIRE(v.value == 2);
+		MoveTestStruct* ptr = m2.get("foo");
+		REQUIRE(ptr != nullptr);
+		REQUIRE(ptr->value == 2);
+		REQUIRE(!ptr->moved);
+	}
+	SECTION("altKey, rvalue") {
+		HashMap<StackString, MoveTestStruct> m2;
+		MoveTestStruct v(2);
+		REQUIRE(!v.moved);
+		m2.put("foo", std::move(v));
+		REQUIRE(v.moved);
+		REQUIRE(v.value == 0);
+		MoveTestStruct* ptr = m2.get("foo");
+		REQUIRE(ptr != nullptr);
+		REQUIRE(ptr->value == 2);
+		REQUIRE(ptr->moved);
 	}
 }

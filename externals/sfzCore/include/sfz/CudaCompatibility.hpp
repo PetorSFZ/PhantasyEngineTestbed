@@ -18,17 +18,22 @@
 
 #pragma once
 
-#include <cmath>
+// CUDA call macro
+// ------------------------------------------------------------------------------------------------
 
-namespace sfz {
+/// A macro to allow for functions to be called from CUDA.
+#if defined(__CUDACC__)
+#define SFZ_CUDA_CALL inline __host__ __device__
+#else
+#define SFZ_CUDA_CALL inline
+#endif
 
-template<typename T = float>
-constexpr T PI() noexcept { return T(3.14159265358979323846); }
+// CUDA device macro
+// ------------------------------------------------------------------------------------------------
 
-template<typename T = float>
-constexpr T DEG_TO_RAD() noexcept { return PI<T>() / T(180); }
-
-template<typename T = float>
-constexpr T RAD_TO_DEG() noexcept { return T(180) / PI<T>(); }
-
-} // namespace sfz
+/// A macro that is defined if the code is currently being compiled for CUDA devices
+#if defined(__CUDACC__)
+#if defined(__CUDA_ARCH__)
+#define SFZ_CUDA_DEVICE_CODE 1
+#endif
+#endif

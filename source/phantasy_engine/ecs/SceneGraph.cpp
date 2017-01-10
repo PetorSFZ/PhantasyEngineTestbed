@@ -1,6 +1,6 @@
 // See 'LICENSE_PHANTASY_ENGINE' for copyright and contributors.
 
-#include "phantasy_engine/level/SceneGraph.hpp"
+#include "phantasy_engine/ecs/SceneGraph.hpp"
 
 namespace phe {
 

@@ -9,7 +9,6 @@
 #include "Helpers.hpp"
 
 #include <sfz/util/IO.hpp>
-#include <sfz/math/MatrixSupport.hpp>
 
 using namespace sfz;
 
@@ -18,7 +17,7 @@ using namespace sfz;
 
 static const int numBalls = 50;
 static const float distance = 91.0f;
-static const float period = (distance / 2.5f) / (2.0f * sfz::PI());
+static const float period = (distance / 2.5f) / (2.0f * sfz::PI);
 static const float amplitude = 5.0f;
 static const float xOffset = -4.0f - (distance / 2.0f);
 
@@ -52,9 +51,9 @@ TestbedLogic::TestbedLogic(DynArray<RendererAndStatus>&& renderers, uint32_t ren
 		Ball tmpBall;
 		float xPos = i * (distance / numBalls);
 		tmpBall.basePos = vec3(xPos + xOffset,
-		                       ((height == 1) ? 40.0f : 15.0f) - abs(sin(xPos / period) * amplitude),
+		                       ((height == 1) ? 40.0f : 15.0f) - sfz::abs(sin(xPos / period) * amplitude),
 		                       (side == 1) ? 7.0f : -11.0f);
-		tmpBall.entity = spawnObject(((i % 2) == 0) ? 1 : 2, level, translationMatrix(tmpBall.basePos));
+		tmpBall.entity = spawnObject(((i % 2) == 0) ? 1 : 2, level, mat44::translation3(tmpBall.basePos));
 		tmpBall.timeOffset = xPos;
 		mChristmasBalls.add(tmpBall);
 	}
@@ -76,16 +75,16 @@ UpdateOp TestbedLogic::update(GameScreen& screen, UpdateState& state) noexcept
 		auto& rendComp = *screen.level->ecs.renderComponents.get(ball.entity);
 
 		ball.timeOffset += state.delta;
-		if (ball.timeOffset > 200 * PI()) ball.timeOffset -= 200 * PI();
+		if (ball.timeOffset > 200 * PI) ball.timeOffset -= 200 * PI;
 
 		vec3 pos = ball.basePos;
 		pos += vec3(sin(ball.timeOffset * 0.85f) * 0.045f,
 		            0.0f,
 		            sin(ball.timeOffset * 0.85f) * 0.05f);
 
-		vec3 prevPos = translation(rendComp.transform);
+		vec3 prevPos = rendComp.transform.columnAt(3).xyz;;
 		rendComp.velocity = (pos - prevPos) / state.delta;
-		rendComp.transform = translationMatrix(pos);
+		rendComp.transform = mat44::translation3(pos);
 	}
 
 	// Move balls
@@ -93,16 +92,16 @@ UpdateOp TestbedLogic::update(GameScreen& screen, UpdateState& state) noexcept
 		auto& rendComp = *screen.level->ecs.renderComponents.get(ball.entity);
 
 		ball.timeOffset += state.delta;
-		if (ball.timeOffset > 200 * PI()) ball.timeOffset -= 200 * PI();
+		if (ball.timeOffset > 200 * PI) ball.timeOffset -= 200 * PI;
 
 		vec3 pos = ball.basePos;
 		pos += vec3(0.0f,
 		            sin(ball.timeOffset * 1.25f) * 3.0f,
 		            cos(ball.timeOffset * 1.25f) * 3.0f);
 
-		vec3 prevPos = translation(rendComp.transform);
+		vec3 prevPos = rendComp.transform.columnAt(3).xyz;
 		rendComp.velocity = (pos - prevPos) / state.delta;
-		rendComp.transform = translationMatrix(pos);
+		rendComp.transform = mat44::translation3(pos);
 	}
 
 	// Handle input
@@ -150,7 +149,7 @@ UpdateOp TestbedLogic::update(GameScreen& screen, UpdateState& state) noexcept
 	
 	
 	float currentSpeed = 10.0f;
-	float turningSpeed = 1.25f * PI();
+	float turningSpeed = 1.25f * PI;
 
 	// Triggers
 	if (ctrl.leftTrigger > ctrl.triggerDeadzone) {
@@ -163,8 +162,8 @@ UpdateOp TestbedLogic::update(GameScreen& screen, UpdateState& state) noexcept
 	// Analogue Sticks
 	if (length(ctrl.rightStick) > ctrl.stickDeadzone) {
 		vec3 right = normalize(cross(screen.cam.dir(), screen.cam.up()));
-		mat3 xTurn = rotationMatrix3(vec3{0.0f, -1.0f, 0.0f}, ctrl.rightStick[0] * turningSpeed * state.delta);
-		mat3 yTurn = rotationMatrix3(right, ctrl.rightStick[1] * turningSpeed * state.delta);
+		mat3 xTurn = mat3::rotation3(vec3(0.0f, -1.0f, 0.0f), ctrl.rightStick[0] * turningSpeed * state.delta);
+		mat3 yTurn = mat3::rotation3(right, ctrl.rightStick[1] * turningSpeed * state.delta);
 		screen.cam.setDir(yTurn * xTurn * screen.cam.dir(), yTurn * xTurn * screen.cam.up());
 	}
 	if (length(ctrl.leftStick) > ctrl.stickDeadzone) {
@@ -223,7 +222,7 @@ UpdateOp TestbedLogic::update(GameScreen& screen, UpdateState& state) noexcept
 			}
 		}
 
-		spawnObject(meshHandle, *screen.level, translationMatrix(pos));
+		spawnObject(meshHandle, *screen.level, mat44::translation3(pos));
 	}
 	if (ctrl.x == ButtonState::DOWN) {
 		vec3 pos = screen.cam.pos() + screen.cam.dir() * 4.0f;
@@ -248,7 +247,7 @@ UpdateOp TestbedLogic::update(GameScreen& screen, UpdateState& state) noexcept
 		}
 
 		Ball ball;
-		ball.entity = spawnObject(meshHandle, *screen.level, translationMatrix(pos));
+		ball.entity = spawnObject(meshHandle, *screen.level, mat44::translation3(pos));
 		ball.basePos = pos;
 		ball.timeOffset = 0.0f;
 		mMovingBalls.add(ball);

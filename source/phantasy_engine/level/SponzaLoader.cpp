@@ -8,8 +8,8 @@
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 
-#include <sfz/containers/DynString.hpp>
 #include <sfz/containers/HashMap.hpp>
+#include <sfz/strings/DynString.hpp>
 
 #include "phantasy_engine/level/StaticScene.hpp"
 #include "phantasy_engine/util/IOUtil.hpp"

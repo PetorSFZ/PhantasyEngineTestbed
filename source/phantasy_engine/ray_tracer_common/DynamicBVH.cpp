@@ -5,7 +5,7 @@
 #include "phantasy_engine/ray_tracer_common/BVHNode.hpp"
 
 #include <sfz/geometry/AABB.hpp>
-#include <sfz/math/MatrixSupport.hpp>
+#include <sfz/math/MathSupport.hpp>
 
 #include "phantasy_engine/ray_tracer_common/StaticBVHBuilder.hpp"
 

@@ -90,7 +90,7 @@ static __device__ void shadeHit(uint32_t id, uint32_t numPixels, const vec3& mas
 			float r1 = curand_uniform(&randState);
 			float r2 = curand_uniform(&randState);
 			float centerDistance = light.radius * (2.0f * r2 - 1.0f);
-			float azimuthAngle = 2.0f * sfz::PI() * r1;
+			float azimuthAngle = 2.0f * sfz::PI * r1;
 
 			vec3 lightPosOffset = circleU * cos(azimuthAngle) * centerDistance +
 				circleV * sin(azimuthAngle) * centerDistance;
@@ -228,7 +228,7 @@ inline __device__ vec3 clampToHemisphere(const vec3& vector, const vec3& surface
 /// Return a GGX distributed sample around the reflection vector.
 inline __device__ vec3 sampleGgx(const vec2& randVec, float a, const vec3& reflection, const vec3& surfaceNormal)
 {
-	float phi = 2.0f * sfz::PI() * randVec.x;
+	float phi = 2.0f * sfz::PI * randVec.x;
 	float cosTheta = sqrt((1.0f - randVec.y) / (1.0f + (a * a - 1.0f) * randVec.y));
 	float sinTheta = sqrt(1.0f - cosTheta * cosTheta);
 
@@ -238,7 +238,7 @@ inline __device__ vec3 sampleGgx(const vec2& randVec, float a, const vec3& refle
 /// Return cosine-weighted sample around the hemisphere.
 inline __device__ vec3 sampleLambertian(const vec2& randVec, const vec3& normal)
 {
-	float phi = 2.0f * sfz::PI() * randVec.x;
+	float phi = 2.0f * sfz::PI * randVec.x;
 	float sinTheta = sqrt(randVec.y);
 	float cosTheta = sqrt(1.0f - randVec.y);
 

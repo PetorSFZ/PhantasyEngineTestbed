@@ -21,23 +21,20 @@ namespace sfz {
 // HashMap (implementation): Constructors & destructors
 // ------------------------------------------------------------------------------------------------
 
-template<typename K, typename V, typename Hash, typename KeyEqual, typename Allocator>
-HashMap<K,V,Hash,KeyEqual,Allocator>::HashMap(uint32_t suggestedCapacity) noexcept
+template<typename K, typename V, typename Descr, typename Allocator>
+HashMap<K,V,Descr,Allocator>::HashMap(uint32_t suggestedCapacity) noexcept
 {
 	this->rehash(suggestedCapacity);
 }
 
-template<typename K, typename V, typename Hash, typename KeyEqual, typename Allocator>
-HashMap<K,V,Hash,KeyEqual,Allocator>::HashMap() noexcept {}
-
-template<typename K, typename V, typename Hash, typename KeyEqual, typename Allocator>
-HashMap<K,V,Hash,KeyEqual,Allocator>::HashMap(const HashMap& other) noexcept
+template<typename K, typename V, typename Descr, typename Allocator>
+HashMap<K,V,Descr,Allocator>::HashMap(const HashMap& other) noexcept
 {
 	*this = other;
 }
 
-template<typename K, typename V, typename Hash, typename KeyEqual, typename Allocator>
-HashMap<K,V,Hash,KeyEqual,Allocator>& HashMap<K,V,Hash,KeyEqual,Allocator>::operator= (const HashMap& other) noexcept
+template<typename K, typename V, typename Descr, typename Allocator>
+HashMap<K,V,Descr,Allocator>& HashMap<K,V,Descr,Allocator>::operator= (const HashMap& other) noexcept
 {
 	// Clear and rehash this HashMap
 	this->clear();
@@ -51,21 +48,21 @@ HashMap<K,V,Hash,KeyEqual,Allocator>& HashMap<K,V,Hash,KeyEqual,Allocator>::oper
 	return *this;
 }
 
-template<typename K, typename V, typename Hash, typename KeyEqual, typename Allocator>
-HashMap<K,V,Hash,KeyEqual,Allocator>::HashMap(HashMap&& other) noexcept
+template<typename K, typename V, typename Descr, typename Allocator>
+HashMap<K,V,Descr,Allocator>::HashMap(HashMap&& other) noexcept
 {
 	this->swap(other);
 }
 
-template<typename K, typename V, typename Hash, typename KeyEqual, typename Allocator>
-HashMap<K,V,Hash,KeyEqual,Allocator>& HashMap<K,V,Hash,KeyEqual,Allocator>::operator= (HashMap&& other) noexcept
+template<typename K, typename V, typename Descr, typename Allocator>
+HashMap<K,V,Descr,Allocator>& HashMap<K,V,Descr,Allocator>::operator= (HashMap&& other) noexcept
 {
 	this->swap(other);
 	return *this;
 }
 
-template<typename K, typename V, typename Hash, typename KeyEqual, typename Allocator>
-HashMap<K,V,Hash,KeyEqual,Allocator>::~HashMap() noexcept
+template<typename K, typename V, typename Descr, typename Allocator>
+HashMap<K,V,Descr,Allocator>::~HashMap() noexcept
 {
 	this->destroy();
 }
@@ -73,152 +70,107 @@ HashMap<K,V,Hash,KeyEqual,Allocator>::~HashMap() noexcept
 // HashMap (implementation): Getters
 // ------------------------------------------------------------------------------------------------
 
-template<typename K, typename V, typename Hash, typename KeyEqual, typename Allocator>
-V* HashMap<K,V,Hash,KeyEqual,Allocator>::get(const K& key) noexcept
+template<typename K, typename V, typename Descr, typename Allocator>
+V* HashMap<K,V,Descr,Allocator>::get(const K& key) noexcept
 {
-	// Finds the index of the element
-	uint32_t firstFreeSlot = uint32_t(~0);
-	bool elementFound = false;
-	bool isPlaceholder = false;
-	uint32_t index = this->findElementIndex(key, elementFound, firstFreeSlot, isPlaceholder);
-
-	// Returns nullptr if map doesn't contain element
-	if (!elementFound) return nullptr;
-
-	// Returns pointer to element
-	return &(valuesPtr()[index]);
+	return this->getInternal<K,KeyHash,KeyEqual>(key);
 }
 
-template<typename K, typename V, typename Hash, typename KeyEqual, typename Allocator>
-const V* HashMap<K,V,Hash,KeyEqual,Allocator>::get(const K& key) const noexcept
+template<typename K, typename V, typename Descr, typename Allocator>
+const V* HashMap<K,V,Descr,Allocator>::get(const K& key) const noexcept
 {
-	// Finds the index of the element
-	uint32_t firstFreeSlot = uint32_t(~0);
-	bool elementFound = false;
-	bool isPlaceholder = false;
-	uint32_t index = this->findElementIndex(key, elementFound, firstFreeSlot, isPlaceholder);
+	return this->getInternal<K,KeyHash,KeyEqual>(key);
+}
 
-	// Returns nullptr if map doesn't contain element
-	if (!elementFound) return nullptr;
+template<typename K, typename V, typename Descr, typename Allocator>
+V* HashMap<K,V,Descr,Allocator>::get(const AltK& key) noexcept
+{
+	return this->getInternal<AltK,AltKeyHash,AltKeyKeyEqual>(key);
+}
 
-	// Returns pointer to element
-	return &(valuesPtr()[index]);
+template<typename K, typename V, typename Descr, typename Allocator>
+const V* HashMap<K,V,Descr,Allocator>::get(const AltK& key) const noexcept
+{
+	return this->getInternal<AltK,AltKeyHash,AltKeyKeyEqual>(key);
 }
 
 // HashMap (implementation): Public methods
 // ------------------------------------------------------------------------------------------------
 
-template<typename K, typename V, typename Hash, typename KeyEqual, typename Allocator>
-void HashMap<K,V,Hash,KeyEqual,Allocator>::put(const K& key, const V& value) noexcept
+template<typename K, typename V, typename Descr, typename Allocator>
+V& HashMap<K,V,Descr,Allocator>::put(const K& key, const V& value) noexcept
 {
-	ensureProperlyHashed();
-
-	// Finds the index of the element
-	uint32_t firstFreeSlot = uint32_t(~0);
-	bool elementFound = false;
-	bool isPlaceholder = false;
-	uint32_t index = this->findElementIndex(key, elementFound, firstFreeSlot, isPlaceholder);
-
-	// If map contains key just replace value and return
-	if (elementFound) {
-		valuesPtr()[index] = value;
-		return;
-	}
-
-	// Otherwise insert info, key and value
-	setElementInfo(firstFreeSlot, ELEMENT_INFO_OCCUPIED);
-	new (keysPtr() + firstFreeSlot) K(key);
-	new (valuesPtr() + firstFreeSlot) V(value);
-
-	mSize += 1;
-	if (isPlaceholder) mPlaceholders -= 1;
+	return this->putInternal<const K&, const V&, KeyHash, KeyEqual>(key, value);
 }
 
-template<typename K, typename V, typename Hash, typename KeyEqual, typename Allocator>
-void HashMap<K,V,Hash,KeyEqual,Allocator>::put(const K& key, V&& value) noexcept
+template<typename K, typename V, typename Descr, typename Allocator>
+V& HashMap<K,V,Descr,Allocator>::put(const K& key, V&& value) noexcept
 {
-	ensureProperlyHashed();
-
-	// Finds the index of the element
-	uint32_t firstFreeSlot = uint32_t(~0);
-	bool elementFound = false;
-	bool isPlaceholder = false;
-	uint32_t index = this->findElementIndex(key, elementFound, firstFreeSlot, isPlaceholder);
-
-	// If map contains key just replace value and return
-	if (elementFound) {
-		valuesPtr()[index] = std::move(value);
-		return;
-	}
-
-	// Otherwise insert info, key and value
-	setElementInfo(firstFreeSlot, ELEMENT_INFO_OCCUPIED);
-	new (keysPtr() + firstFreeSlot) K(key);
-	new (valuesPtr() + firstFreeSlot) V(std::move(value));
-
-	mSize += 1;
-	if (isPlaceholder) mPlaceholders -= 1;
+	return this->putInternal<const K&, V, KeyHash, KeyEqual>(key, std::move(value));
 }
 
-template<typename K, typename V, typename Hash, typename KeyEqual, typename Allocator>
-V& HashMap<K,V,Hash,KeyEqual,Allocator>::operator[] (const K& key) noexcept
+template<typename K, typename V, typename Descr, typename Allocator>
+V& HashMap<K,V,Descr,Allocator>::put(K&& key, const V& value) noexcept
 {
-	if (mCapacity == 0) ensureProperlyHashed();
-
-	// Finds the index of the element
-	uint32_t firstFreeSlot = uint32_t(~0);
-	bool elementFound = false;
-	bool isPlaceholder = false;
-	uint32_t index = this->findElementIndex(key, elementFound, firstFreeSlot, isPlaceholder);
-
-	// Check if HashMap needs to rehashed
-	if (!elementFound) {
-		if (ensureProperlyHashed()) {
-			// If rehashed redo the search so we have valid indices
-			index = this->findElementIndex(key, elementFound, firstFreeSlot, isPlaceholder);
-		}
-	}
-
-	// If element doesn't exist create it with default constructor
-	if (!elementFound) {
-		index = firstFreeSlot;
-		mSize += 1;
-		if (isPlaceholder) mPlaceholders -= 1;
-
-		// Otherwise insert info, key and value
-		setElementInfo(index, ELEMENT_INFO_OCCUPIED);
-		new (keysPtr() + index) K(key);
-		new (valuesPtr() + index) V();
-	}
-
-	// Returns pointer to element
-	return valuesPtr()[index];
+	return this->putInternal<K, const V&, KeyHash, KeyEqual>(std::move(key), value);
 }
 
-template<typename K, typename V, typename Hash, typename KeyEqual, typename Allocator>
-bool HashMap<K,V,Hash,KeyEqual,Allocator>::remove(const K& key) noexcept
+template<typename K, typename V, typename Descr, typename Allocator>
+V& HashMap<K,V,Descr,Allocator>::put(K&& key, V&& value) noexcept
 {
-	// Finds the index of the element
-	uint32_t firstFreeSlot = uint32_t(~0);
-	bool elementFound = false;
-	bool isPlaceholder = false;
-	uint32_t index = this->findElementIndex(key, elementFound, firstFreeSlot, isPlaceholder);
-
-	// Returns nullptr if map doesn't contain element
-	if (!elementFound) return false;
-
-	// Remove element
-	setElementInfo(index, ELEMENT_INFO_PLACEHOLDER);
-	keysPtr()[index].~K();
-	valuesPtr()[index].~V();
-
-	mSize -= 1;
-	mPlaceholders += 1;
-	return true;
+	return this->putInternal<K, V, KeyHash, KeyEqual>(std::move(key), std::move(value));
 }
 
-template<typename K, typename V, typename Hash, typename KeyEqual, typename Allocator>
-void HashMap<K,V,Hash,KeyEqual,Allocator>::swap(HashMap& other) noexcept
+template<typename K, typename V, typename Descr, typename Allocator>
+V& HashMap<K,V,Descr,Allocator>::put(const AltK& key, const V& value) noexcept
+{
+	return this->putInternal<const AltK&, const V&, AltKeyHash, AltKeyKeyEqual>(key, value);
+}
+
+template<typename K, typename V, typename Descr, typename Allocator>
+V& HashMap<K,V,Descr,Allocator>::put(const AltK& key, V&& value) noexcept
+{
+	return this->putInternal<const AltK&, V, AltKeyHash, AltKeyKeyEqual>(key, std::move(value));
+}
+
+template<typename K, typename V, typename Descr, typename Allocator>
+V& HashMap<K,V,Descr,Allocator>::operator[] (const K& key) noexcept
+{
+	V* ptr = this->get(key);
+	if (ptr != nullptr) return *ptr;
+	return this->put(key, V());
+}
+
+template<typename K, typename V, typename Descr, typename Allocator>
+V& HashMap<K,V,Descr,Allocator>::operator[] (K&& key) noexcept
+{
+	V* ptr = this->get(key);
+	if (ptr != nullptr) return *ptr;
+	return this->put(std::move(key), V());
+}
+
+template<typename K, typename V, typename Descr, typename Allocator>
+V& HashMap<K,V,Descr,Allocator>::operator[] (const AltK& key) noexcept
+{
+	V* ptr = this->get(key);
+	if (ptr != nullptr) return *ptr;
+	return this->put(key, V());
+}
+
+template<typename K, typename V, typename Descr, typename Allocator>
+bool HashMap<K,V,Descr,Allocator>::remove(const K& key) noexcept
+{
+	return this->removeInternal<K,KeyHash,KeyEqual>(key);
+}
+
+template<typename K, typename V, typename Descr, typename Allocator>
+bool HashMap<K,V,Descr,Allocator>::remove(const AltK& key) noexcept
+{
+	return this->removeInternal<AltK,AltKeyHash,AltKeyKeyEqual>(key);
+}
+
+template<typename K, typename V, typename Descr, typename Allocator>
+void HashMap<K,V,Descr,Allocator>::swap(HashMap& other) noexcept
 {
 	uint32_t thisSize = this->mSize;
 	uint32_t thisCapacity = this->mCapacity;
@@ -236,8 +188,8 @@ void HashMap<K,V,Hash,KeyEqual,Allocator>::swap(HashMap& other) noexcept
 	other.mDataPtr = thisDataPtr;
 }
 
-template<typename K, typename V, typename Hash, typename KeyEqual, typename Allocator>
-void HashMap<K,V,Hash,KeyEqual,Allocator>::rehash(uint32_t suggestedCapacity) noexcept
+template<typename K, typename V, typename Descr, typename Allocator>
+void HashMap<K,V,Descr,Allocator>::rehash(uint32_t suggestedCapacity) noexcept
 {
 	if (suggestedCapacity < mCapacity) suggestedCapacity = mCapacity;
 	if (suggestedCapacity == 0) return;
@@ -262,8 +214,8 @@ void HashMap<K,V,Hash,KeyEqual,Allocator>::rehash(uint32_t suggestedCapacity) no
 	this->swap(tmp);
 }
 
-template<typename K, typename V, typename Hash, typename KeyEqual, typename Allocator>
-bool HashMap<K,V,Hash,KeyEqual,Allocator>::ensureProperlyHashed() noexcept
+template<typename K, typename V, typename Descr, typename Allocator>
+bool HashMap<K,V,Descr,Allocator>::ensureProperlyHashed() noexcept
 {
 	// If HashMap is empty initialize with smallest size
 	if (mCapacity == 0) {
@@ -287,8 +239,8 @@ bool HashMap<K,V,Hash,KeyEqual,Allocator>::ensureProperlyHashed() noexcept
 	return false;
 }
 
-template<typename K, typename V, typename Hash, typename KeyEqual, typename Allocator>
-void HashMap<K,V,Hash,KeyEqual,Allocator>::clear() noexcept
+template<typename K, typename V, typename Descr, typename Allocator>
+void HashMap<K,V,Descr,Allocator>::clear() noexcept
 {
 	if (mSize == 0) return;
 
@@ -328,8 +280,8 @@ void HashMap<K,V,Hash,KeyEqual,Allocator>::clear() noexcept
 	mPlaceholders = 0;
 }
 
-template<typename K, typename V, typename Hash, typename KeyEqual, typename Allocator>
-void HashMap<K,V,Hash,KeyEqual,Allocator>::destroy() noexcept
+template<typename K, typename V, typename Descr, typename Allocator>
+void HashMap<K,V,Descr,Allocator>::destroy() noexcept
 {
 	if (mDataPtr == nullptr) return;
 
@@ -346,8 +298,8 @@ void HashMap<K,V,Hash,KeyEqual,Allocator>::destroy() noexcept
 // HashMap (implementation): Iterators
 // ------------------------------------------------------------------------------------------------
 
-template<typename K, typename V, typename Hash, typename KeyEqual, typename Allocator>
-typename HashMap<K,V,Hash,KeyEqual,Allocator>::Iterator& HashMap<K,V,Hash,KeyEqual,Allocator>::Iterator::operator++ () noexcept
+template<typename K, typename V, typename Descr, typename Allocator>
+typename HashMap<K,V,Descr,Allocator>::Iterator& HashMap<K,V,Descr,Allocator>::Iterator::operator++ () noexcept
 {
 	// Go through map until we find next occupied slot
 	for (uint32_t i = mIndex + 1; i < mHashMap->mCapacity; ++i) {
@@ -363,36 +315,36 @@ typename HashMap<K,V,Hash,KeyEqual,Allocator>::Iterator& HashMap<K,V,Hash,KeyEqu
 	return *this;
 }
 
-template<typename K, typename V, typename Hash, typename KeyEqual, typename Allocator>
-typename HashMap<K,V,Hash,KeyEqual,Allocator>::Iterator HashMap<K,V,Hash,KeyEqual,Allocator>::Iterator::operator++ (int) noexcept
+template<typename K, typename V, typename Descr, typename Allocator>
+typename HashMap<K,V,Descr,Allocator>::Iterator HashMap<K,V,Descr,Allocator>::Iterator::operator++ (int) noexcept
 {
 	auto copy = *this;
 	++(*this);
 	return copy;
 }
 
-template<typename K, typename V, typename Hash, typename KeyEqual, typename Allocator>
-typename HashMap<K,V,Hash,KeyEqual,Allocator>::KeyValuePair HashMap<K,V,Hash,KeyEqual,Allocator>::Iterator::operator* () noexcept
+template<typename K, typename V, typename Descr, typename Allocator>
+typename HashMap<K,V,Descr,Allocator>::KeyValuePair HashMap<K,V,Descr,Allocator>::Iterator::operator* () noexcept
 {
 	sfz_assert_debug(mIndex != uint32_t(~0));
 	sfz_assert_debug(mHashMap->elementInfo(mIndex) == ELEMENT_INFO_OCCUPIED);
 	return KeyValuePair(mHashMap->keysPtr()[mIndex], mHashMap->valuesPtr()[mIndex]);
 }
 
-template<typename K, typename V, typename Hash, typename KeyEqual, typename Allocator>
-bool HashMap<K,V,Hash,KeyEqual,Allocator>::Iterator::operator== (const Iterator& other) const noexcept
+template<typename K, typename V, typename Descr, typename Allocator>
+bool HashMap<K,V,Descr,Allocator>::Iterator::operator== (const Iterator& other) const noexcept
 {
 	return (this->mHashMap == other.mHashMap) && (this->mIndex == other.mIndex);
 }
 
-template<typename K, typename V, typename Hash, typename KeyEqual, typename Allocator>
-bool HashMap<K,V,Hash,KeyEqual,Allocator>::Iterator::operator!= (const Iterator& other) const noexcept
+template<typename K, typename V, typename Descr, typename Allocator>
+bool HashMap<K,V,Descr,Allocator>::Iterator::operator!= (const Iterator& other) const noexcept
 {
 	return !(*this == other);
 }
 
-template<typename K, typename V, typename Hash, typename KeyEqual, typename Allocator>
-typename HashMap<K,V,Hash,KeyEqual,Allocator>::ConstIterator& HashMap<K,V,Hash,KeyEqual,Allocator>::ConstIterator::operator++ () noexcept
+template<typename K, typename V, typename Descr, typename Allocator>
+typename HashMap<K,V,Descr,Allocator>::ConstIterator& HashMap<K,V,Descr,Allocator>::ConstIterator::operator++ () noexcept
 {
 	// Go through map until we find next occupied slot
 	for (uint32_t i = mIndex + 1; i < mHashMap->mCapacity; ++i) {
@@ -408,30 +360,30 @@ typename HashMap<K,V,Hash,KeyEqual,Allocator>::ConstIterator& HashMap<K,V,Hash,K
 	return *this;
 }
 
-template<typename K, typename V, typename Hash, typename KeyEqual, typename Allocator>
-typename HashMap<K,V,Hash,KeyEqual,Allocator>::ConstIterator HashMap<K,V,Hash,KeyEqual,Allocator>::ConstIterator::operator++ (int) noexcept
+template<typename K, typename V, typename Descr, typename Allocator>
+typename HashMap<K,V,Descr,Allocator>::ConstIterator HashMap<K,V,Descr,Allocator>::ConstIterator::operator++ (int) noexcept
 {
 	auto copy = *this;
 	++(*this);
 	return copy;
 }
 
-template<typename K, typename V, typename Hash, typename KeyEqual, typename Allocator>
-typename HashMap<K,V,Hash,KeyEqual,Allocator>::ConstKeyValuePair HashMap<K,V,Hash,KeyEqual,Allocator>::ConstIterator::operator* () noexcept
+template<typename K, typename V, typename Descr, typename Allocator>
+typename HashMap<K,V,Descr,Allocator>::ConstKeyValuePair HashMap<K,V,Descr,Allocator>::ConstIterator::operator* () noexcept
 {
 	sfz_assert_debug(mIndex != uint32_t(~0));
 	sfz_assert_debug(mHashMap->elementInfo(mIndex) == ELEMENT_INFO_OCCUPIED);
 	return ConstKeyValuePair(mHashMap->keysPtr()[mIndex], mHashMap->valuesPtr()[mIndex]);
 }
 
-template<typename K, typename V, typename Hash, typename KeyEqual, typename Allocator>
-bool HashMap<K,V,Hash,KeyEqual,Allocator>::ConstIterator::operator== (const ConstIterator& other) const noexcept
+template<typename K, typename V, typename Descr, typename Allocator>
+bool HashMap<K,V,Descr,Allocator>::ConstIterator::operator== (const ConstIterator& other) const noexcept
 {
 	return (this->mHashMap == other.mHashMap) && (this->mIndex == other.mIndex);
 }
 
-template<typename K, typename V, typename Hash, typename KeyEqual, typename Allocator>
-bool HashMap<K,V,Hash,KeyEqual,Allocator>::ConstIterator::operator!= (const ConstIterator& other) const noexcept
+template<typename K, typename V, typename Descr, typename Allocator>
+bool HashMap<K,V,Descr,Allocator>::ConstIterator::operator!= (const ConstIterator& other) const noexcept
 {
 	return !(*this == other);
 }
@@ -439,8 +391,8 @@ bool HashMap<K,V,Hash,KeyEqual,Allocator>::ConstIterator::operator!= (const Cons
 // HashMap (implementation): Iterator methods
 // ------------------------------------------------------------------------------------------------
 
-template<typename K, typename V, typename Hash, typename KeyEqual, typename Allocator>
-typename HashMap<K,V,Hash,KeyEqual,Allocator>::Iterator HashMap<K,V,Hash,KeyEqual,Allocator>::begin() noexcept
+template<typename K, typename V, typename Descr, typename Allocator>
+typename HashMap<K,V,Descr,Allocator>::Iterator HashMap<K,V,Descr,Allocator>::begin() noexcept
 {
 	if (this->size() == 0) return Iterator(*this, uint32_t(~0));
 	Iterator it(*this, 0);
@@ -451,14 +403,14 @@ typename HashMap<K,V,Hash,KeyEqual,Allocator>::Iterator HashMap<K,V,Hash,KeyEqua
 	return it;
 }
 
-template<typename K, typename V, typename Hash, typename KeyEqual, typename Allocator>
-typename HashMap<K,V,Hash,KeyEqual,Allocator>::ConstIterator HashMap<K,V,Hash,KeyEqual,Allocator>::begin() const noexcept
+template<typename K, typename V, typename Descr, typename Allocator>
+typename HashMap<K,V,Descr,Allocator>::ConstIterator HashMap<K,V,Descr,Allocator>::begin() const noexcept
 {
 	return cbegin();
 }
 
-template<typename K, typename V, typename Hash, typename KeyEqual, typename Allocator>
-typename HashMap<K,V,Hash,KeyEqual,Allocator>::ConstIterator HashMap<K,V,Hash,KeyEqual,Allocator>::cbegin() const noexcept
+template<typename K, typename V, typename Descr, typename Allocator>
+typename HashMap<K,V,Descr,Allocator>::ConstIterator HashMap<K,V,Descr,Allocator>::cbegin() const noexcept
 {
 	if (this->size() == 0) return ConstIterator(*this, uint32_t(~0));
 	ConstIterator it(*this, 0);
@@ -469,20 +421,20 @@ typename HashMap<K,V,Hash,KeyEqual,Allocator>::ConstIterator HashMap<K,V,Hash,Ke
 	return it;
 }
 
-template<typename K, typename V, typename Hash, typename KeyEqual, typename Allocator>
-typename HashMap<K,V,Hash,KeyEqual,Allocator>::Iterator HashMap<K,V,Hash,KeyEqual,Allocator>::end() noexcept
+template<typename K, typename V, typename Descr, typename Allocator>
+typename HashMap<K,V,Descr,Allocator>::Iterator HashMap<K,V,Descr,Allocator>::end() noexcept
 {
 	return Iterator(*this, uint32_t(~0));
 }
 
-template<typename K, typename V, typename Hash, typename KeyEqual, typename Allocator>
-typename HashMap<K,V,Hash,KeyEqual,Allocator>::ConstIterator HashMap<K,V,Hash,KeyEqual,Allocator>::end() const noexcept
+template<typename K, typename V, typename Descr, typename Allocator>
+typename HashMap<K,V,Descr,Allocator>::ConstIterator HashMap<K,V,Descr,Allocator>::end() const noexcept
 {
 	return cend();
 }
 
-template<typename K, typename V, typename Hash, typename KeyEqual, typename Allocator>
-typename HashMap<K,V,Hash,KeyEqual,Allocator>::ConstIterator HashMap<K,V,Hash,KeyEqual,Allocator>::cend() const noexcept
+template<typename K, typename V, typename Descr, typename Allocator>
+typename HashMap<K,V,Descr,Allocator>::ConstIterator HashMap<K,V,Descr,Allocator>::cend() const noexcept
 {
 	return ConstIterator(*this, uint32_t(~0));
 }
@@ -490,8 +442,8 @@ typename HashMap<K,V,Hash,KeyEqual,Allocator>::ConstIterator HashMap<K,V,Hash,Ke
 // HashMap (implementation): Private methods
 // ------------------------------------------------------------------------------------------------
 
-template<typename K, typename V, typename Hash, typename KeyEqual, typename Allocator>
-uint32_t HashMap<K,V,Hash,KeyEqual,Allocator>::findPrimeCapacity(uint32_t capacity) const noexcept
+template<typename K, typename V, typename Descr, typename Allocator>
+uint32_t HashMap<K,V,Descr,Allocator>::findPrimeCapacity(uint32_t capacity) const noexcept
 {
 	constexpr uint32_t PRIMES[] = {
 		67,
@@ -531,8 +483,8 @@ uint32_t HashMap<K,V,Hash,KeyEqual,Allocator>::findPrimeCapacity(uint32_t capaci
 	return MAX_CAPACITY;
 }
 
-template<typename K, typename V, typename Hash, typename KeyEqual, typename Allocator>
-size_t HashMap<K,V,Hash,KeyEqual,Allocator>::sizeOfElementInfoArray() const noexcept
+template<typename K, typename V, typename Descr, typename Allocator>
+size_t HashMap<K,V,Descr,Allocator>::sizeOfElementInfoArray() const noexcept
 {
 	// 2 bits per info element, + 1 since mCapacity always is odd.
 	size_t infoMinRequiredSize = (mCapacity >> 2) + 1;
@@ -542,8 +494,8 @@ size_t HashMap<K,V,Hash,KeyEqual,Allocator>::sizeOfElementInfoArray() const noex
 	return infoNumAlignmentSizedChunks << ALIGNMENT_EXP;
 }
 
-template<typename K, typename V, typename Hash, typename KeyEqual, typename Allocator>
-size_t HashMap<K,V,Hash,KeyEqual,Allocator>::sizeOfKeyArray() const noexcept
+template<typename K, typename V, typename Descr, typename Allocator>
+size_t HashMap<K,V,Descr,Allocator>::sizeOfKeyArray() const noexcept
 {
 	// Calculate how many aligment sized chunks is needed to store keys
 	size_t keysMinRequiredSize = mCapacity * sizeof(K);
@@ -551,8 +503,8 @@ size_t HashMap<K,V,Hash,KeyEqual,Allocator>::sizeOfKeyArray() const noexcept
 	return keyNumAlignmentSizedChunks << ALIGNMENT_EXP;
 }
 
-template<typename K, typename V, typename Hash, typename KeyEqual, typename Allocator>
-size_t HashMap<K,V,Hash,KeyEqual,Allocator>::sizeOfValueArray() const noexcept
+template<typename K, typename V, typename Descr, typename Allocator>
+size_t HashMap<K,V,Descr,Allocator>::sizeOfValueArray() const noexcept
 {
 	// Calculate how many alignment sized chunks is needed to store values
 	size_t valuesMinRequiredSize = mCapacity * sizeof(V);
@@ -560,32 +512,32 @@ size_t HashMap<K,V,Hash,KeyEqual,Allocator>::sizeOfValueArray() const noexcept
 	return valuesNumAlignmentSizedChunks << ALIGNMENT_EXP;
 }
 
-template<typename K, typename V, typename Hash, typename KeyEqual, typename Allocator>
-size_t HashMap<K,V,Hash,KeyEqual,Allocator>::sizeOfAllocatedMemory() const noexcept
+template<typename K, typename V, typename Descr, typename Allocator>
+size_t HashMap<K,V,Descr,Allocator>::sizeOfAllocatedMemory() const noexcept
 {
 	return sizeOfElementInfoArray() + sizeOfKeyArray() + sizeOfValueArray();
 }
 
-template<typename K, typename V, typename Hash, typename KeyEqual, typename Allocator>
-uint8_t* HashMap<K,V,Hash,KeyEqual,Allocator>::elementInfoPtr() const noexcept
+template<typename K, typename V, typename Descr, typename Allocator>
+uint8_t* HashMap<K,V,Descr,Allocator>::elementInfoPtr() const noexcept
 {
 	return mDataPtr;
 }
 
-template<typename K, typename V, typename Hash, typename KeyEqual, typename Allocator>
-K* HashMap<K,V,Hash,KeyEqual,Allocator>::keysPtr() const noexcept
+template<typename K, typename V, typename Descr, typename Allocator>
+K* HashMap<K,V,Descr,Allocator>::keysPtr() const noexcept
 {
 	return reinterpret_cast<K*>(mDataPtr + sizeOfElementInfoArray());
 }
 
-template<typename K, typename V, typename Hash, typename KeyEqual, typename Allocator>
-V* HashMap<K,V,Hash,KeyEqual,Allocator>::valuesPtr() const noexcept
+template<typename K, typename V, typename Descr, typename Allocator>
+V* HashMap<K,V,Descr,Allocator>::valuesPtr() const noexcept
 {
 	return reinterpret_cast<V*>(mDataPtr + sizeOfElementInfoArray() + sizeOfKeyArray());
 }
 
-template<typename K, typename V, typename Hash, typename KeyEqual, typename Allocator>
-uint8_t HashMap<K,V,Hash,KeyEqual,Allocator>::elementInfo(uint32_t index) const noexcept
+template<typename K, typename V, typename Descr, typename Allocator>
+uint8_t HashMap<K,V,Descr,Allocator>::elementInfo(uint32_t index) const noexcept
 {
 	uint32_t chunkIndex = index >> 2; // index / 4;
 	uint32_t chunkIndexModulo = index & 0x03; // index % 4
@@ -597,8 +549,8 @@ uint8_t HashMap<K,V,Hash,KeyEqual,Allocator>::elementInfo(uint32_t index) const 
 	return info;
 }
 
-template<typename K, typename V, typename Hash, typename KeyEqual, typename Allocator>
-void HashMap<K,V,Hash,KeyEqual,Allocator>::setElementInfo(uint32_t index, uint8_t value) noexcept
+template<typename K, typename V, typename Descr, typename Allocator>
+void HashMap<K,V,Descr,Allocator>::setElementInfo(uint32_t index, uint8_t value) noexcept
 {
 	uint32_t chunkIndex = index >> 2; // index / 4;
 	uint32_t chunkIndexModulo = index & 0x03; // index % 4
@@ -613,11 +565,13 @@ void HashMap<K,V,Hash,KeyEqual,Allocator>::setElementInfo(uint32_t index, uint8_
 	elementInfoPtr()[chunkIndex] =  uint8_t(chunk | (value << chunkIndexModuloTimes2));
 }
 
-template<typename K, typename V, typename Hash, typename KeyEqual, typename Allocator>
-uint32_t HashMap<K,V,Hash,KeyEqual,Allocator>::findElementIndex(const K& key, bool& elementFound, uint32_t& firstFreeSlot, bool& isPlaceholder) const noexcept
+template<typename K, typename V, typename Descr, typename Allocator>
+template<typename KT, typename Hash, typename Equal>
+uint32_t HashMap<K,V,Descr,Allocator>::findElementIndex(const KT& key, bool& elementFound,
+                                                        uint32_t& firstFreeSlot, bool& isPlaceholder) const noexcept
 {
 	Hash keyHasher;
-	KeyEqual keyComparer;
+	Equal keyComparer;
 
 	elementFound = false;
 	firstFreeSlot = uint32_t(~0);
@@ -641,7 +595,7 @@ uint32_t HashMap<K,V,Hash,KeyEqual,Allocator>::findElementIndex(const K& key, bo
 		isPlaceholder = true;
 	}
 	else if (info == ELEMENT_INFO_OCCUPIED) {
-		if (keyComparer(keys[baseIndex], key)) {
+		if (keyComparer(key, keys[baseIndex])) {
 			elementFound = true;
 			return uint32_t(baseIndex);
 		}
@@ -664,7 +618,7 @@ uint32_t HashMap<K,V,Hash,KeyEqual,Allocator>::findElementIndex(const K& key, bo
 				isPlaceholder = true;
 			}
 		} else if (info == ELEMENT_INFO_OCCUPIED) {
-			if (keyComparer(keys[index], key)) {
+			if (keyComparer(key, keys[index])) {
 				elementFound = true;
 				return uint32_t(index);
 			}
@@ -682,7 +636,7 @@ uint32_t HashMap<K,V,Hash,KeyEqual,Allocator>::findElementIndex(const K& key, bo
 				isPlaceholder = true;
 			}
 		} else if (info == ELEMENT_INFO_OCCUPIED) {
-			if (keyComparer(keys[index], key)) {
+			if (keyComparer(key, keys[index])) {
 				elementFound = true;
 				return uint32_t(index);
 			}
@@ -690,6 +644,79 @@ uint32_t HashMap<K,V,Hash,KeyEqual,Allocator>::findElementIndex(const K& key, bo
 	}
 
 	return uint32_t(~0);
+}
+
+template<typename K, typename V, typename Descr, typename Allocator>
+template<typename KT, typename Hash, typename Equal>
+V* HashMap<K,V,Descr,Allocator>::getInternal(const KT& key) const noexcept
+{
+	// Finds the index of the element
+	uint32_t firstFreeSlot = uint32_t(~0);
+	bool elementFound = false;
+	bool isPlaceholder = false;
+	uint32_t index = this->findElementIndex<KT,Hash,Equal>(key, elementFound, firstFreeSlot, isPlaceholder);
+
+	// Returns nullptr if map doesn't contain element
+	if (!elementFound) return nullptr;
+
+	// Returns pointer to element
+	return &(valuesPtr()[index]);
+}
+
+template<typename K, typename V, typename Descr, typename Allocator>
+template<typename KT, typename VT, typename Hash, typename Equal>
+V& HashMap<K,V,Descr,Allocator>::putInternal(KT&& key, VT&& value) noexcept
+{
+	// Utilizes perfect forwarding in order to determine if parameters are const references or rvalues.
+	// const reference: KT == const K&
+	// rvalue: KT == K
+	// std::forward<KT>(key) will then return the correct version of key
+
+	ensureProperlyHashed();
+
+	// Finds the index of the element
+	uint32_t firstFreeSlot = uint32_t(~0);
+	bool elementFound = false;
+	bool isPlaceholder = false;
+	uint32_t index = this->findElementIndex<KT,Hash,Equal>(key, elementFound, firstFreeSlot, isPlaceholder);
+
+	// If map contains key just replace value and return
+	if (elementFound) {
+		valuesPtr()[index] = std::forward<VT>(value);
+		return valuesPtr()[index];
+	}
+
+	// Otherwise insert info, key and value
+	setElementInfo(firstFreeSlot, ELEMENT_INFO_OCCUPIED);
+	new (keysPtr() + firstFreeSlot) K(std::forward<KT>(key));
+	new (valuesPtr() + firstFreeSlot) V(std::forward<VT>(value));
+
+	mSize += 1;
+	if (isPlaceholder) mPlaceholders -= 1;
+	return valuesPtr()[firstFreeSlot];
+}
+
+template<typename K, typename V, typename Descr, typename Allocator>
+template<typename KT, typename Hash, typename Equal>
+bool HashMap<K,V,Descr,Allocator>::removeInternal(const KT& key) noexcept
+{
+	// Finds the index of the element
+	uint32_t firstFreeSlot = uint32_t(~0);
+	bool elementFound = false;
+	bool isPlaceholder = false;
+	uint32_t index = this->findElementIndex<KT,Hash,Equal>(key, elementFound, firstFreeSlot, isPlaceholder);
+
+	// Returns nullptr if map doesn't contain element
+	if (!elementFound) return false;
+
+	// Remove element
+	setElementInfo(index, ELEMENT_INFO_PLACEHOLDER);
+	keysPtr()[index].~K();
+	valuesPtr()[index].~V();
+
+	mSize -= 1;
+	mPlaceholders += 1;
+	return true;
 }
 
 } // namespace sfz

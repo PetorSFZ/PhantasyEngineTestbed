@@ -108,7 +108,7 @@ __device__ vec3 shadeHit(const CudaTracerParams& params, curandState& randState,
 
 			// Slightly offset light ray to get stochastic soft shadows
 			vec3 circleU;
-			if (abs(info.normal.z) > 0.01f) {
+			if (sfz::abs(info.normal.z) > 0.01f) {
 				circleU = normalize(vec3(0.0f, -info.normal.z, info.normal.y));
 			}
 			else {
@@ -118,7 +118,7 @@ __device__ vec3 shadeHit(const CudaTracerParams& params, curandState& randState,
 
 			float r1 = curand_uniform(&randState);
 			float r2 = (2.0f * light.radius * curand_uniform(&randState)) - light.radius;
-			float azimuthAngle = 2.0f * PI() * r1;
+			float azimuthAngle = 2.0f * PI * r1;
 
 			vec3 lightPosOffset = circleU * cos(azimuthAngle) * r2 +
 			                      circleV * sin(azimuthAngle) * r2;
@@ -159,7 +159,7 @@ __device__ vec3 shadeHit(const CudaTracerParams& params, curandState& randState,
 		nDotV = std::max(0.001f, nDotV);
 
 		// Lambert diffuse
-		vec3 diffuse = albedoColor / sfz::PI();
+		vec3 diffuse = albedoColor / sfz::PI;
 
 		// Cook-Torrance specular
 		// Normal distribution function
@@ -282,12 +282,12 @@ __global__ void cudaRayTracerKernel(CudaTracerParams params)
 
 		float r1 = curand_uniform(&randState);
 		float r2 = curand_uniform(&randState);
-		float azimuthAngle = 2.0f * PI() * r1;
+		float azimuthAngle = 2.0f * PI * r1;
 		float altitudeFactor = sqrt(r2);
 
 		// Find surface vectors u and v orthogonal to normal
 		vec3 u;
-		if (abs(info.normal.z) > 0.01f) {
+		if (sfz::abs(info.normal.z) > 0.01f) {
 			u = normalize(vec3(0.0f, -info.normal.z, info.normal.y));
 		} else {
 			u = normalize(vec3(-info.normal.y, info.normal.x, 0.0f));

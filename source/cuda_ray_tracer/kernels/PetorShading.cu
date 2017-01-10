@@ -71,7 +71,7 @@ static __global__ void gatherRaysShadeKernel(GatherRaysShadeKernelInput input,
 	int baseSecondaryIdx = (loc.y * input.res.x + loc.x) * input.numIncomingLights;
 	IncomingLight info = input.incomingLights[baseSecondaryIdx];
 
-	if (sfz::sum(info.amount()) > 0.001f) {
+	if (sfz::elementSum(info.amount()) > 0.001f) {
 		vec3 toHit = info.origin() - p;
 		float toHitDist = length(toHit);
 		vec3 toHitDir = toHit / toHitDist;

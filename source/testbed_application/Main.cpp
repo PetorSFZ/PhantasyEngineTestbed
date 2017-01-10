@@ -98,7 +98,7 @@ int main(int, char**)
 
 	before = std::chrono::high_resolution_clock::now();
 
-	loadStaticSceneSponza(modelsPath.str, "sponzaPBR/sponzaPBR.obj", *level, scalingMatrix4(0.05f));
+	loadStaticSceneSponza(modelsPath.str, "sponzaPBR/sponzaPBR.obj", *level, mat44::scaling3(0.05f));
 	
 	after = std::chrono::high_resolution_clock::now();
 	delta = std::chrono::duration_cast<FloatSecond>(after - before).count();
@@ -187,7 +187,7 @@ int main(int, char**)
 	level->staticScene.sphereLights.add(std::move(sunlight));
 
 	// Add triangle mesh to scene
-	loadDynObject(modelsPath.str, "skysphere/skysphere.obj", *level, scalingMatrix4(10.0f));
+	loadDynObject(modelsPath.str, "skysphere/skysphere.obj", *level, mat44::scaling3(10.0f));
 	loadDynObjectCustomMaterial(modelsPath.str, "sphere.obj", *level, vec3(1.0f, 0.0f, 0.0f), 0.1f, 1.0f);
 	loadDynObjectCustomMaterial(modelsPath.str, "sphere.obj", *level, vec3(0.0f, 1.0f, 0.0f), 0.1f, 1.0f);
 

@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <sfz/containers/DynString.hpp>
+#include <sfz/strings/DynString.hpp>
 
 namespace phe {
 

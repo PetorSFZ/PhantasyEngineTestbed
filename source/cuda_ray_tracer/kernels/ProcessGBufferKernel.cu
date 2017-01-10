@@ -2,6 +2,8 @@
 
 #include "kernels/ProcessGBufferKernel.hpp"
 
+#include <cfloat>
+
 #include "CudaHelpers.hpp"
 #include "CudaSfzVectorCompatibility.cuh"
 #include "GBufferRead.cuh"

@@ -21,6 +21,8 @@
 #include "sfz/PopWarnings.hpp"
 
 #include "sfz/math/Vector.hpp"
+#include "sfz/math/MathPrimitiveToStrings.hpp"
+#include "sfz/math/MathSupport.hpp"
 
 #include <type_traits>
 
@@ -29,9 +31,8 @@ TEST_CASE("Vector<T,2> specialization", "[sfz::Vector]")
 	sfz::Vector<int,2> v;
 	SECTION("Data") {
 		REQUIRE(sizeof(sfz::Vector<int,2>) == sizeof(int)*2);
-		REQUIRE(sizeof(v.elements) == sizeof(int)*2);
-		v.elements[0] = 1;
-		v.elements[1] = 2;
+		v.data()[0] = 1;
+		v.data()[1] = 2;
 		REQUIRE(v.x == 1);
 		REQUIRE(v.y == 2);
 	}
@@ -72,10 +73,9 @@ TEST_CASE("Vector<T,3> specialization", "[sfz::Vector]")
 	sfz::Vector<int,3> v;
 	SECTION("Data") {
 		REQUIRE(sizeof(sfz::Vector<int,3>) == sizeof(int)*3);
-		REQUIRE(sizeof(v.elements) == sizeof(int)*3);
-		v.elements[0] = 1;
-		v.elements[1] = 2;
-		v.elements[2] = 3;
+		v.data()[0] = 1;
+		v.data()[1] = 2;
+		v.data()[2] = 3;
 		REQUIRE(v.x == 1);
 		REQUIRE(v.y == 2);
 		REQUIRE(v.z == 3);
@@ -138,11 +138,10 @@ TEST_CASE("Vector<T,4> specialization", "[sfz::Vector]")
 	sfz::Vector<int,4> v;
 	SECTION("Data") {
 		REQUIRE(sizeof(sfz::Vector<int,4>) == sizeof(int)*4);
-		REQUIRE(sizeof(v.elements) == sizeof(int)*4);
-		v.elements[0] = 1;
-		v.elements[1] = 2;
-		v.elements[2] = 3;
-		v.elements[3] = 4;
+		v.data()[0] = 1;
+		v.data()[1] = 2;
+		v.data()[2] = 3;
+		v.data()[3] = 4;
 		REQUIRE(v.x == 1);
 		REQUIRE(v.y == 2);
 		REQUIRE(v.z == 3);
@@ -425,24 +424,15 @@ TEST_CASE("Arithmetic operators", "[sfz::Vector]")
 
 TEST_CASE("Length of vector", "[sfz::Vector]")
 {
-	using sfz::squaredLength;
 	using sfz::length;
-	sfz::Vector<int, 2> v1{2, 0};
-	int v2Arr[] = {-2, 2, 2, -2, 3};
-	sfz::Vector<int, 5> v2{v2Arr};
+	using sfz::approxEqual;
+	sfz::vec2 v1(2.0f, 0.0f);
+	float v2Arr[] = {-2.0f, 2.0f, 2.0f, -2.0f};
+	sfz::vec4 v2(v2Arr);
 
-	SECTION("squaredLength()") {
-		REQUIRE(squaredLength(v1) == 4);
-		REQUIRE(squaredLength(v2) == 25);
-	}
 	SECTION("length()") {
-		REQUIRE(length(v1) == 2);
-		REQUIRE(length(v2) == 5);
-	}
-	SECTION("Rounding down") {
-		sfz::Vector<int, 2> v3{2,1};
-		REQUIRE(squaredLength(v3) == 5);
-		REQUIRE(length(v3) == 2);
+		REQUIRE(approxEqual(length(v1), 2.0f));
+		REQUIRE(approxEqual(length(v2), 4.0f));
 	}
 }
 
@@ -517,6 +507,11 @@ TEST_CASE("Dot (scalar) product", "[sfz::Vector]")
 		REQUIRE(v1[0] == -3);
 		REQUIRE(v1[1] == 2);	
 	}
+	SECTION("_mm_dp_ps()") {
+		sfz::vec4 v1(1.0f, 2.0f, 3.0f, 4.0f);
+		sfz::vec4 v2(3.0f, -1.0f, -2.0f, 5.0f);
+		REQUIRE(sfz::approxEqual(sfz::dot(v1, v2), 15.0f));
+	}
 }
 
 TEST_CASE("Cross product", "[sfz::Vector]")
@@ -553,149 +548,9 @@ TEST_CASE("Cross product", "[sfz::Vector]")
 
 TEST_CASE("Sum of vector", "[sfz::Vector]")
 {
-	using sfz::sum;
+	using sfz::elementSum;
 	sfz::Vector<int, 4> v1{1, 2, -4, 9};
-	REQUIRE(sum(v1) == 8);
-}
-
-TEST_CASE("Angle of vectors", "[sfz::VectorSupport]")
-{
-	sfz::Vector<float, 2> vRight{1, 0};
-	sfz::Vector<float, 2> vUp{0, 1};
-	sfz::Vector<float, 2> vDown{0, -1};
-
-	SECTION("(2D) Angle between y and (implicit) x-axis") {
-		auto angle = sfz::angle(vUp);
-		REQUIRE((3.1415f/2.f) <= angle);
-		REQUIRE(angle <= (3.1416f/2.f));
-	}
-	SECTION("Angle between y and (explicit) x-axis") {
-		auto angle = sfz::angle(vRight, vUp);
-		REQUIRE((3.1415f/2.f) <= angle);
-		REQUIRE(angle <= (3.1416f/2.f));
-	}
-	SECTION("Angle between same vectors") {
-		auto angle1 = angle(vRight);
-		REQUIRE(angle1 == 0);
-
-		auto angle2 = angle(vUp, vUp);
-		REQUIRE(angle2 == 0);
-	}
-	SECTION("(2D) Angle with implicit x-axis should never give negative angles") {
-		auto angle = sfz::angle(vDown);
-		REQUIRE((3.f*3.1415f/2.f) <= angle);
-		REQUIRE(angle <= (3.f*3.1416f/2.f));
-	}
-}
-
-TEST_CASE("Rotating vectors", "[sfz::VectorSupport]")
-{
-	sfz::Vector<float, 2> vRight{1, 0};
-	sfz::Vector<float, 2> vUp{0, 1};
-	
-	SECTION("Rotates in positive direction") {
-		auto res = sfz::rotate(vRight, 3.1415926f);
-		REQUIRE(-1.01f <= res[0]);
-		REQUIRE(res[0] <= -0.99f);
-		REQUIRE(-0.01f <= res[1]);
-		REQUIRE(res[1] <= 0.01f);
-
-		auto angleOrg = angle(vRight);
-		auto angleRes = angle(res);
-		REQUIRE((angleOrg + 3.1415f) <= angleRes);
-		REQUIRE(angleRes <= (angleOrg + 3.1416f));
-	}
-	SECTION("Rotates in negative direction") {
-		auto res = sfz::rotate(vUp, -3.1415926f);
-		REQUIRE(-0.01f <= res[0]);
-		REQUIRE(res[0] <= 0.01f);
-		REQUIRE(-1.01f <= res[1]);
-		REQUIRE(res[1] <= -0.99f);
-
-		auto angleOrg = angle(vUp);
-		auto angleRes = angle(res);
-		// "+" in this case since angle() returns positive angle from x-axis.
-		REQUIRE((angleOrg + 3.1415f) <= angleRes);
-		REQUIRE(angleRes <= (angleOrg + 3.1416f));
-	}
-	SECTION("Nothing happens when rotating with 0") {
-		auto resRight = sfz::rotate(vRight, 0.f);
-		REQUIRE(resRight == vRight);
-		auto resUp = sfz::rotate(vUp, 0.f);
-		REQUIRE(resUp == vUp);
-	}
-}
-
-TEST_CASE("min() & max()", "[sfz::Vector]")
-{
-	using sfz::min;
-	using sfz::max;
-
-	sfz::Vector<int,3> v1{-1, 0, 1};
-	sfz::Vector<int,3> v2{2, 3, -1};
-
-	SECTION("min() of two vectors") {
-		auto res = min(v1, v2);
-		REQUIRE(res[0] == -1);
-		REQUIRE(res[1] == 0);
-		REQUIRE(res[2] == -1);
-	}
-	SECTION("max() of two vectors") {
-		auto res = max(v1, v2);
-		REQUIRE(res[0] == 2);
-		REQUIRE(res[1] == 3);
-		REQUIRE(res[2] == 1);
-	}
-	SECTION("min() of vector and scalar") {
-		auto res1 = min(v1, 0);
-		auto res2 = min(v2, 2);
-		REQUIRE(res1 == min(0, v1));
-		REQUIRE(res2 == min(2, v2));
-		REQUIRE(res1[0] == -1);
-		REQUIRE(res1[1] == 0);
-		REQUIRE(res1[2] == 0);
-		REQUIRE(res2[0] == 2);
-		REQUIRE(res2[1] == 2);
-		REQUIRE(res2[2] == -1);
-	}
-	SECTION("max() of vector and scalar")
-	{
-		auto res1 = max(v1, 0);
-		auto res2 = max(v2, 2);
-		REQUIRE(res1 == max(0, v1));
-		REQUIRE(res2 == max(2, v2));
-		REQUIRE(res1[0] == 0);
-		REQUIRE(res1[1] == 0);
-		REQUIRE(res1[2] == 1);
-		REQUIRE(res2[0] == 2);
-		REQUIRE(res2[1] == 3);
-		REQUIRE(res2[2] == 2);
-	}
-	SECTION("minElement()")
-	{
-		int res1 = minElement(v1);
-		int res2 = minElement(v2);
-		REQUIRE(res1 == -1);
-		REQUIRE(res2 == -1);
-	}
-	SECTION("maxElement")
-	{
-		int res1 = maxElement(v1);
-		int res2 = maxElement(v2);
-		REQUIRE(res1 == 1);
-		REQUIRE(res2 == 3);
-	}
-}
-
-TEST_CASE("abs()", "[sfz::Vector]")
-{
-	using sfz::abs;
-
-	sfz::Vector<int,3> v1{-1, -2, 3};
-	auto res = abs(v1);
-	REQUIRE(res[0] == 1);
-	REQUIRE(res[1] == 2);
-	REQUIRE(res[2] == 3);
+	REQUIRE(elementSum(v1) == 8);
 }
 
 TEST_CASE("Converting to string", "[sfz::Vector]")
@@ -706,22 +561,6 @@ TEST_CASE("Converting to string", "[sfz::Vector]")
 
 	vec4 v2{1.0f, 2.0f, 3.0f, 4.0f};
 	REQUIRE(toString(v2, 1) == "[1.0, 2.0, 3.0, 4.0]");
-}
-
-TEST_CASE("Hashing", "[sfz::Vector]")
-{
-	sfz::Vector<int, 3> v1{2, 100, 32};
-	sfz::Vector<int, 3> v2{-1, 0, -10};
-	sfz::Vector<int, 3> v3{0, -9, 14};
-
-	REQUIRE(sfz::hash(v1) != sfz::hash(v2));
-	REQUIRE(sfz::hash(v2) != sfz::hash(v3));
-
-	std::hash<sfz::Vector<int,3>> hasher;
-
-	REQUIRE(hasher(v1) == sfz::hash(v1));
-	REQUIRE(hasher(v2) == sfz::hash(v2));
-	REQUIRE(hasher(v3) == sfz::hash(v3));
 }
 
 TEST_CASE("Is proper POD", "[sfz::Vector]")

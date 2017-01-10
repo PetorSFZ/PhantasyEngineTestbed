@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <sfz/CUDACallable.hpp>
+#include <sfz/CudaCompatibility.hpp>
 #include <sfz/math/Vector.hpp>
 
 namespace phe {
@@ -19,18 +19,18 @@ struct Ray {
 	Ray& operator= (const Ray&) noexcept = default;
 	~Ray() noexcept = default;
 
-	SFZ_CUDA_CALLABLE Ray(const vec3& originIn, const vec3& directionIn) noexcept
+	SFZ_CUDA_CALL Ray(const vec3& originIn, const vec3& directionIn) noexcept
 	{
 		setOrigin(originIn);
 		setDir(directionIn);
 	}
 
-	SFZ_CUDA_CALLABLE void setOrigin(const vec3& originIn) noexcept
+	SFZ_CUDA_CALL void setOrigin(const vec3& originIn) noexcept
 	{
 		this->origin = originIn;
 	}
 
-	SFZ_CUDA_CALLABLE void setDir(const vec3& dirIn) noexcept
+	SFZ_CUDA_CALL void setDir(const vec3& dirIn) noexcept
 	{
 		this->dir = dirIn;
 		this->invDir = vec3(1.0f) / dirIn;

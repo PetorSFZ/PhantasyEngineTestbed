@@ -2,6 +2,8 @@
 
 #include "RayCastKernel.hpp"
 
+#include <cfloat>
+
 #include <phantasy_engine/ray_tracer_common/BVHNode.hpp>
 #include <phantasy_engine/ray_tracer_common/Triangle.hpp>
 

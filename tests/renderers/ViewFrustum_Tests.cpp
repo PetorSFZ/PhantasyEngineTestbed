@@ -4,7 +4,7 @@
 #include <catch.hpp>
 #include <sfz/PopWarnings.hpp>
 
-#include <sfz/math/MathHelpers.hpp>
+#include <sfz/math/MathSupport.hpp>
 
 #include <phantasy_engine/rendering/ViewFrustum.hpp>
 

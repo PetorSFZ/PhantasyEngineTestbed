@@ -21,7 +21,6 @@ using sfz::mat4;
 using sfz::SharedPtr;
 using sfz::vec2i;
 using sfz::vec3;
-using sfz::identityMatrix4;
 
 // Helper structs
 // ------------------------------------------------------------------------------------------------

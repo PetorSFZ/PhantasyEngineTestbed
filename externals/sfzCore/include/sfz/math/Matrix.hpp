@@ -18,203 +18,348 @@
 
 #pragma once
 
-#include <cstddef>
-#include <initializer_list>
+#include <cstdint>
 
 #include "sfz/Assert.hpp"
-#include "sfz/containers/StackString.hpp"
 #include "sfz/math/Vector.hpp"
+
+#include "sfz/CudaCompatibility.hpp"
+#include "sfz/SimdIntrinsics.hpp"
 
 namespace sfz {
 
-using std::size_t;
+using std::int32_t;
+using std::uint32_t;
 
-/// \brief A mathematical Matrix POD class that imitates a built-in primitive.
-///
-/// It's important to note that the implementation of this Matrix is column-major order (and
-/// publically accessable). The reason for this is that this seems to be the most natural way to
-/// interact with OpenGL. What might be confusing is that some parts of the interface (most notably
-/// the initalizer_list constructor) uses row-major order as it's more natural to write matrices
-/// in code that way. Be extra careful when accesing or setting specific values in a matrix.
-///
-/// The template is designed to be used with floating point types in first hand. It's possible that
-/// using integer types might lead to truncation in some instances.
-///
-/// Satisfies the conditions of std::is_pod, std::is_trivial and std::is_standard_layout if used
-/// with standard primitives.
-///
-/// \param T the element type
-/// \param M the amount of rows in the Matrix
-/// \param N the amount of columns in the Matrix
-template<typename T, size_t M, size_t N>
-struct Matrix final {
-
-	// Public members
-	// --------------------------------------------------------------------------------------------
-
-	/// The internal COLUMN-MAJOR (i.e. N columns of size M) order array of this Matrix.
-	T elements[N][M];
-
-	T* data() noexcept { return reinterpret_cast<T*>(elements); }
-	const T* data() const noexcept { return reinterpret_cast<const T*>(elements); }
-
-	// Constructors & destructors
-	// --------------------------------------------------------------------------------------------
-
-	Matrix() noexcept = default;
-	Matrix(const Matrix<T,M,N>&) noexcept = default;
-	Matrix<T,M,N>& operator= (const Matrix<T,M,N>&) noexcept = default;
-	~Matrix() noexcept = default;
-
-	/// \brief Constructs a matrix with the elements in an array.
-	/// The rowMajorData flag determines whether the array is in row major or column major order.
-	Matrix(const T* arrayPtr, bool rowMajorData) noexcept;
-
-	/// \brief Constructs a matrix with the given elements given in ROW-MAJOR order.
-	/// The elements are given in row-major order because it's more natural to write and read a
-	/// matrix that way in source. This is however not how the elements will be saved as the
-	/// internal representation uses column-major order. Any unspecified elements will be set to 0.
-	/// sfz_assert_debug: if any of the lists are larger than the row or column it's trying to fill
-	Matrix(std::initializer_list<std::initializer_list<T>> list) noexcept;
-
-	// Member functions
-	// --------------------------------------------------------------------------------------------
-
-	/// \brief General accessor returning the reference to element at the i:th row and j:th column
-	/// sfz_assert_debug: location must be in range
-	T& at(size_t i, size_t j) noexcept;
-
-	/// \brief Returns the element at the i:th row and j:th column
-	/// sfz_assert_debug: location must be in range
-	T at(size_t i, size_t j) const noexcept;
-
-	/// sfz_assert_debug: location must be in range
-	Vector<T,N> rowAt(size_t i) const noexcept;
-
-	/// sfz_assert_debug: location must be in range
-	Vector<T,M> columnAt(size_t j) const noexcept;
-
-	/// \brief Assigns value to element at the i:th row and j:th column
-	/// sfz_assert_debug: location must be in range
-	void set(size_t i, size_t j, T value) noexcept;
-
-	/// sfz_assert_debug: location must be in range
-	void setRow(size_t i, const Vector<T,N>& row) noexcept;
-
-	/// sfz_assert_debug: location must be in range
-	void setColumn(size_t j, const Vector<T,M>& column) noexcept;
-};
-
-// Matrix constants
+// Matrix struct declaration
 // ------------------------------------------------------------------------------------------------
 
-template<typename T, size_t M, size_t N>
-Matrix<T,M,N> ZERO_MATRIX() noexcept;
+/// A mathematical Matrix POD class that imitates a built-in primitive.
+///
+/// Uses row-major memory storage. Assumes vectors are column matrices, i.e. normal standard math
+/// syntax. When uploading to OpenGL it needs to be transposed as OpenGL uses column-major storage.
+/// OpenGL also assumes that vectors are column matrices, so only the storage layout is different.
+/// This should not be confused with Direct3D which often assumes that vectors are row matrices.
+/// When two indices are used the first one is always used to specify row (i.e. y-direction) and
+/// the second one is used to specify column (i.e. x-direction).
+///
+/// The template is designed to be used with 32-bit floating points, other types may work, but no
+/// guarantees are given.
+///
+/// Satisfies the conditions of std::is_pod, std::is_trivial and std::is_standard_layout if used
+/// with float.
+///
+/// \param T the element type (float)
+/// \param H the height (i.e. the amount of rows) of the Matrix
+/// \param W the width (i.e. the amount of columns) of the Matrix
+
+template<typename T, uint32_t H, uint32_t W>
+struct Matrix final {
+	
+	Vector<T,W> rows[H];
+
+	SFZ_CUDA_CALL T* data() noexcept { return &rows[0][0]; }
+	SFZ_CUDA_CALL const T* data() const noexcept { return &rows[0][0]; }
+
+	Matrix() noexcept = default;
+	Matrix(const Matrix<T,H,W>&) noexcept = default;
+	Matrix<T,H,W>& operator= (const Matrix<T,H,W>&) noexcept = default;
+	~Matrix() noexcept = default;
+
+	/// Constructs a matrix with the elements in an array (assumes array is in row-major order)
+	SFZ_CUDA_CALL explicit Matrix(const T* arrayPtr) noexcept;
+
+	SFZ_CUDA_CALL T& at(uint32_t y, uint32_t x) noexcept { return rows[y][x]; }
+	SFZ_CUDA_CALL T at(uint32_t y, uint32_t x) const noexcept { return rows[y][x]; }
+	SFZ_CUDA_CALL Vector<T,H> columnAt(uint32_t x) const noexcept;
+
+	SFZ_CUDA_CALL void set(uint32_t y, uint32_t x, T value) noexcept { this->at(y, x) = value; }
+	SFZ_CUDA_CALL void setColumn(uint32_t x, Vector<T,H> column) noexcept;
+};
+
+template<typename T>
+struct Matrix<T,2,2> final {
+
+	union {
+		struct { Vector<T,2> rows[2]; };
+		struct { Vector<T,2> row0, row1; };
+		struct { T e00, e01,
+		           e10, e11; };
+	};
+
+	SFZ_CUDA_CALL T* data() noexcept { return &e00; }
+	SFZ_CUDA_CALL const T* data() const noexcept { return &e00; }
+
+	Matrix() noexcept = default;
+	Matrix(const Matrix<T,2,2>&) noexcept = default;
+	Matrix<T,2,2>& operator= (const Matrix<T,2,2>&) noexcept = default;
+	~Matrix() noexcept = default;
+
+	/// Constructs a matrix with the elements in an array (assumes array is in row-major order)
+	SFZ_CUDA_CALL explicit Matrix(const T* arrayPtr) noexcept;
+
+	SFZ_CUDA_CALL Matrix(T e00, T e01,
+	                     T e10, T e11) noexcept;
+
+	SFZ_CUDA_CALL Matrix(Vector<T,2> row0,
+	                     Vector<T,2> row1) noexcept;
+
+	static SFZ_CUDA_CALL Matrix fill(T value) noexcept;
+	static SFZ_CUDA_CALL Matrix identity() noexcept;
+	static SFZ_CUDA_CALL Matrix scaling2(T scale) noexcept;
+	static SFZ_CUDA_CALL Matrix scaling2(T x, T y) noexcept;
+	static SFZ_CUDA_CALL Matrix scaling2(Vector<T,2> scale) noexcept;
+
+	SFZ_CUDA_CALL T& at(uint32_t y, uint32_t x) noexcept { return rows[y][x]; }
+	SFZ_CUDA_CALL T at(uint32_t y, uint32_t x) const noexcept { return rows[y][x]; }
+	SFZ_CUDA_CALL Vector<T,2> columnAt(uint32_t x) const noexcept;
+
+	SFZ_CUDA_CALL void set(uint32_t y, uint32_t x, T value) noexcept { this->at(y, x) = value; }
+	SFZ_CUDA_CALL void setColumn(uint32_t x, Vector<T,2> column) noexcept;
+};
+
+template<typename T>
+struct Matrix<T,3,3> final {
+
+	union {
+		struct { Vector<T,3> rows[3]; };
+		struct { Vector<T,3> row0, row1, row2; };
+		struct { T e00, e01, e02,
+		           e10, e11, e12,
+		           e20, e21, e22; };
+	};
+
+	SFZ_CUDA_CALL T* data() noexcept { return &e00; }
+	SFZ_CUDA_CALL const T* data() const noexcept { return &e00; }
+
+	Matrix() noexcept = default;
+	Matrix(const Matrix<T,3,3>&) noexcept = default;
+	Matrix<T,3,3>& operator= (const Matrix<T,3,3>&) noexcept = default;
+	~Matrix() noexcept = default;
+
+	/// Constructs a matrix with the elements in an array (assumes array is in row-major order)
+	SFZ_CUDA_CALL explicit Matrix(const T* arrayPtr) noexcept;
+
+	SFZ_CUDA_CALL Matrix(T e00, T e01, T e02,
+	                     T e10, T e11, T e12,
+	                     T e20, T e21, T e22) noexcept;
+
+	SFZ_CUDA_CALL Matrix(Vector<T,3> row0,
+	                     Vector<T,3> row1,
+	                     Vector<T,3> row2) noexcept;
+
+	/// Constructs a 3x3 matrix by removing elements from the specified matrix
+	SFZ_CUDA_CALL explicit Matrix(const Matrix<T,3,4>& matrix) noexcept;
+	SFZ_CUDA_CALL explicit Matrix(const Matrix<T,4,4>& matrix) noexcept;
+
+	static SFZ_CUDA_CALL Matrix fill(T value) noexcept;
+	static SFZ_CUDA_CALL Matrix identity() noexcept;
+	static SFZ_CUDA_CALL Matrix scaling3(T scale) noexcept;
+	static SFZ_CUDA_CALL Matrix scaling3(T x, T y, T z) noexcept;
+	static SFZ_CUDA_CALL Matrix scaling3(Vector<T,3> scale) noexcept;
+	static SFZ_CUDA_CALL Matrix rotation3(Vector<T,3> axis, T angleRad) noexcept;
+
+	SFZ_CUDA_CALL T& at(uint32_t y, uint32_t x) noexcept { return rows[y][x]; }
+	SFZ_CUDA_CALL T at(uint32_t y, uint32_t x) const noexcept { return rows[y][x]; }
+	SFZ_CUDA_CALL Vector<T,3> columnAt(uint32_t x) const noexcept;
+
+	SFZ_CUDA_CALL void set(uint32_t y, uint32_t x, T value) noexcept { this->at(y, x) = value; }
+	SFZ_CUDA_CALL void setColumn(uint32_t x, Vector<T,3> column) noexcept;
+};
+
+template<typename T>
+struct alignas(16) Matrix<T,3,4> final {
+
+	union {
+		struct { Vector<T,4> rows[3]; };
+		struct { Vector<T,4> row0, row1, row2; };
+		struct { T e00, e01, e02, e03,
+		           e10, e11, e12, e13,
+		           e20, e21, e22, e23; };
+	};
+
+	SFZ_CUDA_CALL T* data() noexcept { return &e00; }
+	SFZ_CUDA_CALL const T* data() const noexcept { return &e00; }
+
+	Matrix() noexcept = default;
+	Matrix(const Matrix<T,3,4>&) noexcept = default;
+	Matrix<T,3,4>& operator= (const Matrix<T,3,4>&) noexcept = default;
+	~Matrix() noexcept = default;
+
+	/// Constructs a matrix with the elements in an array (assumes array is in row-major order)
+	SFZ_CUDA_CALL explicit Matrix(const T* arrayPtr) noexcept;
+
+	SFZ_CUDA_CALL Matrix(T e00, T e01, T e02, T e03,
+	                     T e10, T e11, T e12, T e13,
+	                     T e20, T e21, T e22, T e23) noexcept;
+
+	SFZ_CUDA_CALL Matrix(Vector<T,4> row0,
+	                     Vector<T,4> row1,
+	                     Vector<T,4> row2) noexcept;
+
+	/// Constructs a 3x4 matrix by placing the specified matrix ontop a 3x4 identity-like matrix.
+	SFZ_CUDA_CALL explicit Matrix(const Matrix<T,3,3>& matrix) noexcept;
+	SFZ_CUDA_CALL explicit Matrix(const Matrix<T,4,4>& matrix) noexcept;
+
+	static SFZ_CUDA_CALL Matrix fill(T value) noexcept;
+	static SFZ_CUDA_CALL Matrix identity() noexcept; // Identity-like, identity does not exist for 3x4.
+	static SFZ_CUDA_CALL Matrix scaling3(T scale) noexcept;
+	static SFZ_CUDA_CALL Matrix scaling3(T x, T y, T z) noexcept;
+	static SFZ_CUDA_CALL Matrix scaling3(Vector<T,3> scale) noexcept;
+	static SFZ_CUDA_CALL Matrix rotation3(Vector<T,3> axis, T angleRad) noexcept;
+	static SFZ_CUDA_CALL Matrix translation3(Vector<T,3> delta) noexcept;
+
+	SFZ_CUDA_CALL T& at(uint32_t y, uint32_t x) noexcept { return rows[y][x]; }
+	SFZ_CUDA_CALL T at(uint32_t y, uint32_t x) const noexcept { return rows[y][x]; }
+	SFZ_CUDA_CALL Vector<T,3> columnAt(uint32_t x) const noexcept;
+
+	SFZ_CUDA_CALL void set(uint32_t y, uint32_t x, T value) noexcept { this->at(y, x) = value; }
+	SFZ_CUDA_CALL void setColumn(uint32_t x, Vector<T,3> column) noexcept;
+};
+
+template<typename T>
+struct alignas(16) Matrix<T,4,4> final {
+
+	union {
+		struct { Vector<T,4> rows[4]; };
+		struct { Vector<T,4> row0, row1, row2, row3; };
+		struct { T e00, e01, e02, e03,
+		           e10, e11, e12, e13,
+		           e20, e21, e22, e23,
+		           e30, e31, e32, e33; };
+	};
+
+	SFZ_CUDA_CALL T* data() noexcept { return &e00; }
+	SFZ_CUDA_CALL const T* data() const noexcept { return &e00; }
+
+	Matrix() noexcept = default;
+	Matrix(const Matrix<T,4,4>&) noexcept = default;
+	Matrix<T,4,4>& operator= (const Matrix<T,4,4>&) noexcept = default;
+	~Matrix() noexcept = default;
+
+	/// Constructs a matrix with the elements in an array (assumes array is in row-major order)
+	SFZ_CUDA_CALL explicit Matrix(const T* arrayPtr) noexcept;
+
+	SFZ_CUDA_CALL Matrix(T e00, T e01, T e02, T e03,
+	                     T e10, T e11, T e12, T e13,
+	                     T e20, T e21, T e22, T e23,
+	                     T e30, T e31, T e32, T e33) noexcept;
+
+	SFZ_CUDA_CALL Matrix(Vector<T,4> row0,
+	                     Vector<T,4> row1,
+	                     Vector<T,4> row2,
+	                     Vector<T,4> row3) noexcept;
+
+	/// Constructs a 4x4 matrix by placing the specified matrix ontop a 4x4 identity matrix.
+	SFZ_CUDA_CALL explicit Matrix(const Matrix<T,3,3>& matrix) noexcept;
+	SFZ_CUDA_CALL explicit Matrix(const Matrix<T,3,4>& matrix) noexcept;
+
+	static SFZ_CUDA_CALL Matrix fill(T value) noexcept;
+	static SFZ_CUDA_CALL Matrix identity() noexcept;
+	static SFZ_CUDA_CALL Matrix scaling3(T scale) noexcept; // Note that the bottom right corner is 1 for 4x4
+	static SFZ_CUDA_CALL Matrix scaling3(T x, T y, T z) noexcept; // Note that the bottom right corner is 1 for 4x4
+	static SFZ_CUDA_CALL Matrix scaling3(Vector<T,3> scale) noexcept; // Note that the bottom right corner is 1 for 4x4
+	static SFZ_CUDA_CALL Matrix rotation3(Vector<T,3> axis, T angleRad) noexcept;
+	static SFZ_CUDA_CALL Matrix translation3(Vector<T,3> delta) noexcept;
+
+	SFZ_CUDA_CALL T& at(uint32_t y, uint32_t x) noexcept { return rows[y][x]; }
+	SFZ_CUDA_CALL T at(uint32_t y, uint32_t x) const noexcept { return rows[y][x]; }
+	SFZ_CUDA_CALL Vector<T,4> columnAt(uint32_t x) const noexcept;
+
+	SFZ_CUDA_CALL void set(uint32_t y, uint32_t x, T value) noexcept { this->at(y, x) = value; }
+	SFZ_CUDA_CALL void setColumn(uint32_t x, Vector<T,4> column) noexcept;
+};
+
+using mat22 = Matrix<float,2,2>;
+using mat33 = Matrix<float,3,3>;
+using mat34 = Matrix<float,3,4>;
+using mat44 = Matrix<float,4,4>;
+
+using mat2 = mat22;
+using mat3 = mat33;
+using mat4 = mat44;
+
+static_assert(sizeof(mat22) == sizeof(float) * 2 * 2, "mat22 is padded");
+static_assert(sizeof(mat33) == sizeof(float) * 3 * 3, "mat33 is padded");
+static_assert(sizeof(mat34) == sizeof(float) * 3 * 4, "mat34 is padded");
+static_assert(sizeof(mat44) == sizeof(float) * 4 * 4, "mat44 is padded");
 
 // Matrix functions
 // ------------------------------------------------------------------------------------------------
 
-template<typename T, size_t M, size_t N>
-void fill(Matrix<T,M,N>& matrix, T value);
-
 /// Element-wise multiplication of two matrices
-template<typename T, size_t M, size_t N>
-Matrix<T,M,N> elemMult(const Matrix<T,M,N>& lhs, const Matrix<T,M,N>& rhs) noexcept;
+template<typename T, uint32_t H, uint32_t W>
+SFZ_CUDA_CALL Matrix<T,H,W> elemMult(const Matrix<T,H,W>& lhs, const Matrix<T,H,W>& rhs) noexcept;
 
-template<typename T, size_t M, size_t N>
-Matrix<T,N,M> transpose(const Matrix<T,M,N>& matrix) noexcept;
+template<typename T, uint32_t H, uint32_t W>
+SFZ_CUDA_CALL Matrix<T,W,H> transpose(const Matrix<T,H,W>& m) noexcept;
 
-template<typename T, size_t M, size_t N>
-size_t hash(const Matrix<T,M,N>& matrix) noexcept;
+template<typename T>
+SFZ_CUDA_CALL Vector<T,3> transformPoint(const Matrix<T,3,4>& m, const Vector<T,3>& p) noexcept;
 
-/// Creates string representation of a float matrix
-template<size_t M, size_t N>
-StackString256 toString(const Matrix<float,M,N>& matrix, bool rowBreak = false, uint32_t numDecimals = 2) noexcept;
+template<typename T>
+SFZ_CUDA_CALL Vector<T,3> transformPoint(const Matrix<T,4,4>& m, const Vector<T,3>& p) noexcept;
 
-/// Creates string representation of a float matrix
-template<size_t M, size_t N>
-void toString(const Matrix<float,M,N>& matrix, StackString256& string, bool rowBreak = false, uint32_t numDecimals = 2) noexcept;
+template<typename T>
+SFZ_CUDA_CALL Vector<T,3> transformDir(const Matrix<T,3,4>& m, const Vector<T,3>& d) noexcept;
 
-/// Creates string representation of an int matrix
-template<size_t M, size_t N>
-StackString256 toString(const Matrix<int32_t,M,N>& matrix, bool rowBreak = false) noexcept;
+template<typename T>
+SFZ_CUDA_CALL Vector<T,3> transformDir(const Matrix<T,4,4>& m, const Vector<T,3>& d) noexcept;
 
-/// Creates string representation of an int matrix
-template<size_t M, size_t N>
-void toString(const Matrix<int32_t,M,N>& matrix, StackString256& string, bool rowBreak = false) noexcept;
+template<typename T, uint32_t N>
+SFZ_CUDA_CALL T determinant(const Matrix<T,N,N>& m) noexcept;
+
+template<typename T, uint32_t N>
+SFZ_CUDA_CALL Matrix<T,N,N> inverse(const Matrix<T,N,N>& m) noexcept;
 
 // Operators (arithmetic & assignment)
 // ------------------------------------------------------------------------------------------------
 
-template<typename T, size_t M, size_t N>
-Matrix<T,M,N>& operator+= (Matrix<T,M,N>& lhs, const Matrix<T,M,N>& rhs) noexcept;
+template<typename T, uint32_t H, uint32_t W>
+SFZ_CUDA_CALL Matrix<T,H,W>& operator+= (Matrix<T,H,W>& lhs, const Matrix<T,H,W>& rhs) noexcept;
 
-template<typename T, size_t M, size_t N>
-Matrix<T,M,N>& operator-= (Matrix<T,M,N>& lhs, const Matrix<T,M,N>& rhs) noexcept;
+template<typename T, uint32_t H, uint32_t W>
+SFZ_CUDA_CALL Matrix<T,H,W>& operator-= (Matrix<T,H,W>& lhs, const Matrix<T,H,W>& rhs) noexcept;
 
-template<typename T, size_t M, size_t N>
-Matrix<T,M,N>& operator*= (Matrix<T,M,N>& lhs, T rhs) noexcept;
+template<typename T, uint32_t H, uint32_t W>
+SFZ_CUDA_CALL Matrix<T,H,W>& operator*= (Matrix<T,H,W>& lhs, T rhs) noexcept;
 
-template<typename T, size_t N>
-Matrix<T,N,N>& operator*= (Matrix<T,N,N>& lhs, const Matrix<T,N,N>& rhs) noexcept;
+template<typename T, uint32_t N>
+SFZ_CUDA_CALL Matrix<T,N,N>& operator*= (Matrix<T,N,N>& lhs, const Matrix<T,N,N>& rhs) noexcept;
 
 // Operators (arithmetic)
 // ------------------------------------------------------------------------------------------------
 
-template<typename T, size_t M, size_t N>
-Matrix<T,M,N> operator+ (const Matrix<T,M,N>& lhs, const Matrix<T,M,N>& rhs) noexcept;
+template<typename T, uint32_t H, uint32_t W>
+SFZ_CUDA_CALL Matrix<T,H,W> operator+ (const Matrix<T,H,W>& lhs, const Matrix<T,H,W>& rhs) noexcept;
 
-template<typename T, size_t M, size_t N>
-Matrix<T,M,N> operator- (const Matrix<T,M,N>& lhs, const Matrix<T,M,N>& rhs) noexcept;
+template<typename T, uint32_t H, uint32_t W>
+SFZ_CUDA_CALL Matrix<T,H,W> operator- (const Matrix<T,H,W>& lhs, const Matrix<T,H,W>& rhs) noexcept;
 
-template<typename T, size_t M, size_t N>
-Matrix<T,M,N> operator- (const Matrix<T,M,N>& matrix) noexcept;
+template<typename T, uint32_t H, uint32_t W>
+SFZ_CUDA_CALL Matrix<T,H,W> operator- (const Matrix<T,H,W>& matrix) noexcept;
 
-template<typename T, size_t M, size_t N, size_t P>
-Matrix<T,M,P> operator* (const Matrix<T,M,N>& lhs, const Matrix<T,N,P>& rhs) noexcept;
+template<typename T, uint32_t H, uint32_t S, uint32_t W>
+SFZ_CUDA_CALL Matrix<T,H,W> operator* (const Matrix<T,H,S>& lhs, const Matrix<T,S,W>& rhs) noexcept;
 
-template<typename T, size_t M, size_t N>
-Vector<T,M> operator* (const Matrix<T,M,N>& lhs, const Vector<T,N>& rhs) noexcept;
+template<typename T, uint32_t H, uint32_t W>
+SFZ_CUDA_CALL Vector<T,H> operator* (const Matrix<T,H,W>& lhs, const Vector<T,W>& rhs) noexcept;
 
-template<typename T, size_t M, size_t N>
-Matrix<T,M,N> operator* (const Matrix<T,M,N>& lhs, T rhs) noexcept;
+template<typename T, uint32_t H, uint32_t W>
+SFZ_CUDA_CALL Matrix<T,H,W> operator* (const Matrix<T,H,W>& lhs, T rhs) noexcept;
 
-template<typename T, size_t M, size_t N>
-Matrix<T,M,N> operator* (T lhs, const Matrix<T,M,N>& rhs) noexcept;
+template<typename T, uint32_t H, uint32_t W>
+SFZ_CUDA_CALL Matrix<T,H,W> operator* (T lhs, const Matrix<T,H,W>& rhs) noexcept;
 
 // Operators (comparison)
 // ------------------------------------------------------------------------------------------------
 
-template<typename T, size_t M, size_t N>
-bool operator== (const Matrix<T,M,N>& lhs, const Matrix<T,M,N>& rhs) noexcept;
+template<typename T, uint32_t H, uint32_t W>
+SFZ_CUDA_CALL bool operator== (const Matrix<T,H,W>& lhs, const Matrix<T,H,W>& rhs) noexcept;
 
-template<typename T, size_t M, size_t N>
-bool operator!= (const Matrix<T,M,N>& lhs, const Matrix<T,M,N>& rhs) noexcept;
-
-// Standard typedefs
-// ------------------------------------------------------------------------------------------------
-
-using mat2 = Matrix<float,2,2>;
-using mat3 = Matrix<float,3,3>;
-using mat4 = Matrix<float,4,4>;
-
-using mat2i = Matrix<int,2,2>;
-using mat3i = Matrix<int,3,3>;
-using mat4i = Matrix<int,4,4>;
+template<typename T, uint32_t H, uint32_t W>
+SFZ_CUDA_CALL bool operator!= (const Matrix<T,H,W>& lhs, const Matrix<T,H,W>& rhs) noexcept;
 
 } // namespace sfz
 
-// Specializations of standard library for sfz::Matrix
-// ------------------------------------------------------------------------------------------------
-
-namespace std {
-
-template<typename T, size_t M, size_t N>
-struct hash<sfz::Matrix<T,M,N>> {
-	size_t operator() (const sfz::Matrix<T,M,N>& matrix) const noexcept;
-};
-
-} // namespace std
-
 #include "sfz/math/Matrix.inl"
-#include "sfz/math/MatrixSupport.hpp"

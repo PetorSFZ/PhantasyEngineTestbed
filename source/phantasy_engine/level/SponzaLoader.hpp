@@ -15,6 +15,6 @@ using sfz::mat4;
 // ------------------------------------------------------------------------------------------------
 
 void loadStaticSceneSponza(const char* basePath, const char* fileName, Level& level,
-                           const mat4& modelMatrix = sfz::identityMatrix4<float>()) noexcept;
+                           const mat4& modelMatrix = mat4::identity()) noexcept;
 
 } // namespace phe

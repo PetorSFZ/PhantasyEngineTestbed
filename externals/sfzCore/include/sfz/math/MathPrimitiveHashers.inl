@@ -18,51 +18,58 @@
 
 namespace sfz {
 
-// Constructors & destructors
+// Vector hash function
 // ------------------------------------------------------------------------------------------------
 
-inline Sphere::Sphere(const vec3& positionIn, float radiusIn) noexcept
-:
-	position(positionIn),
-	radius(radiusIn)
-{ }
-
-
-// Public member functions
-// ------------------------------------------------------------------------------------------------
-
-inline vec3 Sphere::closestPoint(const vec3& point) const noexcept
+template<typename T, uint32_t N>
+size_t hash(const Vector<T,N>& vector) noexcept
 {
-	const vec3 distToPoint = point - position;
-	vec3 res = point;
-	if (squaredLength(distToPoint) > (radius * radius))
-	{
-		res = position + normalize(distToPoint) * radius;
+	std::hash<T> hasher;
+	size_t hash = 0;
+	for (uint32_t i = 0; i < N; ++i) {
+		// hash_combine algorithm from boost
+		hash ^= hasher(vector[i]) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
 	}
-	return res;
+	return hash;
 }
 
-inline size_t Sphere::hash() const noexcept
+// Matrix hash function
+// ------------------------------------------------------------------------------------------------
+
+template<typename T, uint32_t H, uint32_t W>
+size_t hash(const Matrix<T,H,W>& matrix) noexcept
 {
-	std::hash<vec3> vecHasher;
-	std::hash<float> floatHasher;
+	std::hash<T> hasher;
 	size_t hash = 0;
-	// hash_combine algorithm from boost
-	hash ^= vecHasher(position) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
-	hash ^= floatHasher(radius) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+	for (uint32_t y = 0; y < H; y++) {
+		for (uint32_t x = 0; x < W; x++) {
+			// hash_combine algorithm from boost
+			hash ^= hasher(matrix.at(y, x)) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+		}
+	}
 	return hash;
 }
 
 } // namespace sfz
 
-// Specializations of standard library for sfz::Sphere
-// ------------------------------------------------------------------------------------------------
-
 namespace std {
 
-inline size_t hash<sfz::Sphere>::operator() (const sfz::Sphere& sphere) const noexcept
+// Vector hash struct
+// ------------------------------------------------------------------------------------------------
+
+template<typename T, uint32_t N>
+size_t hash<sfz::Vector<T,N>>::operator() (const sfz::Vector<T,N>& vector) const noexcept
 {
-	return sphere.hash();
+	return sfz::hash(vector);
+}
+
+// Matrix hash struct
+// ------------------------------------------------------------------------------------------------
+
+template<typename T, uint32_t H, uint32_t W>
+size_t hash<sfz::Matrix<T,H,W>>::operator() (const sfz::Matrix<T,H,W>& matrix) const noexcept
+{
+	return sfz::hash(matrix);
 }
 
 } // namespace std

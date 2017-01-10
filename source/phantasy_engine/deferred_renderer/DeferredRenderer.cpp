@@ -2,11 +2,11 @@
 
 #include "phantasy_engine/deferred_renderer/DeferredRenderer.hpp"
 
-#include <sfz/containers/StackString.hpp>
 #include <sfz/gl/IncludeOpenGL.hpp>
 #include <sfz/gl/Program.hpp>
 #include <sfz/math/ProjectionMatrices.hpp>
 #include <sfz/memory/New.hpp>
+#include <sfz/strings/StackString.hpp>
 #include <sfz/util/IO.hpp>
 
 #include "phantasy_engine/deferred_renderer/GLModel.hpp"
@@ -179,10 +179,10 @@ void DeferredRenderer::setStaticScene(const StaticScene& staticScene) noexcept
 		mImpl->shadowMapGenShader.useProgram();
 
 		// Model matrix is identity since static scene is defined in world space
-		gl::setUniform(mImpl->shadowMapGenShader, "uModelMatrix", sfz::identityMatrix4<float>());
+		gl::setUniform(mImpl->shadowMapGenShader, "uModelMatrix", mat4::identity());
 
 		// View and projection matrices for each face
-		const mat4 projMatrix = sfz::scalingMatrix4<float>(1.0f, -1.0f, 1.0f) * sfz::perspectiveProjectionVkD3d(90.0f, 1.0f, 0.01f, light.range);
+		const mat4 projMatrix = mat4::scaling3(1.0f, -1.0f, 1.0f) * sfz::perspectiveProjectionVkD3d(90.0f, 1.0f, 0.01f, light.range);
 		mat4 viewProjMatrices[6];
 		viewProjMatrices[0] = projMatrix * sfz::viewMatrixGL(light.pos, vec3(1.0f, 0.0f, 0.0f), vec3(0.0f, -1.0f, 0.0f)); // right
 		viewProjMatrices[1] = projMatrix * sfz::viewMatrixGL(light.pos, vec3(-1.0f, 0.0f, 0.0f), vec3(0.0f, -1.0f, 0.0f)); // left
@@ -243,7 +243,7 @@ RenderResult DeferredRenderer::render(const RenderComponent* renderComponents, u
 	gbuffer.bindViewportClearColorDepth(vec2i(0), mTargetResolution, vec4(0.0f), 0.0f);
 	gbufferGenShader.useProgram();
 
-	const mat4 modelMatrix = identityMatrix4<float>();
+	const mat4 modelMatrix = mat4::identity();
 	gl::setUniform(gbufferGenShader, "uProjMatrix", projMatrix);
 	gl::setUniform(gbufferGenShader, "uViewMatrix", viewMatrix);
 
@@ -256,7 +256,7 @@ RenderResult DeferredRenderer::render(const RenderComponent* renderComponents, u
 	const int worldVelocityLoc = glGetUniformLocation(gbufferGenShader.handle(), "uWorldVelocity");
 
 	// For the static scene the model matrix should be identity
-	gl::setUniform(modelMatrixLoc, identityMatrix4<float>());
+	gl::setUniform(modelMatrixLoc, mat4::identity());
 	gl::setUniform(normalMatrixLoc, inverse(transpose(viewMatrix)));
 
 	// Set velocity of static geometry to 0

@@ -26,13 +26,13 @@ struct IncomingLight final {
 	vec4 fData1;
 	vec4 fData2;
 
-	SFZ_CUDA_CALLABLE vec3 origin() const noexcept { return fData1.xyz; }
-	SFZ_CUDA_CALLABLE vec3 amount() const noexcept { return fData2.xyz; }
-	SFZ_CUDA_CALLABLE float fallofFactor() const noexcept { return fData1.w; }
+	SFZ_CUDA_CALL vec3 origin() const noexcept { return fData1.xyz; }
+	SFZ_CUDA_CALL vec3 amount() const noexcept { return fData2.xyz; }
+	SFZ_CUDA_CALL float fallofFactor() const noexcept { return fData1.w; }
 
-	SFZ_CUDA_CALLABLE void setOrigin(const vec3& val) noexcept { fData1.xyz = val; }
-	SFZ_CUDA_CALLABLE void setAmount(const vec3& val) noexcept { fData2.xyz = val; }
-	SFZ_CUDA_CALLABLE void setFallofFactor(float val) noexcept { fData1.w = val; }
+	SFZ_CUDA_CALL void setOrigin(const vec3& val) noexcept { fData1.xyz = val; }
+	SFZ_CUDA_CALL void setAmount(const vec3& val) noexcept { fData2.xyz = val; }
+	SFZ_CUDA_CALL void setFallofFactor(float val) noexcept { fData1.w = val; }
 };
 
 // GatherRaysShadeKernel

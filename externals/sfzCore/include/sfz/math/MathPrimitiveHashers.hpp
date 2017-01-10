@@ -16,60 +16,45 @@
 //    misrepresented as being the original software.
 // 3. This notice may not be removed or altered from any source distribution.
 
+#include <functional>
+
+#include "sfz/math/Matrix.hpp"
+#include "sfz/math/Vector.hpp"
+
 namespace sfz {
 
-// Circle: Constructors and destructors
+// Vector hash function
 // ------------------------------------------------------------------------------------------------
 
-inline Circle::Circle(vec2 centerPos, float radius) noexcept
-:
-	pos{centerPos},
-	radius{radius}
-{ }
+template<typename T, uint32_t N>
+size_t hash(const Vector<T,N>& vector) noexcept;
 
-inline Circle::Circle(float centerX, float centerY, float radius) noexcept
-:
-	pos{centerX, centerY},
-	radius{radius}
-{ }
-
-// Circle: Public methods
+// Matrix hash function
 // ------------------------------------------------------------------------------------------------
 
-inline size_t Circle::hash() const noexcept
-{
-	std::hash<float> hasher;
-	size_t hash = 0;
-	// hash_combine algorithm from boost
-	hash ^= hasher(pos[0]) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
-	hash ^= hasher(pos[1]) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
-	hash ^= hasher(radius) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
-	return hash;
-}
-
-// Circle: Comparison operators
-// ------------------------------------------------------------------------------------------------
-
-inline bool Circle::operator== (const Circle& other) const noexcept
-{
-	return pos == other.pos && radius == other.radius;
-}
-
-inline bool Circle::operator!= (const Circle& other) const noexcept
-{
-	return !((*this) == other);
-}
+template<typename T, uint32_t H, uint32_t W>
+size_t hash(const Matrix<T,H,W>& matrix) noexcept;
 
 } // namespace sfz
 
-// Specializations of standard library for sfz::Circle
-// ------------------------------------------------------------------------------------------------
-
 namespace std {
 
-inline size_t hash<sfz::Circle>::operator() (const sfz::Circle& circle) const noexcept
-{
-	return circle.hash();
-}
+// Vector hash struct
+// ------------------------------------------------------------------------------------------------
+
+template<typename T, uint32_t N>
+struct hash<sfz::Vector<T,N>> {
+	size_t operator() (const sfz::Vector<T,N>& vector) const noexcept;
+};
+
+// Matrix hash struct
+// ------------------------------------------------------------------------------------------------
+
+template<typename T, uint32_t H, uint32_t W>
+struct hash<sfz::Matrix<T,H,W>> {
+	size_t operator() (const sfz::Matrix<T,H,W>& matrix) const noexcept;
+};
 
 } // namespace std
+
+#include "sfz/math/MathPrimitiveHashers.inl"

@@ -2,7 +2,6 @@
 
 #pragma once
 
-#include <sfz/CUDACallable.hpp>
 #include <sfz/math/Vector.hpp>
 
 namespace phe {

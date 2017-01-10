@@ -18,13 +18,24 @@
 
 #pragma once
 
-// CUDA callable macro
+#include <immintrin.h> // Intel AVX intrinsics
+
+namespace sfz {
+
+// Matrix struct declaration
 // ------------------------------------------------------------------------------------------------
 
-/// A macro to allow for functions to be called from CUDA.
+/// Calculates the parameter mask for _mm_shuffle_ps()
+/// Each parameter should be a number in the interval [0, 3], which specifies which slot to copy
+/// parameters from.
+#define SFZ_SHUFFLE_PS_PARAM(e0, e1, e2, e3) \
+	(uint32_t(e0) | (uint32_t(e1) << 2u) | (uint32_t(e2) << 4u) | (uint32_t(e3) << 6u))
 
-#if defined(__CUDACC__)
-#define SFZ_CUDA_CALLABLE inline __host__ __device__
-#else
-#define SFZ_CUDA_CALLABLE inline
-#endif
+/// Replicates the specified element in all slots in the resulting vector
+template<uint32_t element>
+inline __m128 replicatePs(__m128 v) noexcept
+{
+	return _mm_shuffle_ps(v, v, SFZ_SHUFFLE_PS_PARAM(element, element, element, element));
+}
+
+} // namespace sfz

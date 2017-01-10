@@ -6,7 +6,7 @@
 
 #include <sfz/containers/DynArray.hpp>
 #include <sfz/util/IniParser.hpp>
-#include <sfz/math/MathHelpers.hpp>
+#include <sfz/math/MathSupport.hpp>
 #include <sfz/memory/SmartPointers.hpp>
 
 namespace phe {

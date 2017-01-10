@@ -2,8 +2,9 @@
 
 #pragma once
 
-#include <sfz/CUDACallable.hpp>
+#include <sfz/CudaCompatibility.hpp>
 #include <sfz/math/Vector.hpp>
+#include <sfz/math/MathSupport.hpp>
 
 #include "phantasy_engine/ray_tracer_common/Ray.hpp"
 #include "phantasy_engine/ray_tracer_common/Triangle.hpp"
@@ -21,7 +22,7 @@ struct TriangleHit final {
 };
 
 // See page 750 in Real-Time Rendering 3
-SFZ_CUDA_CALLABLE TriangleHit intersects(const TriangleVertices& tri, const vec3& origin, const vec3& dir) noexcept
+SFZ_CUDA_CALL TriangleHit intersects(const TriangleVertices& tri, const vec3& origin, const vec3& dir) noexcept
 {
 	TriangleHit result;
 
@@ -74,7 +75,7 @@ struct AABBHit final {
 	float tIn, tOut;
 };
 
-SFZ_CUDA_CALLABLE AABBHit intersects(const Ray& ray, const vec3& min, const vec3& max) noexcept
+SFZ_CUDA_CALL AABBHit intersects(const Ray& ray, const vec3& min, const vec3& max) noexcept
 {
 	vec3 t1 = (min - ray.origin) * ray.invDir;
 	vec3 t2 = (max - ray.origin) * ray.invDir;

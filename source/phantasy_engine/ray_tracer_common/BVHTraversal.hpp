@@ -4,7 +4,7 @@
 
 #include <cfloat>
 
-#include <sfz/CUDACallable.hpp>
+#include <sfz/CudaCompatibility.hpp>
 
 #include "phantasy_engine/ray_tracer_common/BVHNode.hpp"
 #include "phantasy_engine/ray_tracer_common/Intersection.hpp"
@@ -129,9 +129,9 @@ inline RayCastResult castRay(const BVHNode* nodes, const TriangleVertices* trian
 
 /// Version of castRay that stores additional data about the traversal
 template <size_t STACK_MAX_SIZE = 144>
-SFZ_CUDA_CALLABLE RayCastResult castDebugRay(const BVHNode* nodes, const TriangleVertices* triangles,
-                                             const Ray& ray, DebugRayCastData* debugData,
-                                             float tMin = 0.0001f, float tMax = FLT_MAX) noexcept
+SFZ_CUDA_CALL RayCastResult castDebugRay(const BVHNode* nodes, const TriangleVertices* triangles,
+                                         const Ray& ray, DebugRayCastData* debugData,
+                                         float tMin = 0.0001f, float tMax = FLT_MAX) noexcept
 {
 	sfz_assert_debug(debugData != nullptr);
 
@@ -244,7 +244,7 @@ struct HitInfo final {
 	uint32_t materialIndex;
 };
 
-SFZ_CUDA_CALLABLE HitInfo interpretHit(const TriangleData* triDatas, const RayCastResult& result,
+SFZ_CUDA_CALL HitInfo interpretHit(const TriangleData* triDatas, const RayCastResult& result,
                                        const Ray& ray) noexcept
 {
 	const TriangleData& data = triDatas[result.triangleIndex];

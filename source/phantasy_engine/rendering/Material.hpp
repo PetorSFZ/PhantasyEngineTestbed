@@ -2,8 +2,8 @@
 
 #pragma once
 
-#include <sfz/CUDACallable.hpp>
-#include <sfz/math/MathHelpers.hpp>
+#include <sfz/CudaCompatibility.hpp>
+#include <sfz/math/MathSupport.hpp>
 #include <sfz/math/Vector.hpp>
 
 namespace phe {
@@ -34,24 +34,24 @@ struct Material final {
 	// Getters
 	// --------------------------------------------------------------------------------------------
 
-	SFZ_CUDA_CALLABLE int32_t albedoTexIndex() const noexcept { return iData.x; }
-	SFZ_CUDA_CALLABLE int32_t roughnessTexIndex() const noexcept { return iData.y; }
-	SFZ_CUDA_CALLABLE int32_t metallicTexIndex() const noexcept { return iData.z; }
+	SFZ_CUDA_CALL int32_t albedoTexIndex() const noexcept { return iData.x; }
+	SFZ_CUDA_CALL int32_t roughnessTexIndex() const noexcept { return iData.y; }
+	SFZ_CUDA_CALL int32_t metallicTexIndex() const noexcept { return iData.z; }
 	
-	SFZ_CUDA_CALLABLE vec4 albedoValue() const noexcept { return fData1; }
-	SFZ_CUDA_CALLABLE float roughnessValue() const noexcept { return fData2.x; }
-	SFZ_CUDA_CALLABLE float metallicValue() const noexcept { return fData2.y; }
+	SFZ_CUDA_CALL vec4 albedoValue() const noexcept { return fData1; }
+	SFZ_CUDA_CALL float roughnessValue() const noexcept { return fData2.x; }
+	SFZ_CUDA_CALL float metallicValue() const noexcept { return fData2.y; }
 
 	// Setters
 	// --------------------------------------------------------------------------------------------
 
-	SFZ_CUDA_CALLABLE void setAlbedoTexIndex(int32_t index) noexcept { iData.x = index; }
-	SFZ_CUDA_CALLABLE void setRoughnessTexIndex(int32_t index) noexcept { iData.y = index; }
-	SFZ_CUDA_CALLABLE void setMetallicTexIndex(int32_t index) noexcept { iData.z = index; }
+	SFZ_CUDA_CALL void setAlbedoTexIndex(int32_t index) noexcept { iData.x = index; }
+	SFZ_CUDA_CALL void setRoughnessTexIndex(int32_t index) noexcept { iData.y = index; }
+	SFZ_CUDA_CALL void setMetallicTexIndex(int32_t index) noexcept { iData.z = index; }
 
-	SFZ_CUDA_CALLABLE void setAlbedoValue(const vec4& value) noexcept { fData1 = value; }
-	SFZ_CUDA_CALLABLE void setRoughnessValue(float value) noexcept { fData2.x = value; }
-	SFZ_CUDA_CALLABLE void setMetallicValue(float value) noexcept { fData2.y = value; }
+	SFZ_CUDA_CALL void setAlbedoValue(const vec4& value) noexcept { fData1 = value; }
+	SFZ_CUDA_CALL void setRoughnessValue(float value) noexcept { fData2.x = value; }
+	SFZ_CUDA_CALL void setMetallicValue(float value) noexcept { fData2.y = value; }
 };
 
 // Material comparison functions

@@ -19,7 +19,7 @@ using std::uint32_t;
 
 struct SceneGraphNode final {
 	uint32_t entityId = ~0u;
-	mat4 transform = sfz::identityMatrix4<float>();
+	mat4 transform = mat4::identity();
 	uint32_t parent = ~0u;
 	DynArray<uint32_t> children;
 	

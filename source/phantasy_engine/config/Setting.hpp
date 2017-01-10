@@ -4,7 +4,7 @@
 
 #include <cstdint>
 
-#include <sfz/containers/StackString.hpp>
+#include <sfz/strings/StackString.hpp>
 
 namespace phe {
 

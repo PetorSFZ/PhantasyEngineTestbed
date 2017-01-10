@@ -6,16 +6,21 @@ if(NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
 	set(CMAKE_BUILD_TYPE Release)
 endif()
 
+# Require 64bit compiler
+if(NOT (CMAKE_SIZEOF_VOID_P EQUAL 8))
+	message(FATAL_ERROR "Can only compile in 64bit mode")
+endif()
+
 # Compiler flags
 if(MSVC)
 	# MSVC flags
-	set(CMAKE_CXX_FLAGS "/Wall /Zi /EHsc /wd4201 /wd4350 /wd4514 /wd4571 /wd4647 /wd4668 /wd4710 /wd4711 /wd4820 /D_CRT_SECURE_NO_WARNINGS")
+	set(CMAKE_CXX_FLAGS "/Wall /Zi /EHsc /arch:AVX /wd4201 /wd4350 /wd4514 /wd4571 /wd4647 /wd4668 /wd4710 /wd4711 /wd4820 /D_CRT_SECURE_NO_WARNINGS")
 	set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "/O2 /fp:fast /DEBUG /DSFZ_NO_DEBUG")
 	set(CMAKE_CXX_FLAGS_RELEASE "/O2 /fp:fast /DSFZ_NO_DEBUG")
 	set(CMAKE_CXX_FLAGS_DEBUG "/Od /DEBUG")
 else()
 	# GCC / Clang flags
-	set(CMAKE_CXX_FLAGS "-Wall -Wextra -std=c++14 -pthread")
+	set(CMAKE_CXX_FLAGS "-Wall -Wextra -std=c++14 -march=sandybridge -pthread -fno-strict-aliasing")
 	set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O3 -ffast-math -g -DSFZ_NO_DEBUG")
 	set(CMAKE_CXX_FLAGS_RELEASE "-O3 -ffast-math -DSFZ_NO_DEBUG")
 	set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g")
@@ -76,21 +81,19 @@ set(SOURCE_ROOT_FILES
 	${INCLUDE_DIR}/sfz/Assert.hpp
 	${INCLUDE_DIR}/sfz/Assert.inl
 	 ${SOURCE_DIR}/sfz/Assert.cpp
-	${INCLUDE_DIR}/sfz/CUDACallable.hpp
+	${INCLUDE_DIR}/sfz/CudaCompatibility.hpp
 	${INCLUDE_DIR}/sfz/PopWarnings.hpp
-	${INCLUDE_DIR}/sfz/PushWarnings.hpp)
+	${INCLUDE_DIR}/sfz/PushWarnings.hpp
+	${INCLUDE_DIR}/sfz/SimdIntrinsics.hpp)
 source_group(sfz_root FILES ${SOURCE_ROOT_FILES})
 
 set(SOURCE_CONTAINERS_FILES
 	${INCLUDE_DIR}/sfz/Containers.hpp
 	${INCLUDE_DIR}/sfz/containers/DynArray.hpp
 	${INCLUDE_DIR}/sfz/containers/DynArray.inl
-	${INCLUDE_DIR}/sfz/containers/DynString.hpp
-	${INCLUDE_DIR}/sfz/containers/DynString.inl
 	${INCLUDE_DIR}/sfz/containers/HashMap.hpp
 	${INCLUDE_DIR}/sfz/containers/HashMap.inl
-	${INCLUDE_DIR}/sfz/containers/StackString.hpp
-	 ${SOURCE_DIR}/sfz/containers/StackString.cpp)
+	${INCLUDE_DIR}/sfz/containers/HashTableKeyDescriptor.hpp)
 source_group(sfz_containers FILES ${SOURCE_CONTAINERS_FILES})
 
 set(SOURCE_GEOMETRY_FILES
@@ -98,17 +101,14 @@ set(SOURCE_GEOMETRY_FILES
 	${INCLUDE_DIR}/sfz/geometry/AABB.hpp
 	${INCLUDE_DIR}/sfz/geometry/AABB.inl
 	${INCLUDE_DIR}/sfz/geometry/AABB2D.hpp
-	${INCLUDE_DIR}/sfz/geometry/AABB2D.inl
 	${INCLUDE_DIR}/sfz/geometry/Circle.hpp
-	${INCLUDE_DIR}/sfz/geometry/Circle.inl
 	${INCLUDE_DIR}/sfz/geometry/Intersection.hpp
 	${INCLUDE_DIR}/sfz/geometry/Intersection.inl
 	${INCLUDE_DIR}/sfz/geometry/OBB.hpp
 	${INCLUDE_DIR}/sfz/geometry/OBB.inl
 	${INCLUDE_DIR}/sfz/geometry/Plane.hpp
 	${INCLUDE_DIR}/sfz/geometry/Plane.inl
-	${INCLUDE_DIR}/sfz/geometry/Sphere.hpp
-	${INCLUDE_DIR}/sfz/geometry/Sphere.inl)
+	${INCLUDE_DIR}/sfz/geometry/Sphere.hpp)
 source_group(sfz_geometry FILES ${SOURCE_GEOMETRY_FILES})
 
 if(SFZ_CORE_OPENGL)
@@ -130,15 +130,18 @@ endif()
 
 set(SOURCE_MATH_FILES
 	${INCLUDE_DIR}/sfz/Math.hpp
-	${INCLUDE_DIR}/sfz/math/MathConstants.hpp
-	${INCLUDE_DIR}/sfz/math/MathHelpers.hpp
-	${INCLUDE_DIR}/sfz/math/MathHelpers.inl
+	${INCLUDE_DIR}/sfz/math/MathPrimitiveHashers.hpp
+	${INCLUDE_DIR}/sfz/math/MathPrimitiveHashers.inl
+	${INCLUDE_DIR}/sfz/math/MathPrimitiveToStrings.hpp
+	 ${SOURCE_DIR}/sfz/math/MathPrimitiveToStrings.cpp
+	${INCLUDE_DIR}/sfz/math/MathSupport.hpp
+	${INCLUDE_DIR}/sfz/math/MathSupport.inl
 	${INCLUDE_DIR}/sfz/math/Matrix.hpp
 	${INCLUDE_DIR}/sfz/math/Matrix.inl
-	${INCLUDE_DIR}/sfz/math/MatrixSupport.hpp
-	${INCLUDE_DIR}/sfz/math/MatrixSupport.inl
 	${INCLUDE_DIR}/sfz/math/ProjectionMatrices.hpp
 	 ${SOURCE_DIR}/sfz/math/ProjectionMatrices.cpp
+	${INCLUDE_DIR}/sfz/math/Quaternion.hpp
+	${INCLUDE_DIR}/sfz/math/Quaternion.inl
 	${INCLUDE_DIR}/sfz/math/Vector.hpp
 	${INCLUDE_DIR}/sfz/math/Vector.inl)
 source_group(sfz_math FILES ${SOURCE_MATH_FILES})
@@ -177,6 +180,16 @@ set(SOURCE_SDL_FILES
 	 ${SOURCE_DIR}/sfz/sdl/Window.cpp)
 source_group(sfz_sdl FILES ${SOURCE_SDL_FILES})
 
+set(SOURCE_STRINGS_FILES
+	${INCLUDE_DIR}/sfz/Strings.hpp
+	${INCLUDE_DIR}/sfz/strings/DynString.hpp
+	${INCLUDE_DIR}/sfz/strings/DynString.inl
+	${INCLUDE_DIR}/sfz/strings/StackString.hpp
+	 ${SOURCE_DIR}/sfz/strings/StackString.cpp
+	${INCLUDE_DIR}/sfz/strings/StringHashers.hpp
+	${INCLUDE_DIR}/sfz/strings/StringHashers.inl)
+source_group(sfz_strings FILES ${SOURCE_STRINGS_FILES})
+
 set(SOURCE_UTIL_FILES
 	${INCLUDE_DIR}/sfz/Util.hpp
 	${INCLUDE_DIR}/sfz/util/FrametimeStats.hpp
@@ -196,6 +209,7 @@ set(SOURCE_ALL_FILES
 	${SOURCE_MEMORY_FILES}
 	${SOURCE_SCREENS_FILES}
 	${SOURCE_SDL_FILES}
+	${SOURCE_STRINGS_FILES}
 	${SOURCE_UTIL_FILES})
 
 # Library compile target
@@ -249,9 +263,7 @@ if(SFZ_CORE_BUILD_TESTS)
 
 	set(CONTAINERS_TEST_FILES
 		${TESTS_DIR}/sfz/containers/DynArray_Tests.cpp
-		${TESTS_DIR}/sfz/containers/DynString_Tests.cpp
-		${TESTS_DIR}/sfz/containers/HashMap_Tests.cpp
-		${TESTS_DIR}/sfz/containers/StackString_Tests.cpp)
+		${TESTS_DIR}/sfz/containers/HashMap_Tests.cpp)
 	source_group(sfz_containers FILES ${CONTAINERS_TEST_FILES})
 
 	set(GEOMETRY_TEST_FILES
@@ -259,9 +271,11 @@ if(SFZ_CORE_BUILD_TESTS)
 	source_group(sfz_geometry FILES ${GEOMETRY_TEST_FILES})
 
 	set(MATH_TEST_FILES
-		${TESTS_DIR}/sfz/math/MathConstants_Tests.cpp
+		${TESTS_DIR}/sfz/math/MathPrimitiveHashers_Tests.cpp
+		${TESTS_DIR}/sfz/math/MathSupport_Tests.cpp
 		${TESTS_DIR}/sfz/math/Matrix_Tests.cpp
-		${TESTS_DIR}/sfz/math/Vector_Tests.cpp)
+		${TESTS_DIR}/sfz/math/Vector_Tests.cpp
+		${TESTS_DIR}/sfz/math/Quaternion_Tests.cpp)
 	source_group(sfz_math FILES ${MATH_TEST_FILES})
 	
 	set(MEMORY_TEST_FILES
@@ -269,6 +283,12 @@ if(SFZ_CORE_BUILD_TESTS)
 		${TESTS_DIR}/sfz/memory/New_Tests.cpp
 		${TESTS_DIR}/sfz/memory/SmartPointers_Tests.cpp)
 	source_group(sfz_memory FILES ${MEMORY_TEST_FILES})
+
+	set(STRINGS_TEST_FILES
+		${TESTS_DIR}/sfz/strings/DynString_Tests.cpp
+		${TESTS_DIR}/sfz/strings/StackString_Tests.cpp
+		${TESTS_DIR}/sfz/strings/StringHashers_Tests.cpp)
+	source_group(sfz_strings FILES ${STRINGS_TEST_FILES})
 
 	set(UTIL_TEST_FILES
 		${TESTS_DIR}/sfz/util/IniParser_Tests.cpp
@@ -281,6 +301,7 @@ if(SFZ_CORE_BUILD_TESTS)
 		${GEOMETRY_TEST_FILES}
 		${MATH_TEST_FILES}
 		${MEMORY_TEST_FILES}
+		${STRINGS_TEST_FILES}
 		${UTIL_TEST_FILES})
 
 	enable_testing(true)

@@ -11,10 +11,10 @@
 #include <cuda_gl_interop.h>
 
 #include <sfz/containers/DynArray.hpp>
-#include <sfz/containers/StackString.hpp>
 #include <sfz/gl/Program.hpp>
 #include <sfz/math/ProjectionMatrices.hpp>
 #include <sfz/memory/New.hpp>
+#include <sfz/strings/StackString.hpp>
 #include <sfz/util/IO.hpp>
 
 #include <phantasy_engine/deferred_renderer/GLTexture.hpp>
@@ -289,10 +289,10 @@ void CudaTracerRenderer::setStaticScene(const StaticScene& staticScene) noexcept
 		mImpl->shadowMapGenShader.useProgram();
 
 		// Model matrix is identity since static scene is defined in world space
-		gl::setUniform(mImpl->shadowMapGenShader, "uModelMatrix", sfz::identityMatrix4<float>());
+		gl::setUniform(mImpl->shadowMapGenShader, "uModelMatrix", mat44::identity());
 
 		// View and projection matrices for each face
-		const mat4 projMatrix = sfz::scalingMatrix4<float>(1.0f, -1.0f, 1.0f) * sfz::perspectiveProjectionVkD3d(90.0f, 1.0f, 0.01f, light.range);
+		const mat4 projMatrix = mat44::scaling3(1.0f, -1.0f, 1.0f) * sfz::perspectiveProjectionVkD3d(90.0f, 1.0f, 0.01f, light.range);
 		mat4 viewProjMatrices[6];
 		viewProjMatrices[0] = projMatrix * sfz::viewMatrixGL(light.pos, vec3(1.0f, 0.0f, 0.0f), vec3(0.0f, -1.0f, 0.0f)); // right
 		viewProjMatrices[1] = projMatrix * sfz::viewMatrixGL(light.pos, vec3(-1.0f, 0.0f, 0.0f), vec3(0.0f, -1.0f, 0.0f)); // left
@@ -434,7 +434,7 @@ RenderResult CudaTracerRenderer::render(const RenderComponent* renderComponents,
 	gbuffer.bindViewportClearColorDepth();
 	gbufferGenShader.useProgram();
 
-	const mat4 modelMatrix = identityMatrix4<float>();
+	const mat4 modelMatrix = mat44::identity();
 	gl::setUniform(gbufferGenShader, "uProjMatrix", projMatrix);
 	gl::setUniform(gbufferGenShader, "uViewMatrix", viewMatrix);
 
@@ -448,8 +448,8 @@ RenderResult CudaTracerRenderer::render(const RenderComponent* renderComponents,
 
 	// For the static scene the model matrix should be identity
 	// normalMatrix = inverse(transpose(modelMatrix)) since we want worldspace normals
-	gl::setUniform(modelMatrixLoc, identityMatrix4<float>());
-	gl::setUniform(normalMatrixLoc, identityMatrix4<float>());
+	gl::setUniform(modelMatrixLoc, mat44::identity());
+	gl::setUniform(normalMatrixLoc, mat44::identity());
 
 	// Simply skip the draw calls if we are performance testing the ray cast kernel with primary rays
 	if (!(mImpl->rayCastPerfTest->boolValue() && mImpl->rayCastPerfTestPrimaryRays->boolValue())) {
@@ -483,7 +483,7 @@ RenderResult CudaTracerRenderer::render(const RenderComponent* renderComponents,
 		// Whether to generate primary or secondary rays for the test
 		if (mImpl->rayCastPerfTestPrimaryRays->boolValue()) {
 			CameraDef camDef = generateCameraDef(mCamera.pos(), mCamera.dir(), mCamera.up(),
-			                                     mCamera.verticalFov() * DEG_TO_RAD(),
+			                                     mCamera.verticalFov() * DEG_TO_RAD,
 			                                     vec2(mTargetResolution));
 			launchGenPrimaryRaysKernel(mImpl->rayBuffer.cudaPtr(), camDef, mTargetResolution);
 		}

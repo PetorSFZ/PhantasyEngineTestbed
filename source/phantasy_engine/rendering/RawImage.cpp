@@ -7,9 +7,9 @@
 
 #include <stb_image.h>
 
-#include <sfz/containers/DynString.hpp>
-#include <sfz/math/MathHelpers.hpp>
+#include <sfz/math/MathSupport.hpp>
 #include <sfz/memory/Allocators.hpp>
+#include <sfz/strings/DynString.hpp>
 
 namespace phe {
 

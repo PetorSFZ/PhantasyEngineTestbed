@@ -37,7 +37,7 @@ if(MSVC)
 	set(CMAKE_CXX_FLAGS_DEBUG "/Od /DEBUG")
 else()
 	# GCC / Clang flags
-	set(CMAKE_CXX_FLAGS "-Wall -Wextra -Wno-c++11-extensions -std=c++11 -pthread")
+	set(CMAKE_CXX_FLAGS "-Wall -Wextra -Wno-c++11-extensions -std=c++11 -pthread -fno-strict-aliasing")
 	set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O3 -ffast-math -g -DSFZ_NO_DEBUG")
 	set(CMAKE_CXX_FLAGS_RELEASE "-O3 -ffast-math -DSFZ_NO_DEBUG")
 	set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g")
@@ -109,12 +109,12 @@ set(PHANTASY_ENGINE_LIB_FILES
 	 ${PH_SOURCE_DIR}/ecs/EcsWrapper.cpp
 	${PH_INCLUDE_DIR}/ecs/EntityComponentSystem.hpp
 	 ${PH_SOURCE_DIR}/ecs/EntityComponentSystem.cpp
+	${PH_INCLUDE_DIR}/ecs/SceneGraph.hpp
+	 ${PH_SOURCE_DIR}/ecs/SceneGraph.cpp
 
 	${PH_INCLUDE_DIR}/level/Level.hpp
 	${PH_INCLUDE_DIR}/level/ObjectLoader.hpp
 	 ${PH_SOURCE_DIR}/level/ObjectLoader.cpp
-	${PH_INCLUDE_DIR}/level/SceneGraph.hpp
-	 ${PH_SOURCE_DIR}/level/SceneGraph.cpp
 	${PH_INCLUDE_DIR}/level/SphereLight.hpp
 	${PH_INCLUDE_DIR}/level/SponzaLoader.hpp
 	 ${PH_SOURCE_DIR}/level/SponzaLoader.cpp

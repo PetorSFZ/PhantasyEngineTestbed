@@ -31,9 +31,9 @@ TEST_CASE("Signed distance to plane", "[sfz::Plane]")
 
 	Plane p{vec3{0.0f, 1.0f, 0.0f}, vec3{2.0f, 1.0f, 0.0f}};
 
-	REQUIRE(approxEqual<float>(p.signedDistance(vec3{2.0f, 3.0f, 0.0f}), 2.0f));
-	REQUIRE(approxEqual<float>(p.signedDistance(vec3{0.0f, 3.0f, 0.0f}), 2.0f));
-	REQUIRE(approxEqual<float>(p.signedDistance(vec3{2.0f, 0.0f, 0.0f}), -1.0f));
+	REQUIRE(approxEqual(p.signedDistance(vec3{2.0f, 3.0f, 0.0f}), 2.0f));
+	REQUIRE(approxEqual(p.signedDistance(vec3{0.0f, 3.0f, 0.0f}), 2.0f));
+	REQUIRE(approxEqual(p.signedDistance(vec3{2.0f, 0.0f, 0.0f}), -1.0f));
 }
 
 TEST_CASE("Point inside AABB test", "[sfz::Intersection]")
@@ -92,7 +92,7 @@ TEST_CASE("OBB vs OBB test", "[sfz::Intersection]")
 {
 	using namespace sfz;
 
-	std::array<vec3,3> axisAlignedAxes{{vec3{1.0f, 0.0f, 0.0f},
+	OBBAxes axisAlignedAxes{{vec3{1.0f, 0.0f, 0.0f},
 	                                    vec3{0.0f, 1.0f, 0.0f},
 	                                    vec3{0.0f, 0.0f, 1.0f}}};
 	vec3 smallExts{1.0f, 1.0f, 1.0f};

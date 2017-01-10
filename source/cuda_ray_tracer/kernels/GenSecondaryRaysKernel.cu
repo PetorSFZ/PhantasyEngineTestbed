@@ -2,6 +2,8 @@
 
 #include "kernels/GenSecondaryRaysKernel.hpp"
 
+#include <cfloat>
+
 #include "CudaHelpers.hpp"
 #include "CudaDeviceHelpers.cuh"
 #include "GBufferRead.cuh"

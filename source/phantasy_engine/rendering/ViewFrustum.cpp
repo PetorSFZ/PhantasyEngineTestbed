@@ -18,7 +18,7 @@ using namespace sfz;
 static OBB obbApproximation(const ViewFrustum& frustum) noexcept
 {
 	using std::tan;
-	const float yHalfRadAngle = (frustum.verticalFov() / 2.0f) * sfz::DEG_TO_RAD();
+	const float yHalfRadAngle = (frustum.verticalFov() / 2.0f) * DEG_TO_RAD;
 	const float xHalfRadAngle = frustum.aspectRatio() * yHalfRadAngle;
 	const float nearMFar = frustum.far() - frustum.near();
 	return OBB{frustum.pos() + frustum.dir() * (frustum.near() + (nearMFar / 2.0f)),
@@ -81,7 +81,7 @@ mat4 ViewFrustum::projMatrix(vec2i resolution) const noexcept {
 
 	// Apply pixel offset by adding x,y translation in clip space ([-1,1])
 	vec2 clipPixelOffset = 2.0f * mPixelOffset / vec2(resolution);
-	mat4 pixelOffsetTranslation = translationMatrix(vec3(clipPixelOffset, 0.0f));
+	mat4 pixelOffsetTranslation = mat44::translation3(vec3(clipPixelOffset, 0.0f));
 	result = pixelOffsetTranslation * result;
 
 	return result;
@@ -157,7 +157,7 @@ void ViewFrustum::update() noexcept
 void ViewFrustum::updatePlanes() noexcept
 {
 	const vec3 right = normalize(cross(mDir, mUp));
-	const float yHalfRadAngle = (mVerticalFovDeg/2.0f) * DEG_TO_RAD();
+	const float yHalfRadAngle = (mVerticalFovDeg/2.0f) * DEG_TO_RAD;
 	const float xHalfRadAngle = mAspectRatio * yHalfRadAngle;
 	
 	sfz_assert_debug(approxEqual(dot(mDir, mUp), 0.0f));
@@ -167,19 +167,19 @@ void ViewFrustum::updatePlanes() noexcept
 	mNearPlane = Plane{-mDir, mPos + mDir*mNear};
 	mFarPlane = Plane{mDir, mPos + mDir*mFar};
 	
-	vec3 upPlaneDir = rotationMatrix3(right, yHalfRadAngle) * mDir;
+	vec3 upPlaneDir = mat3::rotation3(right, yHalfRadAngle) * mDir;
 	vec3 upPlaneNormal = normalize(cross(upPlaneDir, -right));
 	mUpPlane = Plane{upPlaneNormal, mPos};
 
-	vec3 downPlaneDir = rotationMatrix3(-right, yHalfRadAngle) * mDir;
+	vec3 downPlaneDir = mat3::rotation3(-right, yHalfRadAngle) * mDir;
 	vec3 downPlaneNormal = normalize(cross(downPlaneDir, right));
 	mDownPlane = Plane{downPlaneNormal, mPos};
 
-	vec3 rightPlaneDir = rotationMatrix3(-mUp, xHalfRadAngle) * mDir;
+	vec3 rightPlaneDir = mat3::rotation3(-mUp, xHalfRadAngle) * mDir;
 	vec3 rightPlaneNormal = normalize(cross(rightPlaneDir, mUp));
 	mRightPlane = Plane{rightPlaneNormal, mPos};
 
-	vec3 leftPlaneDir = rotationMatrix3(mUp, xHalfRadAngle) * mDir;
+	vec3 leftPlaneDir = mat3::rotation3(mUp, xHalfRadAngle) * mDir;
 	vec3 leftPlaneNormal = normalize(cross(leftPlaneDir, -mUp));
 	mLeftPlane = Plane{leftPlaneNormal, mPos};
 }
