@@ -9,9 +9,9 @@ namespace phe {
 // EcsWrapper: Constructors & destructors
 // ------------------------------------------------------------------------------------------------
 
-EcsWrapper::EcsWrapper(uint32_t maxNumEntities) noexcept
+EcsWrapper::EcsWrapper(uint32_t maxNumEntities, Allocator* allocator) noexcept
 {
-	rawEcsPtr = sfz::makeShared<EntityComponentSystem>(maxNumEntities);
+	rawEcsPtr = sfz::makeShared<EntityComponentSystem>(allocator, maxNumEntities, allocator);
 	renderComponents = EcsComponentAccessor<RenderComponent>(rawEcsPtr);
 }
 

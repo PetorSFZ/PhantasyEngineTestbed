@@ -192,7 +192,7 @@ GlobalConfig& GlobalConfig::instance() noexcept
 void GlobalConfig::init(const char* basePath, const char* fileName) noexcept
 {
 	if (mImpl != nullptr) this->destroy();
-	mImpl = sfz_new<GlobalConfigImpl>();
+	mImpl = sfzNewDefault<GlobalConfigImpl>();
 
 	// Initialize IniParser with path
 	StackString256 tmpPath;
@@ -203,7 +203,7 @@ void GlobalConfig::init(const char* basePath, const char* fileName) noexcept
 void GlobalConfig::destroy() noexcept
 {
 	if (mImpl == nullptr) return;
-	sfz_delete<GlobalConfigImpl>(mImpl);
+	sfzDeleteDefault<GlobalConfigImpl>(mImpl);
 	mImpl = nullptr;
 }
 
@@ -220,7 +220,7 @@ bool GlobalConfig::load() noexcept
 	for (auto item : ini) {
 		
 		// Create new setting
-		mImpl->mSettings.add(makeUnique<Setting>(item.getSection(), item.getKey()));
+		mImpl->mSettings.add(makeUniqueDefault<Setting>(item.getSection(), item.getKey()));
 		Setting& setting = *mImpl->mSettings.last();
 
 		// Get value of setting
@@ -286,7 +286,7 @@ Setting* GlobalConfig::getCreateSetting(const char* section, const char* key, bo
 		return setting;
 	}
 
-	mImpl->mSettings.add(makeUnique<Setting>(section, key));
+	mImpl->mSettings.add(makeUniqueDefault<Setting>(section, key));
 	if (created != nullptr) *created = true;
 	return mImpl->mSettings.last().get();
 }

@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include <sfz/memory/Allocator.hpp>
 #include <sfz/memory/SmartPointers.hpp>
 
 #include "phantasy_engine/ecs/EcsComponentAccessor.hpp"
@@ -10,6 +11,7 @@
 
 namespace phe {
 
+using sfz::Allocator;
 using sfz::SharedPtr;
 
 // EcsWrapper
@@ -34,7 +36,7 @@ public:
 	EcsWrapper(const EcsWrapper&) = delete;
 	EcsWrapper& operator= (const EcsWrapper&) = delete;
 	
-	explicit EcsWrapper(uint32_t maxNumEntities) noexcept;
+	explicit EcsWrapper(uint32_t maxNumEntities, Allocator* allocator) noexcept;
 	EcsWrapper(EcsWrapper&& other) noexcept;
 	EcsWrapper& operator= (EcsWrapper&& other) noexcept;
 	~EcsWrapper() noexcept;

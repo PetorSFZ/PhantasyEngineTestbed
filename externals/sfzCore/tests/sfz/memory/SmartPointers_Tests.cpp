@@ -25,6 +25,27 @@
 
 using namespace sfz;
 
+class Base {
+public:
+	int val = 0;
+	Base() = default;
+	Base(const Base&) = delete;
+	Base& operator= (const Base&) = delete;
+	Base(Base&&) = delete;
+	Base& operator= (Base&&) = delete;
+};
+
+class Derived : public Base {
+public:
+	Derived(int valIn) {
+		val = valIn;
+	}
+	Derived(const Derived&) = delete;
+	Derived& operator= (const Derived&) = delete;
+	Derived(Derived&&) = delete;
+	Derived& operator= (Derived&&) = delete;
+};
+
 // UniquePtr tests
 // ------------------------------------------------------------------------------------------------
 
@@ -47,7 +68,7 @@ TEST_CASE("Basic UniquePtr tests", "[sfz::UniquePtr]")
 
 	UniquePtr<TestClass> ptr = nullptr;
 	REQUIRE(ptr == nullptr);
-	ptr = UniquePtr<TestClass>{sfz_new<TestClass>(&flag)};
+	ptr = UniquePtr<TestClass>(sfzNewDefault<TestClass>(&flag), getDefaultAllocator());
 	REQUIRE(ptr.get() != nullptr);
 	REQUIRE(ptr != nullptr);
 	REQUIRE(ptr.get()->flagPtr == &flag);
@@ -76,9 +97,26 @@ TEST_CASE("makeUnique()", "[sfz::SmartPointers]")
 		int a, b;
 		Foo(int a, int b) : a(a), b(b) {} 
 	};
-	auto ptr = makeUnique<Foo>(3, 4);
+	auto ptr = makeUniqueDefault<Foo>(3, 4);
 	REQUIRE(ptr->a == 3);
 	REQUIRE(ptr->b == 4);
+}
+
+TEST_CASE("castTake()", "[sfz::SmartPointers]")
+{
+	UniquePtr<Derived> derived = makeUniqueDefault<Derived>(3);
+	REQUIRE(derived->val == 3);
+	UniquePtr<Base> base = derived.castTake<Base>();
+	REQUIRE(derived.get() == nullptr);
+	REQUIRE(derived.allocator() == nullptr);
+	REQUIRE(base->val == 3);
+	REQUIRE(base.allocator() == getDefaultAllocator());
+}
+
+TEST_CASE("Cast constructor", "[sfz::SmartPointers]")
+{
+	UniquePtr<Base> ptr = makeUniqueDefault<Derived>(3);
+	REQUIRE(ptr->val == 3);
 }
 
 // SharedPtr tests
@@ -107,14 +145,14 @@ TEST_CASE("Basic SharedPtr tests", "[sfz::SharedPtr]")
 	};
 
 	REQUIRE(flag == 0);
-	TestClass* item = sfz_new<TestClass>(&flag);
+	TestClass* item = sfzNewDefault<TestClass>(&flag);
 	REQUIRE(flag == 1);
 
 	{
 		SharedPtr<TestClass> ptr = nullptr;
 		REQUIRE(ptr == nullptr);
 		REQUIRE(ptr.refCount() == 0);
-		ptr = SharedPtr<TestClass>(item);
+		ptr = SharedPtr<TestClass>(item, getDefaultAllocator());
 		REQUIRE(ptr != nullptr);
 		REQUIRE(ptr.refCount() == 1);
 	}
@@ -123,7 +161,7 @@ TEST_CASE("Basic SharedPtr tests", "[sfz::SharedPtr]")
 	flag = 0;
 	{
 		REQUIRE(flag == 0);
-		SharedPtr<TestClass> ptr(sfz_new<TestClass>(&flag));
+		SharedPtr<TestClass> ptr(sfzNewDefault<TestClass>(&flag), getDefaultAllocator());
 		REQUIRE(ptr != nullptr);
 		REQUIRE(ptr.refCount() == 1);
 		REQUIRE(flag == 1);
@@ -147,7 +185,45 @@ TEST_CASE("makeShared()", "[sfz::SmartPointers]")
 		int a, b;
 		Foo(int a, int b) : a(a), b(b) {}
 	};
-	auto ptr = makeShared<Foo>(3, 4);
+	auto ptr = makeSharedDefault<Foo>(3, 4);
 	REQUIRE(ptr->a == 3);
 	REQUIRE(ptr->b == 4);
+}
+
+TEST_CASE("cast()", "[sfz::SmartPointers]")
+{
+	SharedPtr<Derived> derived = makeSharedDefault<Derived>(3);
+	REQUIRE(derived->val == 3);
+	{
+		SharedPtr<Base> base = derived.cast<Base>();
+		REQUIRE(derived.get() != nullptr);
+		REQUIRE(derived.allocator() != nullptr);
+		REQUIRE(derived.refCount() == 2);
+		REQUIRE(base->val == 3);
+		REQUIRE(base.allocator() == getDefaultAllocator());
+		REQUIRE(base.refCount() == 2);
+	}
+	REQUIRE(derived.refCount() == 1);
+}
+
+TEST_CASE("Cast constructors", "[sfz::SmartPointers]")
+{
+	SharedPtr<Base> ptr = makeSharedDefault<Derived>(3);
+	REQUIRE(ptr->val == 3);
+	REQUIRE(ptr.refCount() == 1);
+
+	SharedPtr<Base> ptr2 = makeUniqueDefault<Derived>(3);
+	REQUIRE(ptr2->val == 3);
+	REQUIRE(ptr2.refCount() == 1);
+
+	UniquePtr<Derived> tmp = makeUniqueDefault<Derived>(2);
+	REQUIRE(tmp.get() != nullptr);
+	REQUIRE(tmp.allocator() == getDefaultAllocator());
+	SharedPtr<Base> ptr3(std::move(tmp));
+	REQUIRE(tmp.get() == nullptr);
+	REQUIRE(tmp.allocator() == nullptr);
+	REQUIRE(ptr3.get() != nullptr);
+	REQUIRE(ptr3->val == 2);
+	REQUIRE(ptr3.allocator() == getDefaultAllocator());
+	REQUIRE(ptr3.refCount() == 1);
 }

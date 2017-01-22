@@ -16,16 +16,16 @@
 //    misrepresented as being the original software.
 // 3. This notice may not be removed or altered from any source distribution.
 
+#include "sfz/strings/StringHashers.hpp"
+
 namespace sfz {
 
 // FNV-1A hashing function
 // ------------------------------------------------------------------------------------------------
 
-namespace detail {
-
 // FNV-1A hash function, based on public domain reference code by "chongo <Landon Curt Noll> /\oo/\"
 // See http://isthe.com/chongo/tech/comp/fnv/
-inline uint64_t fnv1aHash(const char* str) noexcept
+static uint64_t fnv1aHash(const char* str) noexcept
 {
 	// 64 bit FNV-1 non-zero initial basis, equal to the FNV-0 hash of
 	// "chongo <Landon Curt Noll> /\../\", ('\' is not an escape character in this string)
@@ -47,40 +47,31 @@ inline uint64_t fnv1aHash(const char* str) noexcept
 	return tmp;
 }
 
-}
-
 // String hash functions
 // ------------------------------------------------------------------------------------------------
 
-inline size_t hash(const char* str) noexcept
+size_t hash(const char* str) noexcept
 {
-	return detail::fnv1aHash(str);
+	return fnv1aHash(str);
 }
 
-template<typename Allocator>
-size_t hash(const DynStringTempl<Allocator>& str) noexcept
+size_t hash(const DynString& str) noexcept
 {
 	if (str.size() == 0) return sfz::hash(""); // Fix edge case where DynString has no memory
 	return sfz::hash(str.str());
 }
 
-template<size_t N>
-size_t hash(const StackStringTempl<N>& str) noexcept
-{
-	return sfz::hash(str.str);
-}
-
 // Raw string hash specializations
 // ------------------------------------------------------------------------------------------------
 
-inline bool RawStringEqual::operator()(const char* lhs, const char* rhs) const
+bool RawStringEqual::operator()(const char* lhs, const char* rhs) const
 {
 	if (lhs == nullptr && rhs == nullptr) return true;
 	else if (lhs == nullptr || rhs == nullptr) return false;
 	return std::strcmp(lhs, rhs) == 0;
 }
 
-inline size_t RawStringHash::operator() (const char* str) const noexcept
+size_t RawStringHash::operator() (const char* str) const noexcept
 {
 	return sfz::hash(str);
 }
@@ -92,37 +83,9 @@ namespace std {
 // DynString & StackString std::hash specializations
 // ------------------------------------------------------------------------------------------------
 
-template<typename Allocator>
-size_t hash<sfz::DynStringTempl<Allocator>>::operator() (const sfz::DynStringTempl<Allocator>& str) const noexcept
+size_t hash<sfz::DynString>::operator() (const sfz::DynString& str) const noexcept
 {
-	return sfz::hash<Allocator>(str);
-}
-
-template<size_t N>
-size_t hash<sfz::StackStringTempl<N>>::operator() (const sfz::StackStringTempl<N>& str) const noexcept
-{
-	return sfz::hash<N>(str);
+	return sfz::hash(str);
 }
 
 } // namespace std
-
-namespace sfz {
-
-// DynString & StackString HashTableKeyDescriptor specializations
-// ------------------------------------------------------------------------------------------------
-
-template<typename Allocator>
-bool EqualTo2<const char*, DynStringTempl<Allocator>>::operator() (const char* lhs, const DynStringTempl<Allocator>& rhs) noexcept
-{
-	return rhs == lhs;
-}
-
-template<size_t N>
-bool EqualTo2<const char*, StackStringTempl<N>>::operator() (const char* lhs, const StackStringTempl<N>& rhs) noexcept
-{
-	return rhs == lhs;
-}
-
-} // namespace sfz
-
-

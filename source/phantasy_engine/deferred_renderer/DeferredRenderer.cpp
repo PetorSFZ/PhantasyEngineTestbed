@@ -69,7 +69,7 @@ public:
 
 DeferredRenderer::DeferredRenderer() noexcept
 {
-	this->mImpl = sfz_new<DeferredRendererImpl>();
+	this->mImpl = sfzNewDefault<DeferredRendererImpl>();
 
 	StackString128 shadersPath;
 	shadersPath.printf("%sresources/shaders/deferred_renderer/", basePath());
@@ -104,7 +104,7 @@ DeferredRenderer& DeferredRenderer::operator= (DeferredRenderer&& other) noexcep
 
 DeferredRenderer::~DeferredRenderer() noexcept
 {
-	sfz_delete(mImpl);
+	sfzDeleteDefault(mImpl);
 }
 
 // DeferredRenderer: Virtual methods from BaseRenderer interface

@@ -86,7 +86,7 @@ void PhantasyEngine::init(const char* projectName, const char* iniBasePath, cons
 		sfz::printErrorMessage("Attempting to initialize PhantasyEngine while already initialized.");
 		this->destroy();
 	}
-	mImpl = sfz_new<PhantasyEngineImpl>();
+	mImpl = sfzNewDefault<PhantasyEngineImpl>();
 
 	// Windwows specific hacks
 #ifdef _WIN32
@@ -180,7 +180,7 @@ void PhantasyEngine::destroy() noexcept
 	cfg.save();
 	cfg.destroy();
 
-	sfz_delete(mImpl);
+	sfzDeleteDefault(mImpl);
 	mImpl = nullptr;
 }
 

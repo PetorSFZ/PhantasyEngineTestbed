@@ -38,8 +38,8 @@ void fillDynamicNode(BVH& bvh, AABB& aabb,
 	}
 	float axisSplitPos = aabb.min[splitAxis] + maxAxisLength / 2.0f;
 
-	DynArray<uint32_t> leftTriangles = DynArray<uint32_t>(0, 0, triangleInds.size());
-	DynArray<uint32_t> rightTriangles = DynArray<uint32_t>(0, 0, triangleInds.size());
+	DynArray<uint32_t> leftTriangles(triangleInds.size());
+	DynArray<uint32_t> rightTriangles(triangleInds.size());
 
 	for (const uint32_t triangleInd : triangleInds) {
 		const auto& triangle = inTriangles[triangleInd];
@@ -128,14 +128,14 @@ breakNestedFor1:
 BVH createDynamicBvh(const RawMesh& mesh, const mat4& transform)
 {
 	BVH bvh;
-	bvh.nodes = DynArray<BVHNode>(0, 2 * mesh.indices.size() / 3); // Set capacity to twice the number of triangles (a leaf can contain 1 triangle if it is manually moved)
+	bvh.nodes.create(2 * mesh.indices.size() / 2); // Set capacity to twice the number of triangles (a leaf can contain 1 triangle if it is manually moved)
 
 	uint32_t numTriangles = mesh.indices.size() / 3;
 
-	DynArray<TriangleVertices> triangleVertices = DynArray<TriangleVertices>(0, numTriangles);
-	DynArray<AABB> aabbs = DynArray<AABB>(0, numTriangles);
-	DynArray<TriangleData> triangleDatas = DynArray<TriangleData>(0, numTriangles);
-	DynArray<uint32_t> triangleIndices = DynArray<uint32_t>(0, 0, numTriangles);
+	DynArray<TriangleVertices> triangleVertices(numTriangles);
+	DynArray<AABB> aabbs(numTriangles);
+	DynArray<TriangleData> triangleDatas(numTriangles);
+	DynArray<uint32_t> triangleIndices(numTriangles);
 
 	for (int i = 0; i < mesh.indices.size(); i += 3) {
 		TriangleVertices vertices;
@@ -186,8 +186,8 @@ void fillOuterNode(OuterBVH& bvh, uint32_t& currentIndex, const DynArray<uint32_
 	OuterBVHNode& node = bvh.nodes[bvh.nodes.size() - 1];
 
 	// Split bvh
-	DynArray<uint32_t> leftIndices = DynArray<uint32_t>(0, 0, bvhIndices.size());
-	DynArray<uint32_t> rightIndices = DynArray<uint32_t>(0, 0, bvhIndices.size());
+	DynArray<uint32_t> leftIndices(bvhIndices.size());
+	DynArray<uint32_t> rightIndices(bvhIndices.size());
 
 	// Split AABB in center
 	// Determine the longest axis, which will be used to split along
@@ -284,10 +284,10 @@ OuterBVH createOuterBvh(DynArray<BVH>& bvhs)
 	uint32_t numBvhs = bvhs.size();
 
 	OuterBVH bvh;
-	bvh.nodes = DynArray<OuterBVHNode>(0, bvhs.size() * 2);
+	bvh.nodes.create(bvhs.size() * 2);
 
-	DynArray<AABB> aabbs = DynArray<AABB>(0, numBvhs);
-	DynArray<uint32_t> indices = DynArray<uint32_t>(0, 0, numBvhs);
+	DynArray<AABB> aabbs(numBvhs);
+	DynArray<uint32_t> indices(numBvhs);
 
 	AABB rootAabb;
 	rootAabb.min = bvhs[0].nodes[0].leftChildAABBMin();
@@ -315,7 +315,7 @@ OuterBVH createOuterBvh(DynArray<BVH>& bvhs)
 OuterBVH createDynamicBvh(const DynArray<RawMesh>& meshes, const DynArray<mat4>& transforms)
 {
 	uint32_t numSubBvhs = meshes.size();
-	DynArray<BVH> bvhs = DynArray<BVH>(0, numSubBvhs);
+	DynArray<BVH> bvhs(numSubBvhs);
 
 	for (int i = 0; i < numSubBvhs; i++) {
 		BVH bvh = createDynamicBvh(meshes[i], transforms[i]);

@@ -8,7 +8,6 @@
 #include <stb_image.h>
 
 #include <sfz/math/MathSupport.hpp>
-#include <sfz/memory/Allocators.hpp>
 #include <sfz/strings/DynString.hpp>
 
 namespace phe {
@@ -45,7 +44,7 @@ static void padRgb(DynArray<uint8_t>& dst, const uint8_t* src, uint32_t width, u
 void RawImage::flipVertically() noexcept
 {
 	sfz_assert_debug(imgData.data() != nullptr);
-	uint8_t* buffer = static_cast<uint8_t*>(StandardAllocator::allocate(pitch));
+	uint8_t* buffer = static_cast<uint8_t*>(imgData.allocator()->allocate(pitch, 32, "RawImage::flipVertically()"));
 	for (int32_t i = 0; i < (dim.y / 2); i++) {
 		uint8_t* begin = imgData.data() + i * pitch;
 		uint8_t* end = imgData.data() + (dim.y - i - 1) * pitch;
@@ -54,7 +53,7 @@ void RawImage::flipVertically() noexcept
 		std::memcpy(begin, end, pitch);
 		std::memcpy(end, buffer, pitch);
 	}
-	StandardAllocator::deallocate(buffer);
+	imgData.allocator()->deallocate(buffer);
 }
 
 uint8_t* RawImage::getPixelPtr(int32_t x, int32_t y) noexcept
@@ -77,7 +76,7 @@ const uint8_t* RawImage::getPixelPtr(vec2i location) const noexcept
 	return this->getPixelPtr(location.x, location.y);
 }
 
-RawImage loadImage(const char* basePath, const char* fileName) noexcept
+RawImage loadImage(const char* basePath, const char* fileName, Allocator* allocator) noexcept
 {
 	if (basePath == nullptr && fileName == nullptr) {
 		printErrorMessage("RawImage: Invalid path to image");
@@ -87,7 +86,7 @@ RawImage loadImage(const char* basePath, const char* fileName) noexcept
 	// Concatenate path
 	size_t basePathLen = std::strlen(basePath);
 	size_t fileNameLen = std::strlen(fileName);
-	DynString path("", uint32_t(basePathLen + fileNameLen + 2));
+	DynString path("", uint32_t(basePathLen + fileNameLen + 2), allocator);
 	path.printf("%s%s", basePath, fileName);
 
 	// Loading image

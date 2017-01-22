@@ -21,3 +21,4 @@
 #include "sfz/strings/DynString.hpp"
 #include "sfz/strings/StackString.hpp"
 #include "sfz/strings/StringHashers.hpp"
+#include "sfz/strings/StringID.hpp"

@@ -16,38 +16,36 @@
 //    misrepresented as being the original software.
 // 3. This notice may not be removed or altered from any source distribution.
 
-#include "sfz/memory/Allocators.hpp"
+#include "sfz/PushWarnings.hpp"
+#include "catch.hpp"
+#include "sfz/PopWarnings.hpp"
 
-#ifdef _WIN32
-#include <malloc.h>
-#else
-#include <stdlib.h>
-#endif
+#include <cstring>
 
-namespace sfz {
+#include "sfz/strings/StringID.hpp"
 
-// Standard Allocator: Allocation functions
-// ------------------------------------------------------------------------------------------------
+using namespace sfz;
 
-void* StandardAllocator::allocate(size_t numBytes, size_t alignment) noexcept
+TEST_CASE("Testing StringCollection", "[sfz::StringID]")
 {
-#ifdef _WIN32
-	return _aligned_malloc(numBytes, alignment);
-#else
-	void* ptr = nullptr;
-	posix_memalign(&ptr, alignment, numBytes);
-	return ptr;
-#endif
-}
+	StringCollection collection(32, getDefaultAllocator());
+	REQUIRE(collection.numStringsHeld() == 0);
+	
+	StringID id1 = collection.getStringID("Hello");
+	REQUIRE(collection.numStringsHeld() == 1);
+	StringID id2 = collection.getStringID("World");
+	REQUIRE(collection.numStringsHeld() == 2);
+	
+	REQUIRE(id1 == id1);
+	REQUIRE(id2 == id2);
+	REQUIRE(id1 != id2);
 
-void StandardAllocator::deallocate(void* pointer) noexcept
-{
-	if (pointer == nullptr) return;
-#ifdef _WIN32
-	_aligned_free(pointer);
-#else
-	free(pointer);
-#endif
-}
+	REQUIRE(collection.getString(id1) != nullptr);
+	REQUIRE(std::strcmp("Hello", collection.getString(id1)) == 0);
+	REQUIRE(std::strcmp("World", collection.getString(id2)) == 0);
 
-} // namespace sfz
+	StringID badId;
+	badId.id = id1.id + id2.id;
+	REQUIRE(collection.getString(badId) == nullptr);
+	REQUIRE(collection.numStringsHeld() == 2);
+}

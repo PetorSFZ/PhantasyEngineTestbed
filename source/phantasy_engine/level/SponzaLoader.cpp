@@ -38,7 +38,7 @@ static void processNode(const char* basePath, Level& level,
 		Material materialTmp;
 
 		// Allocate memory for vertices
-		meshTmp.vertices = DynArray<Vertex>(mesh->mNumVertices, mesh->mNumVertices);
+		meshTmp.vertices.addMany(mesh->mNumVertices);
 
 		// Fill vertices with positions, normals and uv coordinates
 		sfz_assert_debug(mesh->HasPositions());
@@ -163,7 +163,8 @@ static void processNode(const char* basePath, Level& level,
 		}
 
 		// Set material index to all vertices in mesh and add it to level
-		meshTmp.materialIndices = DynArray<uint16_t>(meshTmp.vertices.size(), uint16_t(materialIndex), 0u);
+		meshTmp.materialIndices.addMany(meshTmp.vertices.size(), uint16_t(materialIndex));
+
 		level.staticScene.meshes.add(std::move(meshTmp));
 	}
 

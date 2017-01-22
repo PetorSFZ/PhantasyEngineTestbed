@@ -71,7 +71,7 @@ uint32_t loadDynObject(const char* basePath, const char* fileName, Level& level,
 
 		// Allocate memory for vertices
 		uint32_t meshVerticesSize = mesh.vertices.size();
-		mesh.vertices.add(DynArray<Vertex>(aimesh->mNumVertices, aimesh->mNumVertices));
+		mesh.vertices.addMany(aimesh->mNumVertices);
 
 		// Fill vertices with positions, normals and uv coordinates
 		sfz_assert_debug(aimesh->HasPositions());
@@ -180,7 +180,9 @@ uint32_t loadDynObject(const char* basePath, const char* fileName, Level& level,
 
 		// Add material index
 		uint16_t nextMaterialIndex = uint16_t(level.materials.size());
-		mesh.materialIndices.add(DynArray<uint16_t>(aimesh->mNumVertices, nextMaterialIndex, 0u));
+		DynArray<uint16_t> indicesTmp;
+		indicesTmp.addMany(aimesh->mNumVertices, 0u);
+		mesh.materialIndices.add(std::move(indicesTmp));
 
 		// Add the mesh and material
 		level.materials.add(materialTmp);

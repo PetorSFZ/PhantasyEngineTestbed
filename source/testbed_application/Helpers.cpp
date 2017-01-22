@@ -18,11 +18,11 @@ DynArray<RendererAndStatus> createRenderers(uint32_t& indexSelected) noexcept
 	renderers.ensureCapacity(16);
 
 	// 0 == Deferred renderer
-	renderers.add({SharedPtr<BaseRenderer>(sfz_new<phe::DeferredRenderer>()), false});
+	renderers.add({makeSharedDefault<phe::DeferredRenderer>().cast<phe::BaseRenderer>(), false});
 
 	// 1 == CUDA ray tracer
 #ifdef CUDA_TRACER_AVAILABLE
-	renderers.add({SharedPtr<BaseRenderer>(sfz_new<phe::CudaTracerRenderer>()), false});
+	renderers.add({makeSharedDefault<phe::CudaTracerRenderer>().cast<phe::BaseRenderer>(), false});
 #else
 	printf("%s\n", "CUDA not available in this build, using deferred renderer instead.");
 	renderers.add({renderers.first().renderer, false});

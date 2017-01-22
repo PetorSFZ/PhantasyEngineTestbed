@@ -131,6 +131,8 @@ struct ComponentType {
 
 class EntityComponentSystemImpl final {
 public:
+	Allocator* allocator;
+
 	// The maximum number of entities allowed
 	uint32_t maxNumEntities;
 
@@ -144,20 +146,23 @@ public:
 	// The components
 	DynArray<ComponentType> components;
 
-	EntityComponentSystemImpl(uint32_t maxNumEntities) noexcept
+	EntityComponentSystemImpl(Allocator* allocator, uint32_t maxNumEntities) noexcept
 	{
+		this->allocator = allocator;
 		this->maxNumEntities = maxNumEntities;
 
 		// Initialize number of entities
 		this->nextFreeEntity = 0;
-		freeSlots.setCapacity(1024);
+		freeSlots.create(1024, allocator);
 
 		// Initialize all bitmasks to 0
-		masks = DynArray<ComponentMask>(maxNumEntities);
+		masks.create(maxNumEntities, allocator);
+		masks.setSize(maxNumEntities);
 		memset(masks.data(), 0, maxNumEntities * sizeof(ComponentMask));
 
 		// Allocate memory for the components and set "existence component"
-		components = DynArray<ComponentType>(1, ECS_MAX_NUM_COMPONENT_TYPES);
+		components.create(ECS_MAX_NUM_COMPONENT_TYPES, allocator);
+		components.add(ComponentType());
 		components[0].bytesPerComponent = 0;
 		components[0].numComponents = 0;
 	}
@@ -171,9 +176,9 @@ public:
 // EntityComponentSystem: Constructors & destructors
 // ------------------------------------------------------------------------------------------------
 
-EntityComponentSystem::EntityComponentSystem(uint32_t maxNumEntities) noexcept
+EntityComponentSystem::EntityComponentSystem(uint32_t maxNumEntities, Allocator* allocator) noexcept
 {
-	this->create(maxNumEntities);
+	this->create(maxNumEntities, allocator);
 }
 
 EntityComponentSystem::~EntityComponentSystem() noexcept
@@ -184,16 +189,23 @@ EntityComponentSystem::~EntityComponentSystem() noexcept
 // EntityComponentSystem: State methods
 // ------------------------------------------------------------------------------------------------
 
-void EntityComponentSystem::create(uint32_t maxNumEntities) noexcept
+void EntityComponentSystem::create(uint32_t maxNumEntities, Allocator* allocator) noexcept
 {
 	this->destroy();
-	mImpl = sfz_new<EntityComponentSystemImpl>(maxNumEntities);
+	mImpl = sfzNew<EntityComponentSystemImpl>(allocator, allocator, maxNumEntities);
 }
 
 void EntityComponentSystem::destroy() noexcept
 {
-	sfz_delete(mImpl);
+	if (mImpl == nullptr) return;
+	sfzDelete(mImpl, mImpl->allocator);
 	mImpl = nullptr;
+}
+
+Allocator* EntityComponentSystem::allocator() const noexcept
+{
+	if (mImpl == nullptr) return nullptr;
+	return mImpl->allocator;
 }
 
 // EntityComponentSystem: Entity methods
@@ -286,8 +298,9 @@ uint32_t EntityComponentSystem::createComponentTypeRaw(uint32_t bytesPerComponen
 	// Allocating memory for component type
 	ComponentType tmp;
 	tmp.bytesPerComponent = bytesPerComponent;
-	tmp.entityTable = DynArray<uint32_t>(maxNumEntities(), ~0u, maxNumEntities());
-	tmp.data.setCapacity(bytesPerComponent * maxNumEntities());
+	tmp.entityTable.create(maxNumEntities(), mImpl->allocator);
+	tmp.entityTable.addMany(maxNumEntities(), ~0u);
+	tmp.data.create(bytesPerComponent * maxNumEntities(), mImpl->allocator);
 	tmp.data.setSize(bytesPerComponent * maxNumEntities());
 	tmp.numComponents = 0u;
 

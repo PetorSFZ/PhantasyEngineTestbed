@@ -4,11 +4,14 @@
 
 #include <cstdint>
 
+#include <sfz/memory/Allocator.hpp>
+
 namespace phe {
 
 using std::uint8_t;
 using std::uint32_t;
 using std::uint64_t;
+using sfz::Allocator;
 
 // Constants
 // ------------------------------------------------------------------------------------------------
@@ -107,14 +110,14 @@ public:
 	EntityComponentSystem& operator= (EntityComponentSystem&&) = delete;
 
 	/// Creates an ECS using the default constructor and then calls create() on it.
-	explicit EntityComponentSystem(uint32_t maxNumEntities) noexcept;
+	explicit EntityComponentSystem(uint32_t maxNumEntities, Allocator* allocator) noexcept;
 	~EntityComponentSystem() noexcept;
 
 	// State methods
 	// --------------------------------------------------------------------------------------------
 
 	/// Creates a new EntityComponentSystem. Will first destroy() the existing one.
-	void create(uint32_t maxNumEntities) noexcept;
+	void create(uint32_t maxNumEntities, Allocator* allocator) noexcept;
 
 	/// Destroys this EntityComponentSystem, called automatically in the destructor.
 	void destroy() noexcept;
@@ -123,6 +126,9 @@ public:
 	/// methods except for destroy() and swap() is undefined and should under no circumstances be
 	/// called.
 	bool isValid() const noexcept { return mImpl != nullptr; }
+
+	/// Returns the allocator associated with this EntityComponentSystem
+	Allocator* allocator() const noexcept;
 
 	// Entity methods
 	// --------------------------------------------------------------------------------------------

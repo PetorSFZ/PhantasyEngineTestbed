@@ -88,8 +88,8 @@ int main(int, char**)
 	modelsPath.printf("%sresources/models/", basePath());
 	
 	// Create level struct and initialize ECS system
-	SharedPtr<Level> level = makeShared<Level>();
-	level->ecs = EcsWrapper(8192);
+	SharedPtr<Level> level = makeSharedDefault<Level>();
+	level->ecs = EcsWrapper(8192, getDefaultAllocator());
 
 	using time_point = std::chrono::high_resolution_clock::time_point;
 	using FloatSecond = std::chrono::duration<float>;
@@ -192,11 +192,11 @@ int main(int, char**)
 	loadDynObjectCustomMaterial(modelsPath.str, "sphere.obj", *level, vec3(0.0f, 1.0f, 0.0f), 0.1f, 1.0f);
 
 	// Run gameloop
-	sfz::runGameLoop(engine.window(), SharedPtr<BaseScreen>(sfz_new<GameScreen>(
-		SharedPtr<GameLogic>(sfz_new<TestbedLogic>(std::move(renderers), rendererIndex, *level)),
+	sfz::runGameLoop(engine.window(), makeSharedDefault<GameScreen>(
+		makeSharedDefault<TestbedLogic>(std::move(renderers), rendererIndex, *level),
 		level,
 		initialRenderer
-	)));
+	));
 
 	// Deinitializes Phantasy Engine
 	engine.destroy();

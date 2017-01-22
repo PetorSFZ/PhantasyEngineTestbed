@@ -22,6 +22,7 @@
 
 #include "sfz/containers/DynArray.hpp"
 #include "sfz/math/Vector.hpp"
+#include "sfz/memory/DebugAllocator.hpp"
 #include "sfz/memory/New.hpp"
 #include "sfz/memory/SmartPointers.hpp"
 
@@ -37,14 +38,17 @@ TEST_CASE("Default constructor", "[sfz::DynArray]")
 
 TEST_CASE("Fill constructor", "[sfz::DynArray]")
 {
-	DynArray<UniquePtr<int>> nullptrs{8};
+	DynArray<UniquePtr<int>> nullptrs;
+	nullptrs.addMany(8);
 	for (uint32_t i = 0; i < 8; ++i) {
 		REQUIRE(nullptrs.data()[i] == nullptr);
 	}
 	REQUIRE(nullptrs.size() == 8);
 	REQUIRE(nullptrs.capacity() == 8);
 
-	DynArray<int> twos{8, 2};
+	DynArray<int> twos;
+	twos.addMany(8, 2);
+
 	for (uint32_t i = 0; i < 8; ++i) {
 		REQUIRE(twos.data()[i] == 2);
 	}
@@ -64,7 +68,8 @@ TEST_CASE("Fill constructor", "[sfz::DynArray]")
 
 TEST_CASE("Copy constructors", "[sfz::DynArray]")
 {
-	DynArray<int> first{3,3};
+	DynArray<int> first;
+	first.addMany(3, 3);
 	DynArray<int> second;
 
 	REQUIRE(first.size() == 3);
@@ -94,7 +99,8 @@ TEST_CASE("Copy constructors", "[sfz::DynArray]")
 TEST_CASE("Swap & move constructors", "[sfz::DynArray]")
 {
 	DynArray<int> v1;
-	DynArray<int> v2{2, 42, 32};
+	DynArray<int> v2(32);
+	v2.addMany(2, 42);
 
 	REQUIRE(v1.size() == 0);
 	REQUIRE(v1.capacity() == 0);
@@ -157,7 +163,10 @@ TEST_CASE("iterators", "[sfz::DynArray]")
 
 TEST_CASE("add()", "[sfz::DynArray]")
 {
-	DynArray<int> v(2, -1, 2);
+	DynArray<int> v(2);
+	REQUIRE(v.size() == 0);
+	REQUIRE(v.capacity() == 2);
+	v.addMany(2, -1);
 
 	REQUIRE(v.size() == 2);
 	REQUIRE(v.capacity() == 2);
@@ -187,13 +196,13 @@ TEST_CASE("add()", "[sfz::DynArray]")
 	REQUIRE(v2.capacity() == 0);
 	REQUIRE(v2.data() == nullptr);
 
-	v2.add(UniquePtr<int>(sfz_new<int>(3)));
+	v2.add(makeUniqueDefault<int>(3));
 
 	REQUIRE(v2.size() == 1);
 	REQUIRE(v2.capacity() == DynArray<UniquePtr<int>>::DEFAULT_INITIAL_CAPACITY);
 	REQUIRE(*v2[0] == 3);
 
-	UniquePtr<int> b{sfz_new<int>(42)};
+	UniquePtr<int> b = makeUniqueDefault<int>(42);
 
 	v2.add(std::move(b));
 
@@ -219,7 +228,10 @@ TEST_CASE("add()", "[sfz::DynArray]")
 
 TEST_CASE("insert()", "[sfz::DynArray]")
 {
-	DynArray<int> v(2, -1, 2);
+	DynArray<int> v(2);
+	REQUIRE(v.size() == 0);
+	REQUIRE(v.capacity() == 2);
+	v.addMany(2, -1);
 
 	REQUIRE(v.size() == 2);
 	REQUIRE(v.capacity() == 2);
@@ -242,7 +254,8 @@ TEST_CASE("insert()", "[sfz::DynArray]")
 	REQUIRE(v[2] == 3);
 	REQUIRE(v[3] == -1);
 
-	DynArray<int> v2(3, 42);
+	DynArray<int> v2;
+	v2.addMany(3, 42);
 	v.insert(1, v2.data(), 2);
 	REQUIRE(v.size() == 6);
 	REQUIRE(v[0] == 3);
@@ -330,4 +343,34 @@ TEST_CASE("find()", "[sfz::DynArray]")
 
 	REQUIRE(*v.find([](int param) { return param == 2; }) == 2);
 	REQUIRE(v.findIndex([](int param) { return param == 2; }) == 1);
+}
+
+TEST_CASE("Allocator bug", "[sfz::DynArray]")
+{
+	DebugAllocator debugAlloc("DebugAlloc", 4u);
+	{
+		DynArray<DynArray<uint32_t>> arr(0, &debugAlloc);
+		REQUIRE(arr.size() == 0);
+		REQUIRE(arr.capacity() == 0);
+		REQUIRE(arr.allocator() == &debugAlloc);
+
+		for (uint32_t i = 0; i < 250; i++) {
+			arr.add(DynArray<uint32_t>());
+			REQUIRE(arr.allocator() == &debugAlloc);
+			REQUIRE(arr.size() == (i + 1));
+			DynArray<uint32_t>& inner = arr[i];
+			REQUIRE(inner.data() == nullptr);
+			REQUIRE(inner.allocator() == nullptr);
+			REQUIRE(inner.size() == 0);
+			REQUIRE(inner.capacity() == 0);
+		}
+
+		DynArray<DynArray<uint32_t>> arr2(0, &debugAlloc);
+		for (uint32_t i = 0; i < 250; i++) {
+			DynArray<uint32_t> tmp(i * 100, &debugAlloc);
+			tmp.addMany(i * 10, 0u);
+			arr2.add(std::move(tmp));
+		}
+	}
+	REQUIRE(debugAlloc.numAllocations() == 0);
 }

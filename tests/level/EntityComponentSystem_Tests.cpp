@@ -60,7 +60,7 @@ TEST_CASE("ComponentMask", "[EntityComponentSystem]")
 
 TEST_CASE("Entity creation/deletion", "[EntityComponentSystem]")
 {
-	EntityComponentSystem ecs(10);
+	EntityComponentSystem ecs(10, sfz::getDefaultAllocator());
 	REQUIRE(ecs.maxNumEntities() == 10);
 
 	for (uint32_t i = 0; i < 10; i++) {
@@ -84,7 +84,7 @@ TEST_CASE("Entity creation/deletion", "[EntityComponentSystem]")
 
 TEST_CASE("Component creation/deletion", "[EntityComponentSystem]")
 {
-	sfz::SharedPtr<EntityComponentSystem> ecs = sfz::makeShared<EntityComponentSystem>(10);
+	sfz::SharedPtr<EntityComponentSystem> ecs = sfz::makeSharedDefault<EntityComponentSystem>(10, sfz::getDefaultAllocator());
 
 	const uint32_t e1 = ecs->createEntity();
 	const uint32_t e2 = ecs->createEntity();

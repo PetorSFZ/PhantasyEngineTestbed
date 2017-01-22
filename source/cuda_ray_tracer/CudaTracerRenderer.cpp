@@ -177,12 +177,12 @@ public:
 
 CudaTracerRenderer::CudaTracerRenderer() noexcept
 {
-	mImpl = sfz_new<CudaTracerRendererImpl>();
+	mImpl = sfzNewDefault<CudaTracerRendererImpl>();
 }
 
 CudaTracerRenderer::~CudaTracerRenderer() noexcept
 {
-	sfz_delete(mImpl);
+	sfzDeleteDefault(mImpl);
 	cudaDeviceReset();
 }
 
