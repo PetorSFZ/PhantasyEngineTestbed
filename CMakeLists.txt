@@ -64,6 +64,9 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_MODULES})
 
 # sfzCore
 set(SFZ_CORE_OPENGL TRUE)
+if(CUDA_TRACER)
+set(SFZ_CORE_CUDA TRUE)
+endif()
 add_subdirectory(${EXTERNALS_DIR}/sfzCore)
 
 # Assimp

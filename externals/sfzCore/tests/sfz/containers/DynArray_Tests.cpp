@@ -96,6 +96,38 @@ TEST_CASE("Copy constructors", "[sfz::DynArray]")
 	REQUIRE(second.data()[2] == 3);
 }
 
+TEST_CASE("Copy constructor with allocator", "[sfz::DynArray]")
+{
+	DebugAllocator first("first"), second("second");
+	REQUIRE(first.numAllocations() == 0);
+	REQUIRE(second.numAllocations() == 0);
+	{
+		DynArray<int> arr1(10, &first);
+		REQUIRE(arr1.allocator() == &first);
+		REQUIRE(first.numAllocations() == 1);
+
+		arr1.add(2);
+		arr1.add(3);
+		arr1.add(4);
+		REQUIRE(arr1.size() == 3);
+
+		{
+			DynArray<int> arr2(arr1, &second);
+			REQUIRE(arr2.allocator() == &second);
+			REQUIRE(arr2.capacity() == arr1.capacity());
+			REQUIRE(arr2.size() == arr1.size());
+			REQUIRE(arr2[0] == 2);
+			REQUIRE(arr2[1] == 3);
+			REQUIRE(arr2[2] == 4);
+			REQUIRE(first.numAllocations() == 1);
+			REQUIRE(second.numAllocations() == 1);
+		}
+		REQUIRE(second.numAllocations() == 0);
+	}
+	REQUIRE(first.numAllocations() == 0);
+	REQUIRE(second.numAllocations() == 0);
+}
+
 TEST_CASE("Swap & move constructors", "[sfz::DynArray]")
 {
 	DynArray<int> v1;
@@ -335,14 +367,22 @@ TEST_CASE("find()", "[sfz::DynArray]")
 	const int vals[] = {1, 2, 3, 4};
 	v.add(vals, 4);
 
-	REQUIRE(v.find([](int) { return false; }) == nullptr);
-	REQUIRE(v.findIndex([](int) { return false; }) == -1);
+	int* ptr = v.find([](int) { return false; });
+	REQUIRE(ptr == nullptr);
+	int64_t index = v.findIndex([](int) { return false; });
+	REQUIRE(index == -1);
 
-	REQUIRE(*v.find([](int) { return true; }) == 1);
-	REQUIRE(v.findIndex([](int) { return true; }) == 0);
+	ptr = v.find([](int) { return true; });
+	REQUIRE(ptr != nullptr);
+	REQUIRE(*ptr == 1);
+	index = v.findIndex([](int) { return true; });
+	REQUIRE(index == 0);
 
-	REQUIRE(*v.find([](int param) { return param == 2; }) == 2);
-	REQUIRE(v.findIndex([](int param) { return param == 2; }) == 1);
+	ptr = v.find([](int param) { return param == 2; });
+	REQUIRE(ptr != nullptr);
+	REQUIRE(*ptr == 2);
+	index = v.findIndex([](int param) { return param == 2; });
+	REQUIRE(index == 1);
 }
 
 TEST_CASE("Allocator bug", "[sfz::DynArray]")
