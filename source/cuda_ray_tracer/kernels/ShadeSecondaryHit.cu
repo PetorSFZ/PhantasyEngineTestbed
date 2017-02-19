@@ -2,9 +2,10 @@
 
 #include "kernels/ShadeSecondaryHit.hpp"
 
+#include <sfz/Cuda.hpp>
+
 #include "math_constants.h"
 
-#include "CudaHelpers.hpp"
 #include "CudaPbr.cuh"
 
 namespace phe {

@@ -5,9 +5,9 @@
 #include <curand_kernel.h>
 #include <device_launch_parameters.h>
 
-#include <phantasy_engine/ray_tracer_common/BVHNode.hpp>
+#include <sfz/Cuda.hpp>
 
-#include "CudaHelpers.hpp"
+#include <phantasy_engine/ray_tracer_common/BVHNode.hpp>
 
 namespace phe {
 

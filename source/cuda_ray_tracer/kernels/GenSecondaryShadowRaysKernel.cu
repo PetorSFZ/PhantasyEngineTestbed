@@ -2,7 +2,7 @@
 
 #include "kernels/GenSecondaryShadowRaysKernel.hpp"
 
-#include "CudaHelpers.hpp"
+#include <sfz/Cuda.hpp>
 
 #include "phantasy_engine/level/SphereLight.hpp"
 

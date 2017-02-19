@@ -5,9 +5,9 @@
 #include <algorithm>
 
 #include <sfz/gl/IncludeOpenGL.hpp>
-#include <cuda_gl_interop.h>
+#include <sfz/cuda/CudaUtils.hpp>
 
-#include "CudaHelpers.hpp"
+#include <cuda_gl_interop.h>
 
 namespace phe {
 

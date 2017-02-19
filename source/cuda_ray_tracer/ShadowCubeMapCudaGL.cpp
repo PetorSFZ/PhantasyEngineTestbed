@@ -5,11 +5,11 @@
 #include <algorithm>
 
 #include <sfz/gl/IncludeOpenGL.hpp>
+#include <sfz/cuda/CudaUtils.hpp>
+
 #include <cuda_gl_interop.h>
 
 #include <sfz/gl/Framebuffer.hpp>
-
-#include "CudaHelpers.hpp"
 
 namespace phe {
 

@@ -2,9 +2,10 @@
 
 #include "kernels/PetorShading.hpp"
 
+#include <sfz/Cuda.hpp>
+
 #include "math_constants.h"
 
-#include "CudaHelpers.hpp"
 #include "CudaDeviceHelpers.cuh"
 #include "CudaPbr.cuh"
 #include "CudaSfzVectorCompatibility.cuh"

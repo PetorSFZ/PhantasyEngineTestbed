@@ -2,7 +2,8 @@
 
 #include "kernels/InterpretRayHitKernel.hpp"
 
-#include "CudaHelpers.hpp"
+#include <sfz/Cuda.hpp>
+
 #include "CudaSfzVectorCompatibility.cuh"
 
 namespace phe {

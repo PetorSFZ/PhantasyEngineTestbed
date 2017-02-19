@@ -4,7 +4,7 @@
 
 #include <algorithm>
 
-#include "CudaHelpers.hpp"
+#include <sfz/cuda/CudaUtils.hpp>
 
 namespace phe {
 

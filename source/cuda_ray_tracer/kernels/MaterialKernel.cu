@@ -2,9 +2,10 @@
 
 #include "kernels/MaterialKernel.hpp"
 
+#include <sfz/Cuda.hpp>
+
 #include <phantasy_engine/level/SphereLight.hpp>
 
-#include "CudaHelpers.hpp"
 #include "CudaDeviceHelpers.cuh"
 #include "CudaPbr.cuh"
 #include "CudaSfzVectorCompatibility.cuh"

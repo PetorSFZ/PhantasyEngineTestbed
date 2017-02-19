@@ -7,9 +7,9 @@
 #include "device_launch_parameters.h"
 
 #include <sfz/math/Vector.hpp>
+#include <sfz/Cuda.hpp>
 
 #include "BVHTraversal.cuh"
-#include "CudaHelpers.hpp"
 #include "CudaSfzVectorCompatibility.cuh"
 
 namespace phe {

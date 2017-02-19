@@ -4,7 +4,8 @@
 
 #include <cfloat>
 
-#include "CudaHelpers.hpp"
+#include <sfz/Cuda.hpp>
+
 #include "CudaDeviceHelpers.cuh"
 #include "GBufferRead.cuh"
 

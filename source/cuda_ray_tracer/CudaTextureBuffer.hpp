@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "CudaBuffer.hpp"
+#include <sfz/cuda/Buffer.hpp>
 
 namespace phe {
 
@@ -35,7 +35,7 @@ private:
 	// Private members
 	// --------------------------------------------------------------------------------------------
 
-	CudaBuffer<T> mBuffer;
+	sfz::cuda::Buffer<T> mBuffer;
 	cudaTextureObject_t mTexture = 0;
 };
 
@@ -48,18 +48,18 @@ CudaTextureBuffer<T>::CudaTextureBuffer(const T* dataPtr, uint32_t numElements) 
 	static_assert((sizeof(T) % 16) == 0, "Type is not 16-byte aligned");
 
 	mBuffer.create(numElements);
-	mBuffer.upload(dataPtr, numElements);
+	mBuffer.upload(dataPtr, 0, numElements);
 
 	cudaResourceDesc resDesc;
 	memset(&resDesc, 0, sizeof(cudaResourceDesc));
 	resDesc.resType = cudaResourceTypeLinear;
-	resDesc.res.linear.devPtr = mBuffer.cudaPtr();
+	resDesc.res.linear.devPtr = mBuffer.data();
 	resDesc.res.linear.desc.f = cudaChannelFormatKindFloat;
 	resDesc.res.linear.desc.x = 32; // bits per channel
 	resDesc.res.linear.desc.y = 32; // bits per channel
 	resDesc.res.linear.desc.z = 32; // bits per channel
 	resDesc.res.linear.desc.w = 32; // bits per channel
-	resDesc.res.linear.sizeInBytes = mBuffer.size() * sizeof(T);
+	resDesc.res.linear.sizeInBytes = mBuffer.capacity() * sizeof(T);
 
 	cudaTextureDesc texDesc;
 	memset(&texDesc, 0, sizeof(cudaTextureDesc));

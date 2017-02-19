@@ -4,11 +4,12 @@
 
 #include <cfloat>
 
+#include <sfz/Cuda.hpp>
+
 #include <phantasy_engine/ray_tracer_common/BVHNode.hpp>
 #include <phantasy_engine/ray_tracer_common/Triangle.hpp>
 
 #include "CudaDeviceHelpers.cuh"
-#include "CudaHelpers.hpp"
 #include "CudaSfzVectorCompatibility.cuh"
 
 #include "math_constants.h"
