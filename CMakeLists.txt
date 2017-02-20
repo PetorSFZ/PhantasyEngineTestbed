@@ -54,10 +54,6 @@ set(INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/source)
 set(TESTS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/tests)
 set(EXTERNALS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/externals)
 set(RUNTIME_DIR ${CMAKE_CURRENT_SOURCE_DIR}/runtime)
-set(CMAKE_MODULES ${CMAKE_CURRENT_LIST_DIR}/cmake)
-
-# Adds our cmake modules to module path.
-list(APPEND CMAKE_MODULE_PATH ${CMAKE_MODULES})
 
 # Dependencies
 # ------------------------------------------------------------------------------------------------
@@ -78,8 +74,8 @@ add_subdirectory(${EXTERNALS_DIR}/stb_image)
 # imgui
 add_subdirectory(${EXTERNALS_DIR}/imgui)
 
-# SDL2_mixer
-find_package(SDL2_mixer REQUIRED) # ${SDL2_MIXER_INCLUDE_DIRS}, ${SDL2_MIXER_LIBRARIES}
+# SDL2_mixer, sets ${SDL2_MIXER_INCLUDE_DIRS}, ${SDL2_MIXER_LIBRARIES}, ${SDL2_MIXER_DLLS}
+add_subdirectory(${EXTERNALS_DIR}/sdl2_mixer)
 
 # Include directories
 include_directories(
@@ -349,17 +345,17 @@ if(MSVC)
 	file(COPY ${RUNTIME_DIR}/windows/CREATE_RESOURCES_SYMLINKS.BAT DESTINATION ${CMAKE_BINARY_DIR})
 
 	# Runtime DLLs
-	file(COPY ${RUNTIME_DIR}/windows/SDL2.dll DESTINATION ${CMAKE_BINARY_DIR}/Debug)
-	file(COPY ${RUNTIME_DIR}/windows/SDL2.dll DESTINATION ${CMAKE_BINARY_DIR}/RelWithDebInfo)
-	file(COPY ${RUNTIME_DIR}/windows/SDL2.dll DESTINATION ${CMAKE_BINARY_DIR}/Release)
-
-	file(COPY ${RUNTIME_DIR}/windows/SDL2_mixer.dll DESTINATION ${CMAKE_BINARY_DIR}/Debug)
-	file(COPY ${RUNTIME_DIR}/windows/SDL2_mixer.dll DESTINATION ${CMAKE_BINARY_DIR}/RelWithDebInfo)
-	file(COPY ${RUNTIME_DIR}/windows/SDL2_mixer.dll DESTINATION ${CMAKE_BINARY_DIR}/Release)
+	file(COPY ${SFZ_CORE_DLLS} DESTINATION ${CMAKE_BINARY_DIR}/Debug)
+	file(COPY ${SFZ_CORE_DLLS} DESTINATION ${CMAKE_BINARY_DIR}/RelWithDebInfo)
+	file(COPY ${SFZ_CORE_DLLS} DESTINATION ${CMAKE_BINARY_DIR}/Release)
 
 	file(COPY ${ASSIMP_DLLS} DESTINATION ${CMAKE_BINARY_DIR}/Debug)
 	file(COPY ${ASSIMP_DLLS} DESTINATION ${CMAKE_BINARY_DIR}/RelWithDebInfo)
 	file(COPY ${ASSIMP_DLLS} DESTINATION ${CMAKE_BINARY_DIR}/Release)
+
+	file(COPY ${SDL2_MIXER_DLLS} DESTINATION ${CMAKE_BINARY_DIR}/Debug)
+	file(COPY ${SDL2_MIXER_DLLS} DESTINATION ${CMAKE_BINARY_DIR}/RelWithDebInfo)
+	file(COPY ${SDL2_MIXER_DLLS} DESTINATION ${CMAKE_BINARY_DIR}/Release)
 endif()
 
 if(UNIX)

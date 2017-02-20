@@ -1,9 +1,0 @@
-FindSDL2_mixer.cmake
-
-Found at:
-https://github.com/dorkster/flare-engine-next/blob/master/cmake/FindSDL2_mixer.cmake
-and then modified by me
-
-License:
-
-Seems to have been created by Justin Jacobs (https://github.com/dorkster), license is BSD "the license".
