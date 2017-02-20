@@ -36,9 +36,21 @@ endif()
 # Compiler flags
 if(MSVC)
 	# MSVC flags
-	set(CMAKE_CXX_FLAGS "/Wall /Zi /EHsc /wd4201 /wd4350 /wd4514 /wd4571 /wd4647 /wd4668 /wd4710 /wd4711 /wd4820 /D_CRT_SECURE_NO_WARNINGS /MD")
-	set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "/O2 /fp:fast /DEBUG /DSFZ_NO_DEBUG")
+	# /W4 = Warning level 4 (/Wall is too picky and has annoying warnings in standard headers)
+	# /wd4201 = Disable warning 4201 (nonstandard extension used : nameless struct/union)
+	# /Zi = Produce .pdb debug information. Does not affect optimizations, but does imply /debug.
+	# /arch:AVX = Enable (require) Intel AVX instructions for code generation
+	# /D_CRT_SECURE_NO_WARNINGS = Removes annyoing warning when using c standard library
+	# /MD = "Defines _MT and _DLL so that both multithread- and DLL-specific versions of the
+	#        run-time routines are selected from the standard .h files."
+	set(CMAKE_CXX_FLAGS "/W4 /wd4201 /Zi /EHsc /arch:AVX /D_CRT_SECURE_NO_WARNINGS /MD")
+	# /O2 = Optimize code for fastest speed
+	# /fp:fast = "optimize floating-point code for speed at the expense of accuracy and correctness"
+	# /DSFZ_NO_DEBUG = defines the "SFZ_NO_DEBUG" macro, which disables sfz_assert_debug()
 	set(CMAKE_CXX_FLAGS_RELEASE "/O2 /fp:fast /DSFZ_NO_DEBUG")
+	# /DEBUG = "creates debugging information for the .exe file or DLL"
+	set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "/O2 /fp:fast /DEBUG /DSFZ_NO_DEBUG")
+	# /Od = "disables optimization, speeding compilation and simplifying debugging"
 	set(CMAKE_CXX_FLAGS_DEBUG "/Od /DEBUG")
 else()
 	# GCC / Clang flags
@@ -211,7 +223,7 @@ if(CUDA_TRACER)
 
 	# CUDA compiler flags
 	set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -expt-relaxed-constexpr --gpu-architecture=compute_30 --gpu-code=compute_30)
-	set(CUDA_NVCC_FLAGS_DEBUG ${CUDA_NVCC_FLAGS_DEBUG} -g -G -lineinfo)
+	set(CUDA_NVCC_FLAGS_DEBUG ${CUDA_NVCC_FLAGS_DEBUG} -g -lineinfo) # Add -G for CUDA device debugging
 	set(CUDA_NVCC_FLAGS_RELWITHDEBINFO ${CUDA_NVCC_FLAGS_RELWITHDEBINFO} -O3 -use_fast_math -g -lineinfo)
 	set(CUDA_NVCC_FLAGS_RELEASE ${CUDA_NVCC_FLAGS_RELEASE} -O3 -use_fast_math)
 
