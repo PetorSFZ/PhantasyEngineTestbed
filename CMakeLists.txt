@@ -75,6 +75,9 @@ set(SFZ_CORE_OPENGL TRUE)
 if(CUDA_TRACER)
 set(SFZ_CORE_CUDA TRUE)
 endif()
+if(NOT WIN32)
+add_definitions(-DGLEW_STATIC)
+endif()
 add_subdirectory(${EXTERNALS_DIR}/sfzCore)
 
 # Assimp
