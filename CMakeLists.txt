@@ -353,9 +353,6 @@ endif()
 
 # Windows specific file copying
 if(MSVC)
-	# Copy assets symlinks batch file
-	file(COPY ${RUNTIME_DIR}/windows/CREATE_RESOURCES_SYMLINKS.BAT DESTINATION ${CMAKE_BINARY_DIR})
-
 	# Runtime DLLs
 	file(COPY ${SFZ_CORE_DLLS} DESTINATION ${CMAKE_BINARY_DIR}/Debug)
 	file(COPY ${SFZ_CORE_DLLS} DESTINATION ${CMAKE_BINARY_DIR}/RelWithDebInfo)

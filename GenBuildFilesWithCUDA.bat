@@ -25,6 +25,15 @@ if '%errorlevel%' NEQ '0' (
     CD /D "%~dp0"
 :--------------------------------------
 
+: Create build_cuda directory (and delete old one if it exists)
+rmdir /S /Q build_cuda
+mkdir build_cuda
+cd build_cuda
+
+: Generate Visual Studio solution
+cmake .. -G "Visual Studio 14 2015 Win64" -DCUDA_TRACER=TRUE -DPHANTASY_ENGINE_BUILD_TESTS=TRUE
+
+: Create resources symlinks
 cd Debug
 mklink /D resources\ ..\..\resources
 
@@ -33,7 +42,5 @@ mklink /D resources\ ..\..\resources
 
 cd ..\Release
 mklink /D resources\ ..\..\resources
-
-cd ..
 
 PAUSE
