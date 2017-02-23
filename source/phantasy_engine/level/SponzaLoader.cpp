@@ -178,8 +178,8 @@ void loadStaticSceneSponza(const char* basePath, const char* fileName, Level& le
                            const mat4& modelMatrix) noexcept
 {
 	// Create full path
-	size_t basePathLen = std::strlen(basePath);
-	size_t fileNameLen = std::strlen(fileName);
+	uint32_t basePathLen = uint32_t(std::strlen(basePath));
+	uint32_t fileNameLen = uint32_t(std::strlen(fileName));
 	DynString path("", basePathLen + fileNameLen + 2);
 	path.printf("%s%s", basePath, fileName);
 	if (path.size() < 1) {

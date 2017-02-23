@@ -18,27 +18,13 @@ using sfz::vec4;
 // ------------------------------------------------------------------------------------------------
 
 // Assumes both parameters are normalized
-static __device__ vec3 reflect(vec3 in, vec3 normal) noexcept
+inline __device__ vec3 reflect(vec3 in, vec3 normal) noexcept
 {
 	return in - 2.0f * dot(normal, in) * normal;
 }
 
 // Kernels
 // ------------------------------------------------------------------------------------------------
-
-static __global__ void tempWriteColorKernel(cudaSurfaceObject_t surface, vec2i res,
-                                            cudaSurfaceObject_t normalTex)
-{
-	// Calculate surface coordinates
-	vec2i loc = vec2i(blockIdx.x * blockDim.x + threadIdx.x,
-	                  blockIdx.y * blockDim.y + threadIdx.y);
-	if (loc.x >= res.x || loc.y >= res.y) return;
-	
-	float4 tmp = surf2Dread<float4>(normalTex, loc.x * sizeof(float4), loc.y);
-	vec4 color = vec4(1.0f, 0.0f, 0.0f, 1.0f);
-	//surf2Dwrite(toFloat4(color), surface, loc.x * sizeof(float4), loc.y)
-	surf2Dwrite(tmp, surface, loc.x * sizeof(float4), loc.y);
-}
 
 static __global__ void createReflectRaysKernel(vec3 camPos, vec2i res,
                                                cudaSurfaceObject_t posTex,

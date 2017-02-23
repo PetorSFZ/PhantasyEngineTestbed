@@ -85,8 +85,8 @@ breakNestedFor1:
 	leftAabb.min = leftTri.min;
 	leftAabb.max = leftTri.max;
 
-	for (int i = 1; i < smallerList.size(); i++) {
-		const AABB& tri = inTriangleAabbs[smallerList[i]];
+	for (uint32_t i = 1; i < smallerList.size(); i++) {
+		//const AABB& tri = inTriangleAabbs[smallerList[i]];
 		leftAabb.min = min(leftAabb.min, leftTri.min);
 		leftAabb.max = max(leftAabb.max, leftTri.max);
 	}
@@ -95,7 +95,7 @@ breakNestedFor1:
 	rightAabb.min = rightTri.min;
 	rightAabb.max = rightTri.max;
 
-	for (int i = 1; i < largerList.size(); i++) {
+	for (uint32_t i = 1; i < largerList.size(); i++) {
 		const AABB& tri = inTriangleAabbs[largerList[i]];
 		rightAabb.min = min(rightAabb.min, tri.min);
 		rightAabb.max = min(rightAabb.max, tri.max);
@@ -137,7 +137,7 @@ BVH createDynamicBvh(const RawMesh& mesh, const mat4& transform)
 	DynArray<TriangleData> triangleDatas(numTriangles);
 	DynArray<uint32_t> triangleIndices(numTriangles);
 
-	for (int i = 0; i < mesh.indices.size(); i += 3) {
+	for (uint32_t i = 0; i < mesh.indices.size(); i += 3) {
 		TriangleVertices vertices;
 		vec3 v0 = transformPoint(transform, mesh.vertices[mesh.indices[i + 0]].pos);
 		vec3 v1 = transformPoint(transform, mesh.vertices[mesh.indices[i + 1]].pos);
@@ -226,8 +226,8 @@ void fillOuterNode(OuterBVH& bvh, uint32_t& currentIndex, const DynArray<uint32_
 	if (smallerList.size() == 0) {
 		for (uint32_t i = 0; i < largerList.size(); i++) {
 			uint32_t index = largerList[i];
-			const auto& aabb = aabbs[index];
-			for (const vec3 point : { aabb.min, aabb.max }) {
+			const auto& box = aabbs[index];
+			for (const vec3 point : { box.min, box.max }) {
 				// Intentionally use exact float equality, since no operations should have been
 				// done on the stored values
 				if (point[splitAxis] == smallerExtremePos) {
@@ -244,14 +244,14 @@ breakNestedFor2:
 
 	leftAabb.min = aabbs[smallerList[0]].min;
 	leftAabb.max = aabbs[smallerList[0]].max;
-	for (int i = 1; i < smallerList.size(); i++) {
+	for (uint32_t i = 1; i < smallerList.size(); i++) {
 		leftAabb.min = min(leftAabb.min, aabbs[smallerList[i]].min);
 		leftAabb.max = max(leftAabb.max, aabbs[smallerList[i]].max);
 	}
 
 	rightAabb.min = aabbs[largerList[0]].min;
 	rightAabb.max = aabbs[largerList[0]].max;
-	for (int i = 1; i < largerList.size(); i++) {
+	for (uint32_t i = 1; i < largerList.size(); i++) {
 		rightAabb.min = min(rightAabb.min, aabbs[largerList[i]].min);
 		rightAabb.max = max(rightAabb.max, aabbs[largerList[i]].max);
 	}
@@ -293,7 +293,7 @@ OuterBVH createOuterBvh(DynArray<BVH>& bvhs)
 	rootAabb.min = bvhs[0].nodes[0].leftChildAABBMin();
 	rootAabb.max = bvhs[0].nodes[0].leftChildAABBMax();
 
-	for (int i = 0; i < numBvhs; i++) {
+	for (uint32_t i = 0; i < numBvhs; i++) {
 		AABB aabb;
 		BVHNode& root = bvhs[i].nodes[0];
 		aabb.min = min(root.leftChildAABBMin(), root.rightChildAABBMin());
@@ -317,7 +317,7 @@ OuterBVH createDynamicBvh(const DynArray<RawMesh>& meshes, const DynArray<mat4>&
 	uint32_t numSubBvhs = meshes.size();
 	DynArray<BVH> bvhs(numSubBvhs);
 
-	for (int i = 0; i < numSubBvhs; i++) {
+	for (uint32_t i = 0; i < numSubBvhs; i++) {
 		BVH bvh = createDynamicBvh(meshes[i], transforms[i]);
 		sanitizeBVH(bvh);
 		bvhs.add(bvh);

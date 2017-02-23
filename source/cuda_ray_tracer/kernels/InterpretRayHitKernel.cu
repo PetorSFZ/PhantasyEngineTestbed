@@ -11,7 +11,7 @@ namespace phe {
 // Helper functions
 // ------------------------------------------------------------------------------------------------
 
-static __device__ void retrieveTriData(const TriangleData* __restrict__ triDatas,
+inline __device__ void retrieveTriData(const TriangleData* __restrict__ triDatas,
                                        const RayIn& ray, const RayHit& hit,
                                        vec3& pos, vec3& normal, vec2& uv,
                                        uint32_t& materialIndex) noexcept
@@ -37,7 +37,7 @@ static __device__ void retrieveTriData(const TriangleData* __restrict__ triDatas
 	materialIndex = data.materialIndex;
 }
 
-static __device__ vec4 linearize(vec4 rgbaGamma) noexcept
+inline __device__ vec4 linearize(vec4 rgbaGamma) noexcept
 {
 	rgbaGamma.x = powf(rgbaGamma.x, 2.2f);
 	rgbaGamma.y = powf(rgbaGamma.y, 2.2f);
@@ -45,7 +45,7 @@ static __device__ vec4 linearize(vec4 rgbaGamma) noexcept
 	return rgbaGamma;
 }
 
-static __device__ Material retrieveMaterial(cudaTextureObject_t materialsTex, uint32_t index) noexcept
+inline __device__ Material retrieveMaterial(cudaTextureObject_t materialsTex, uint32_t index) noexcept
 {
 	index *= 3; // 3 reads per material
 	Material tmp;
@@ -126,7 +126,7 @@ static __global__ void interpretRayHitKernel(InterpretRayHitKernelInput input,
 
 void launchInterpretRayHitKernel(const InterpretRayHitKernelInput& input,
                                  RayHitInfo* __restrict__ outInfos,
-                                 const cudaDeviceProp& deviceProperties) noexcept
+                                 const cudaDeviceProp&) noexcept
 {
 	const uint32_t numThreadsPerBlock = 256;
 	uint32_t numBlocks = (input.numRays / numThreadsPerBlock) + 1;

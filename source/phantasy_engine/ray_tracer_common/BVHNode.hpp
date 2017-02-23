@@ -72,13 +72,13 @@ struct BVHNode {
 		return iData.y;
 	}
 
-	inline int32_t leftChildIndexSafe() const noexcept
+	SFZ_CUDA_CALL int32_t leftChildIndexSafe() const noexcept
 	{
 		int32_t index = leftChildIndexRaw();
 		return (index < 0) ? ~index : index;
 	}
 
-	inline int32_t rightChildIndexSafe() const noexcept
+	SFZ_CUDA_CALL int32_t rightChildIndexSafe() const noexcept
 	{
 		int32_t index = rightChildIndexRaw();
 		return (index < 0) ? ~index : index;

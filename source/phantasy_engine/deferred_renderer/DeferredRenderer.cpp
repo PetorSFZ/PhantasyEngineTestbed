@@ -138,12 +138,12 @@ void DeferredRenderer::setMaterialsAndTextures(const DynArray<Material>& materia
 	mImpl->texturesSSBO.uploadData(tmpBindlessTextureHandles.data(), numBindlessTextureHandleBytes);
 }
 
-void DeferredRenderer::addTexture(const RawImage& texture) noexcept
+void DeferredRenderer::addTexture(const RawImage&) noexcept
 {
 	sfz::error("DeferredRenderer: addTexture() not implemented");
 }
 
-void DeferredRenderer::addMaterial(const Material& material) noexcept
+void DeferredRenderer::addMaterial(const Material&) noexcept
 {
 	sfz::error("DeferredRenderer: addMaterial() not implemented");
 }
@@ -214,13 +214,13 @@ void DeferredRenderer::setDynamicMeshes(const DynArray<RawMesh>& meshes) noexcep
 	}
 }
 
-void DeferredRenderer::addDynamicMesh(const RawMesh& mesh) noexcept
+void DeferredRenderer::addDynamicMesh(const RawMesh&) noexcept
 {
 	sfz::error("DeferredRenderer: addDynamicMeshes() not implemented");
 }
 
 RenderResult DeferredRenderer::render(const RenderComponent* renderComponents, uint32_t numComponents,
-                                      const DynArray<SphereLight>& lights) noexcept
+                                      const DynArray<SphereLight>&) noexcept
 {
 	auto& gbufferGenShader = mImpl->gbufferGenShader;
 	auto& shadingShader = mImpl->shadingShader;
@@ -286,7 +286,7 @@ RenderResult DeferredRenderer::render(const RenderComponent* renderComponents, u
 	glBlendEquation(GL_FUNC_ADD);
 	glBlendFunc(GL_ONE, GL_ONE);
 
-	resultFb.bindViewportClearColorDepth(vec2i(0.0), mTargetResolution, vec4(0.0f), 0.0f);
+	resultFb.bindViewportClearColorDepth(vec2i(0), mTargetResolution, vec4(0.0f), 0.0f);
 	shadingShader.useProgram();
 
 	gl::setUniform(shadingShader, "uInvProjMatrix", invProjMatrix);

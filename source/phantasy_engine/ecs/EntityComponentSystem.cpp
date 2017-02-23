@@ -90,7 +90,7 @@ ComponentMask ComponentMask::operator| (const ComponentMask& other) const noexce
 ComponentMask ComponentMask::operator~ () const noexcept
 {
 	__m128i reg = _mm_load_si128((const __m128i*)this->rawMask);
-	__m128i ones; ones = _mm_cmpeq_epi8(ones, ones);
+	__m128i ones = _mm_cmpeq_epi8(reg, reg);
 	__m128i negated = _mm_xor_si128(reg, ones);
 
 	ComponentMask tmp;

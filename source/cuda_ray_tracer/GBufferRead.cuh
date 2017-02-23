@@ -12,7 +12,7 @@ using std::uint32_t;
 using sfz::vec2u;
 using sfz::vec3;
 
-static __device__ vec3 linearize(vec3 rgbGamma) noexcept
+inline __device__ vec3 linearize(vec3 rgbGamma) noexcept
 {
 	rgbGamma.x = powf(rgbGamma.x, 2.2f);
 	rgbGamma.y = powf(rgbGamma.y, 2.2f);
@@ -20,7 +20,7 @@ static __device__ vec3 linearize(vec3 rgbGamma) noexcept
 	return rgbGamma;
 }
 
-static __device__ vec4 linearize(vec4 rgbGamma) noexcept
+inline __device__ vec4 linearize(vec4 rgbGamma) noexcept
 {
 	rgbGamma.x = powf(rgbGamma.x, 2.2f);
 	rgbGamma.y = powf(rgbGamma.y, 2.2f);
@@ -30,9 +30,9 @@ static __device__ vec4 linearize(vec4 rgbGamma) noexcept
 }
 
 struct GBufferValue final {
+	vec4 albedo;
 	vec3 pos;
 	vec3 normal;
-	vec4 albedo;
 	float roughness;
 	float metallic;
 };

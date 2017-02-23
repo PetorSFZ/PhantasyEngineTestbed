@@ -16,7 +16,7 @@ namespace phe {
 // Static helpers
 // ------------------------------------------------------------------------------------------------
 
-static __device__ void writeResult(cudaSurfaceObject_t result, vec2u loc, vec4 value) noexcept
+inline __device__ void writeResult(cudaSurfaceObject_t result, vec2u loc, vec4 value) noexcept
 {
 	surf2Dwrite(toFloat4(value), result, loc.x * sizeof(float4), loc.y);
 }
@@ -24,7 +24,7 @@ static __device__ void writeResult(cudaSurfaceObject_t result, vec2u loc, vec4 v
 // GatherRaysShadeKernel
 // ------------------------------------------------------------------------------------------------
 
-static __global__ void gatherRaysShadeKernel(GatherRaysShadeKernelInput input,
+__global__ void gatherRaysShadeKernel(GatherRaysShadeKernelInput input,
                                              cudaSurfaceObject_t resultOut)
 {
 	// Calculate surface coordinates

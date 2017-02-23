@@ -190,7 +190,7 @@ static void processNode(const BVH& bvh, BVHMetrics& metrics, InternalBVHMetrics&
 	}
 }
 
-static void processLeaf(const BVH& bvh, BVHMetrics& metrics, InternalBVHMetrics& internalMetrics,
+static void processLeaf(const BVH&, BVHMetrics& metrics, InternalBVHMetrics& internalMetrics,
                         uint32_t numTriangles, uint32_t depth) noexcept
 {
 	internalMetrics.totalLeafDepth += depth;

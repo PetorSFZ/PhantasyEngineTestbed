@@ -39,7 +39,7 @@ inline __device__ vec4 readFromSurface(const cudaSurfaceObject_t& surface, vec2u
 // ------------------------------------------------------------------------------------------------
 
 /// Set ray to not hit anything and be cheap to evaluate in ray casting.
-static __device__ void setToDummyRay(RayIn& ray)
+inline __device__ void setToDummyRay(RayIn& ray)
 {
 	ray.setOrigin(vec3(1000000.0f));
 	ray.setDir(vec3(0.0f, 1.0f, 0.0f));
@@ -47,7 +47,7 @@ static __device__ void setToDummyRay(RayIn& ray)
 	ray.setMaxDist(0.001f);
 }
 
-static __device__ void shadeHit(uint32_t id, uint32_t numPixels, const vec3& mask,
+inline __device__ void shadeHit(uint32_t id, uint32_t numPixels, const vec3& mask,
                                 curandState& randState, RayIn* shadowRays, vec3* lightContributions,
                                 const vec3& normal, const vec3& toCamera, const vec3& pos,
                                 const vec3& albedo, float metallic, float roughness,

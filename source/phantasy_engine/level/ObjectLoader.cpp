@@ -21,13 +21,13 @@ static vec3 toSFZ(const aiVector3D& v)
 
 uint32_t loadDynObject(const char* basePath, const char* fileName, Level& level, const mat4& modelMatrix)
 {
-	size_t basePathLen = std::strlen(basePath);
-	size_t fileNameLen = std::strlen(fileName);
+	uint32_t basePathLen = uint32_t(std::strlen(basePath));
+	uint32_t fileNameLen = uint32_t(std::strlen(fileName));
 	DynString path("", basePathLen + fileNameLen + 2);
 	path.printf("%s%s", basePath, fileName);
 	if (path.size() < 1) {
 		sfz::printErrorMessage("Failed to load model, empty path");
-		return -1;
+		return ~0u;
 	}
 
 	// Get the real base path from the path
@@ -43,7 +43,7 @@ uint32_t loadDynObject(const char* basePath, const char* fileName, Level& level,
 	}
 	if (realBasePath.size() == path.size()) {
 		sfz::printErrorMessage("Failed to find real base path, basePath=\"%s\", fileName=\"%s\"", basePath, fileName);
-		return -1;
+		return ~0u;
 	}
 
 	// Load model through Assimp
@@ -51,7 +51,7 @@ uint32_t loadDynObject(const char* basePath, const char* fileName, Level& level,
 	const aiScene* scene = importer.ReadFile(path.str(), aiProcessPreset_TargetRealtime_Quality | aiProcess_FlipUVs);
 	if (scene == nullptr || scene->mFlags == AI_SCENE_FLAGS_INCOMPLETE || scene->mRootNode == nullptr) {
 		sfz::printErrorMessage("Failed to load model \"%s\", error: %s", fileName, importer.GetErrorString());
-		return -1;
+		return ~0u;
 	}
 
 	const mat4 normalMatrix = inverse(transpose(modelMatrix));
@@ -179,7 +179,7 @@ uint32_t loadDynObject(const char* basePath, const char* fileName, Level& level,
 		}
 
 		// Add material index
-		uint16_t nextMaterialIndex = uint16_t(level.materials.size());
+		//uint16_t nextMaterialIndex = uint16_t(level.materials.size());
 		DynArray<uint16_t> indicesTmp;
 		indicesTmp.addMany(aimesh->mNumVertices, 0u);
 		mesh.materialIndices.add(std::move(indicesTmp));

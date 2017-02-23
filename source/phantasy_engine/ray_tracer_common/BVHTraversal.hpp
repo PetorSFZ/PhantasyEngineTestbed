@@ -133,7 +133,7 @@ SFZ_CUDA_CALL RayCastResult castDebugRay(const BVHNode* nodes, const TriangleVer
                                          const Ray& ray, DebugRayCastData* debugData,
                                          float tMin = 0.0001f, float tMax = FLT_MAX) noexcept
 {
-	sfz_assert_debug(debugData != nullptr);
+	//sfz_assert_debug(debugData != nullptr);
 
 	// Create local stack
 	uint32_t stack[STACK_MAX_SIZE];
@@ -185,7 +185,7 @@ SFZ_CUDA_CALL RayCastResult castDebugRay(const BVHNode* nodes, const TriangleVer
 
 					if (hit.hit && hit.t < closest.t && tMin <= hit.t && hit.t <= tMax) {
 						debugData->trianglesIntersected++;
-						closest.triangleIndex = (triList - triangles) + i;
+						closest.triangleIndex = uint32_t((triList - triangles) + i);
 						closest.t = hit.t;
 						closest.u = hit.u;
 						closest.v = hit.v;
@@ -218,7 +218,7 @@ SFZ_CUDA_CALL RayCastResult castDebugRay(const BVHNode* nodes, const TriangleVer
 
 					if (hit.hit && hit.t < closest.t && tMin <= hit.t && hit.t <= tMax) {
 						debugData->trianglesIntersected++;
-						closest.triangleIndex = (triList - triangles) + i;
+						closest.triangleIndex = uint32_t((triList - triangles) + i);
 						closest.t = hit.t;
 						closest.u = hit.u;
 						closest.v = hit.v;

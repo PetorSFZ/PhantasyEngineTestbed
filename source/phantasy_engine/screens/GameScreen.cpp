@@ -299,9 +299,9 @@ void GameScreen::render(UpdateState& state)
 
 }
 
-void GameScreen::setRenderer(const SharedPtr<BaseRenderer>& renderer) noexcept
+void GameScreen::setRenderer(const SharedPtr<BaseRenderer>& rendererIn) noexcept
 {
-	this->renderer = renderer;
+	this->renderer = rendererIn;
 
 	resetTAA();
 }

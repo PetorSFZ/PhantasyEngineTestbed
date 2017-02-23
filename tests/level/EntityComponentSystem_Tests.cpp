@@ -50,10 +50,10 @@ TEST_CASE("ComponentMask", "[EntityComponentSystem]")
 	}
 	SECTION("fromType()") {
 		for (uint64_t i = 0; i < 64; i++) {
-			REQUIRE(ComponentMask::fromRawValue(0, uint64_t(1) << i) == ComponentMask::fromType(i));
+			REQUIRE(ComponentMask::fromRawValue(0, uint64_t(1) << i) == ComponentMask::fromType(uint32_t(i)));
 		}
 		for (uint64_t i = 0; i < 64; i++) {
-			REQUIRE(ComponentMask::fromRawValue(uint64_t(1) << i, 0) == ComponentMask::fromType(i + 64));
+			REQUIRE(ComponentMask::fromRawValue(uint64_t(1) << i, 0) == ComponentMask::fromType(uint32_t(i + 64)));
 		}
 	}
 }

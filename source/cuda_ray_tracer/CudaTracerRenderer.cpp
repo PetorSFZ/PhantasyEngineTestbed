@@ -237,12 +237,12 @@ void CudaTracerRenderer::setMaterialsAndTextures(const DynArray<Material>& mater
 	                                                        tmpTextureHandles.size());
 }
 
-void CudaTracerRenderer::addTexture(const RawImage& texture) noexcept
+void CudaTracerRenderer::addTexture(const RawImage&) noexcept
 {
 	sfz::error("CudaTracerRenderer: addTexture() not implemented");
 }
 
-void CudaTracerRenderer::addMaterial(const Material& material) noexcept
+void CudaTracerRenderer::addMaterial(const Material&) noexcept
 {
 	sfz::error("CudaTracerRenderer: addMaterial() not implemented");
 }
@@ -408,13 +408,13 @@ static void sendDynamicBvhToCuda()
 //	stupidGpuSend(mImpl->tracerParams.dynamic, bvhTriangleDataTex);
 }*/
 
-void CudaTracerRenderer::addDynamicMesh(const RawMesh& mesh) noexcept
+void CudaTracerRenderer::addDynamicMesh(const RawMesh&) noexcept
 {
 	sfz::error("CudaTracerRenderer: addDynamicMesh() not implemented");
 }
 
 RenderResult CudaTracerRenderer::render(const RenderComponent* renderComponents, uint32_t numComponents,
-                                        const DynArray<SphereLight>& lights) noexcept
+                                        const DynArray<SphereLight>&) noexcept
 {
 	const mat4 viewMatrix = mCamera.viewMatrix();
 	const mat4 projMatrix = mCamera.projMatrix(mTargetResolution);
@@ -745,7 +745,7 @@ void CudaTracerRenderer::targetResolutionUpdated() noexcept
 	uint32_t numTargetPixels = mTargetResolution.x * mTargetResolution.y;
 	uint32_t numPrimaryShadowRays = numTargetPixels * mImpl->staticSphereLights.capacity();
 	uint32_t numSecondaryRays = numTargetPixels / 4;
-	uint32_t numSecondaryShadowRays = numSecondaryRays * mImpl->staticSphereLights.capacity();
+	//uint32_t numSecondaryShadowRays = numSecondaryRays * mImpl->staticSphereLights.capacity();
 	mImpl->rayBuffer.destroy();
 	mImpl->rayBuffer.create(numTargetPixels);
 	mImpl->shadowRayBuffer.destroy();

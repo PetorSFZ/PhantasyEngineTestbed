@@ -73,7 +73,7 @@ struct AABBIsect final {
 	float tOut;
 };
 
-static __device__ AABBIsect rayVsAabb(const vec3& invDir, const vec3& originDivDir, const vec3& min, const vec3& max, float tCurrMin, float tCurrMax)
+inline __device__ AABBIsect rayVsAabb(const vec3& invDir, const vec3& originDivDir, const vec3& min, const vec3& max, float tCurrMin, float tCurrMax)
 {
 	//vec3 lo = (min - ray.origin) * ray.invDir;
 	//vec3 hi = (max - ray.origin) * ray.invDir;
@@ -96,7 +96,7 @@ static __device__ AABBIsect rayVsAabb(const vec3& invDir, const vec3& originDivD
 // ------------------------------------------------------------------------------------------------
 
 // See page 750 in Real-Time Rendering 3
-static __device__ void rayVsTriangle(const TriangleVertices& tri, const vec3& origin, const vec3& dir, float& t, float& u, float& v) noexcept
+inline __device__ void rayVsTriangle(const TriangleVertices& tri, const vec3& origin, const vec3& dir, float& t, float& u, float& v) noexcept
 {
 	const float EPS = 0.00001f;
 	vec3 p0 = tri.v0.xyz;
@@ -136,7 +136,7 @@ static __device__ void rayVsTriangle(const TriangleVertices& tri, const vec3& or
 // Helper functions
 // ------------------------------------------------------------------------------------------------
 
-static __device__ BVHNode loadBvhNode(cudaTextureObject_t bvhNodesTex, uint32_t nodeIndex)
+inline __device__ BVHNode loadBvhNode(cudaTextureObject_t bvhNodesTex, uint32_t nodeIndex)
 {
 	nodeIndex *= 4; // 4 texture reads per index
 	BVHNode node;
@@ -147,7 +147,7 @@ static __device__ BVHNode loadBvhNode(cudaTextureObject_t bvhNodesTex, uint32_t 
 	return node;
 }
 
-static __device__ TriangleVertices loadTriangle(cudaTextureObject_t trianglesTex, uint32_t triIndex)
+inline __device__ TriangleVertices loadTriangle(cudaTextureObject_t trianglesTex, uint32_t triIndex)
 {
 	triIndex *= 3; // 3 texture reads per index
 	TriangleVertices v;
@@ -166,10 +166,10 @@ static const uint32_t RAY_CAST_KERNEL_BLOCK_WIDTH = 32;
 static const uint32_t RAY_CAST_KERNEL_MAX_BLOCK_HEIGHT = 64;
 static const uint32_t RAY_CAST_KERNEL_BLOCK_DEPTH = 1;
 // The node stack size, BVHs may not have deeper leaves than this
-static const const uint32_t RAY_CAST_KERNEL_STACK_SIZE = 128;
+static const uint32_t RAY_CAST_KERNEL_STACK_SIZE = 128;
 // The smallest number of active threads in a warp before we attempt to allocate new rays for the
 // remaining threads
-static const const uint32_t RAY_CAST_DYNAMIC_FETCH_THRESHOLD = 20;
+static const uint32_t RAY_CAST_DYNAMIC_FETCH_THRESHOLD = 20;
 
 // The global (atomic) index used to allocate arrays from global list
 static __device__ uint32_t nextGlobalRayIndex = 0u;
@@ -221,7 +221,6 @@ static __global__ void rayCastKernel(cudaTextureObject_t bvhNodes, cudaTextureOb
 	// Ray information
 	vec3 origin, dir, invDir, originDivDir;
 	float tMin;
-	bool noResultOnlyHit;
 
 	// Very naive loop over all input rays
 	//for (uint32_t rayIdx = tid; rayIdx < numRays; rayIdx += numThreads) {
@@ -821,7 +820,7 @@ void launchRayCastKernel(const RayCastKernelInput& input, RayHit* __restrict__ r
 	uint32_t threadsPerBlock = threadsPerSM / (factorSmallerBlocks * blocksPerSM);
 	uint32_t numBlocks = blocksPerSM * numSM * factorSmallerBlocks * factorExtraBlocks;
 
-	numBlocks = ceil(occupancy * numBlocks);
+	numBlocks = uint32_t(ceil(occupancy * numBlocks));
 
 	dim3 blockDims;
 	blockDims.x = RAY_CAST_KERNEL_BLOCK_WIDTH;
@@ -842,7 +841,7 @@ void launchRayCastKernel(const RayCastKernelInput& input, RayHit* __restrict__ r
 }
 
 void launchRayCastNoPersistenceKernel(const RayCastKernelInput& input, RayHit* __restrict__ rayResults,
-                                      const cudaDeviceProp& deviceProperties) noexcept
+                                      const cudaDeviceProp&) noexcept
 {
 	const uint32_t raysPerBlock = 256;
 	uint32_t numBlocks = (input.numRays / raysPerBlock) + 1;
@@ -868,7 +867,7 @@ void launchShadowRayCastKernel(const RayCastKernelInput& input, bool* __restrict
 	uint32_t threadsPerBlock = threadsPerSM / (factorSmallerBlocks * blocksPerSM);
 	uint32_t numBlocks = blocksPerSM * numSM * factorSmallerBlocks * factorExtraBlocks;
 
-	numBlocks = ceil(occupancy * numBlocks);
+	numBlocks = uint32_t(ceil(occupancy * numBlocks));
 
 	dim3 blockDims;
 	blockDims.x = RAY_CAST_KERNEL_BLOCK_WIDTH;
@@ -891,7 +890,7 @@ void launchShadowRayCastKernel(const RayCastKernelInput& input, bool* __restrict
 // Secondary helper kernels (for debugging and profiling)
 // ------------------------------------------------------------------------------------------------
 
-static __device__ vec3 calculatePrimaryRayDir(const CameraDef& cam, vec2 loc, vec2 surfaceRes)
+inline __device__ vec3 calculatePrimaryRayDir(const CameraDef& cam, vec2 loc, vec2 surfaceRes)
 {
 	vec2 locNormalized = loc / surfaceRes; // [0, 1]
 	vec2 centerOffsCoord = locNormalized * 2.0f - vec2(1.0f); // [-1.0, 1.0]

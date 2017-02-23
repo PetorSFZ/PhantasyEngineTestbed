@@ -114,7 +114,7 @@ static void convertRecursively(phe::BVH& bvh, uint32_t& currentTriangleIndex, co
 
 	// Backwards loop -> Depth-first search in the right child
 	for (int64_t i = 1; i >= 0; --i) {
-		nv::BVHNode* child = node->getChildNode(i);
+		nv::BVHNode* child = node->getChildNode(int32_t(i));
 		(bvh.nodes[nodeIndex].*setChildAABBFunctions[i])(child->m_bounds.min(), child->m_bounds.max());
 
 		if (child->isLeaf()) {
@@ -224,7 +224,7 @@ phe::BVH buildStaticFrom(const DynArray<TriangleVertices>& inTriangles,
 		vertices.add(triangle.v1.xyz);
 		vertices.add(triangle.v2.xyz);
 	}
-	for (uint32_t i = 0; i < numVertices; i += 3) {
+	for (int32_t i = 0; i < numVertices; i += 3) {
 		nv::Scene::Triangle triangle;
 		triangle.vertices = vec3i{ (nv::S32)i, (nv::S32)i + 1, (nv::S32)i + 2 };
 		triangles.add(triangle);
@@ -239,7 +239,7 @@ phe::BVH buildStaticFrom(const DynArray<TriangleVertices>& inTriangles,
 
 	phe::BVH convertedBvh;
 
-	for (uint32_t i = 0; i < sbvh.getTriIndices().getSize(); i++) {
+	for (int32_t i = 0; i < sbvh.getTriIndices().getSize(); i++) {
 		convertedBvh.triangleVerts.add(inTriangles[sbvh.getTriIndices().get(i)]);
 		convertedBvh.triangleDatas.add(inTriangleDatas[sbvh.getTriIndices().get(i)]);
 	}
