@@ -13,55 +13,53 @@ using std::uint32_t;
 using std::uint64_t;
 using sfz::Allocator;
 
-// Constants
-// ------------------------------------------------------------------------------------------------
-
-constexpr uint32_t ECS_MAX_NUM_COMPONENT_TYPES = 128;
-constexpr uint32_t ECS_NUM_BYTES_PER_MASK = ECS_MAX_NUM_COMPONENT_TYPES / 8u;
-constexpr uint64_t ECS_EXISTENCE_COMPONENT_TYPE = 0u;
-
 // ComponentMask
 // ------------------------------------------------------------------------------------------------
 
-struct alignas(ECS_NUM_BYTES_PER_MASK) ComponentMask final {
+constexpr uint32_t ECS_MAX_NUM_COMPONENT_TYPES = 64;
+
+/// A mask specifying a number of components.
+struct ComponentMask final {
 	// Members
 	// --------------------------------------------------------------------------------------------
 
-	uint8_t rawMask[ECS_NUM_BYTES_PER_MASK];
+	uint64_t rawMask;
 
-	// Constructors & destructors
+	// Constructor methods
 	// --------------------------------------------------------------------------------------------
 
-	ComponentMask() noexcept = default;
-	ComponentMask(const ComponentMask&) noexcept = default;
-	ComponentMask& operator= (const ComponentMask&) noexcept = default;
-	~ComponentMask() noexcept = default;
-
-	static ComponentMask empty() noexcept;
-	static ComponentMask fromType(uint32_t componentType) noexcept;
-	static ComponentMask fromRawValue(uint64_t highBits, uint64_t lowBits) noexcept;
+	static ComponentMask fromRawValue(uint64_t bits) noexcept { return { bits }; }
+	static ComponentMask empty() noexcept { return ComponentMask::fromRawValue(0); }
+	static ComponentMask fromType(uint32_t componentType) noexcept
+	{
+		return ComponentMask::fromRawValue(uint64_t(1) << uint64_t(componentType));
+	}
+	static ComponentMask existenceMask() noexcept { return ComponentMask::fromRawValue(1); }
 
 	// Operators
-	// --------------------------------------------------------------------------------------------
+	// ------------------------------------------------------------------------------------------------
 
-	bool operator== (const ComponentMask& other) const noexcept;
-	bool operator!= (const ComponentMask& other) const noexcept;
-
-	ComponentMask operator& (const ComponentMask& other) const noexcept;
-	ComponentMask operator| (const ComponentMask& other) const noexcept;
-	ComponentMask operator~ () const noexcept;
+	bool operator== (const ComponentMask& o) const noexcept { return rawMask == o.rawMask; }
+	bool operator!= (const ComponentMask& o) const noexcept { return rawMask != o.rawMask; }
+	ComponentMask operator& (const ComponentMask& o) const noexcept { return { rawMask & o.rawMask }; }
+	ComponentMask operator| (const ComponentMask& o) const noexcept { return { rawMask | o.rawMask }; }
+	ComponentMask operator~ () const noexcept { return { ~rawMask }; }
 
 	// Methods
 	// --------------------------------------------------------------------------------------------
 
 	/// Checks whether this mask contains the specified component type or not
-	bool hasComponentType(uint32_t componentType) const noexcept;
+	bool hasComponentType(uint32_t componentType) const noexcept
+	{
+		return this->fulfills(ComponentMask::fromType(componentType));
+	}
 
 	/// Checks whether this mask has all the components in the specified parameter mask
-	bool fulfills(const ComponentMask& constraints) const noexcept;
+	bool fulfills(const ComponentMask& constraints) const noexcept
+	{
+		return (this->rawMask & constraints.rawMask) == constraints.rawMask;
+	}
 };
-
-static_assert(sizeof(ComponentMask) == ECS_NUM_BYTES_PER_MASK, "ComponentMask is padded");
 
 // EntityComponentSystem
 // ------------------------------------------------------------------------------------------------

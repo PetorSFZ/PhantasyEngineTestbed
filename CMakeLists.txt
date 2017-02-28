@@ -225,8 +225,12 @@ if(CUDA_TRACER)
 	add_definitions(-DCUDA_TRACER_AVAILABLE)
 
 	# CUDA compiler flags
-	set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -expt-relaxed-constexpr --gpu-architecture=compute_30 --gpu-code=compute_30)
-	set(CUDA_NVCC_FLAGS_DEBUG ${CUDA_NVCC_FLAGS_DEBUG} -g -lineinfo) # Add -G for CUDA device debugging
+	# compute_30 <==> Equivalent to Kepler cards, (GTX 680M, etc)
+	# sm_50 <==> Maxwell cards (low-end), (940M, etc)
+	# sm_52 <==> Maxwell cards (high end), (GTX 970M, GTX 980 Ti, etc)
+	# sm_61 <==> Pascal cards (first gen), (1070, 1080, Titan X, etc)
+	set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -expt-relaxed-constexpr -gencode arch=compute_30,code=sm_52)
+	set(CUDA_NVCC_FLAGS_DEBUG ${CUDA_NVCC_FLAGS_DEBUG} -O0 -g -lineinfo) # -G for extreme debugging
 	set(CUDA_NVCC_FLAGS_RELWITHDEBINFO ${CUDA_NVCC_FLAGS_RELWITHDEBINFO} -O3 -use_fast_math -g -lineinfo)
 	set(CUDA_NVCC_FLAGS_RELEASE ${CUDA_NVCC_FLAGS_RELEASE} -O3 -use_fast_math)
 

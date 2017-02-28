@@ -4,8 +4,6 @@
 
 #include <algorithm>
 
-#include <immintrin.h> // Intel AVX intrinsics
-
 #include <sfz/Assert.hpp>
 #include <sfz/containers/DynArray.hpp>
 #include <sfz/memory/New.hpp>
@@ -13,111 +11,6 @@
 namespace phe {
 
 using namespace sfz;
-
-// ComponentMask: Constructors & destructors
-// ------------------------------------------------------------------------------------------------
-
-ComponentMask ComponentMask::empty() noexcept
-{
-	return fromRawValue(0, 0);
-}
-
-ComponentMask ComponentMask::fromType(uint32_t componentType) noexcept
-{
-	__m128i val;
-	if (componentType < 64) {
-		uint64_t high = 0;
-		uint64_t low = uint64_t(1) << uint64_t(componentType);
-		val = _mm_setr_epi64x(low, high);
-	}
-	else {
-		uint64_t high = uint64_t(1) << uint64_t(componentType - 64);
-		uint64_t low = 0;
-		val = _mm_setr_epi64x(low, high);
-	}
-	ComponentMask tmp;
-	_mm_store_si128((__m128i*)tmp.rawMask, val);
-	return tmp;
-}
-
-ComponentMask ComponentMask::fromRawValue(uint64_t highBits, uint64_t lowBits) noexcept
-{
-	__m128i val = _mm_setr_epi64x(lowBits, highBits);
-	ComponentMask tmp;
-	_mm_store_si128((__m128i*)tmp.rawMask, val);
-	return tmp;
-}
-
-// ComponentMask: Operators
-// ------------------------------------------------------------------------------------------------
-
-bool ComponentMask::operator== (const ComponentMask& other) const noexcept
-{
-	__m128i thisReg = _mm_load_si128((const __m128i*)this->rawMask);
-	__m128i otherReg = _mm_load_si128((const __m128i*)other.rawMask);
-	__m128i cmp1 = _mm_cmpeq_epi64(thisReg, otherReg);
-	__m128i cmp2 = _mm_and_si128(cmp1, _mm_srli_si128(cmp1, 8));
-	return uint64_t(_mm_extract_epi64(cmp2, 0)) != uint64_t(0);
-}
-
-bool ComponentMask::operator!= (const ComponentMask& other) const noexcept
-{
-	return !(*this == other);
-}
-
-ComponentMask ComponentMask::operator& (const ComponentMask& other) const noexcept
-{
-	__m128i thisReg = _mm_load_si128((const __m128i*)this->rawMask);
-	__m128i otherReg = _mm_load_si128((const __m128i*)other.rawMask);
-	__m128i comb = _mm_and_si128(thisReg, otherReg);
-
-	ComponentMask tmp;
-	_mm_store_si128((__m128i*)tmp.rawMask, comb);
-	return tmp;
-}
-
-ComponentMask ComponentMask::operator| (const ComponentMask& other) const noexcept
-{
-	__m128i thisReg = _mm_load_si128((const __m128i*)this->rawMask);
-	__m128i otherReg = _mm_load_si128((const __m128i*)other.rawMask);
-	__m128i disj = _mm_or_si128(thisReg, otherReg);
-
-	ComponentMask tmp;
-	_mm_store_si128((__m128i*)tmp.rawMask, disj);
-	return tmp;
-}
-
-ComponentMask ComponentMask::operator~ () const noexcept
-{
-	__m128i reg = _mm_load_si128((const __m128i*)this->rawMask);
-	__m128i ones = _mm_cmpeq_epi8(reg, reg);
-	__m128i negated = _mm_xor_si128(reg, ones);
-
-	ComponentMask tmp;
-	_mm_store_si128((__m128i*)tmp.rawMask, negated);
-	return tmp;
-}
-
-// ComponentMask: Methods
-// ------------------------------------------------------------------------------------------------
-
-bool ComponentMask::hasComponentType(uint32_t componentType) const noexcept
-{
-	return this->fulfills(ComponentMask::fromType(componentType));
-}
-
-bool ComponentMask::fulfills(const ComponentMask& constraints) const noexcept
-{
-	__m128i thisReg = _mm_load_si128((const __m128i*)this->rawMask);
-	__m128i constraintsReg = _mm_load_si128((const __m128i*)constraints.rawMask);
-
-	// (this & constraints) == constraints
-	__m128i andReg = _mm_and_si128(thisReg, constraintsReg);
-	__m128i cmp1 = _mm_cmpeq_epi64(andReg, constraintsReg);
-	__m128i cmp2 = _mm_and_si128(cmp1, _mm_srli_si128(cmp1, 8));
-
-	return uint64_t(_mm_extract_epi64(cmp2, 0)) != uint64_t(0);
-}
 
 // EntityComponentSystemImpl
 // ------------------------------------------------------------------------------------------------
