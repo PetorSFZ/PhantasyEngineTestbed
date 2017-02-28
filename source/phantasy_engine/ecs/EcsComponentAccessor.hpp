@@ -46,21 +46,20 @@ public:
 	/// Returns the ComponentMask for the component type associated with this accessor
 	ComponentMask mask() const noexcept;
 
-	/// Adds a component to the specified entity
+	/// See EntityComponentSystem.addComponentRaw()
 	void add(uint32_t entity, const T& component) noexcept;
 
-	/// Removes the component associated with the specified entity
+	/// See EntityComponentSystem.removeComponent()
 	void remove(uint32_t entity) noexcept;
 
-	/// Returns the pointer to the internal array of a given type of component
+	/// See EntityComponentSystem.componentArrayPtrRaw()
 	T* arrayPtr() noexcept;
 	const T* arrayPtr() const noexcept;
 
-	/// Returns the number of components of this type
+	/// See EntityComponentSystem.numComponents()
 	uint32_t numComponents() const noexcept;
 
-	/// Returns pointer to the component associated with the specified entity. Returns nullptr if
-	/// component does not exist.
+	/// See EntityComponentSystem.getComponentRaw()
 	T* get(uint32_t entity) noexcept;
 	const T* get(uint32_t entity) const noexcept;
 

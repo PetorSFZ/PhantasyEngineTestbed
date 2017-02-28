@@ -133,54 +133,78 @@ public:
 
 	/// Creates a new entity with no associated components. Index is guaranteed to be smaller than
 	/// the systems maximum number of entities. Indices used for removed entities will be used.
+	/// Complexity: O(1) operation, should be very fast.
 	uint32_t createEntity() noexcept;
 
 	/// Deletes an entity. Will remove all associated components and free the index to be reused
 	/// for future entities.
+	/// Complexity: O(NUM_COMPONENT_TYPES * NUM_COMPONENTS) operation, essentialy removeComponent()
+	///             is called for each component the entity has.
 	void deleteEntity(uint32_t entity) noexcept;
 
 	/// Returns the component mask for a given entity.
+	/// Complexity: O(1) operation, however componentMaskArrayPtr() should be used if more than
+	///             one ComponentMask is to be accessed.
 	const ComponentMask& componentMask(uint32_t entity) const noexcept;
 
-	/// Returns pointer to the intenral array of component masks.
+	/// Returns pointer to the intenral array of component masks. The ComponentMask for entity
+	/// 'i' is accessed by returnedPointer[i].
+	/// Complexity: O(1) operation
 	const ComponentMask* componentMaskArrayPtr() const noexcept;
 
 	/// Returns the maximum number of entites allowed by this system
+	/// Complexity: O(1) operation
 	uint32_t maxNumEntities() const noexcept;
 
 	/// Returns the current number of entities in this system
+	/// Complexity: O(1) operation
 	uint32_t currentNumEntities() const noexcept;
 
 	/// Gives an upper bound for the index values of the current entities. This value should be
 	/// used when iterating over all entities. Guaranteed to be at least 1 bigger than the
 	/// currently highest index, but not guaranteed to be lower than currentNumEntities().
+	/// Complexity: O(1) operation
 	uint32_t entityIndexUpperBound() const noexcept;
 
 	// Raw (non-typesafe) component methods
 	// --------------------------------------------------------------------------------------------
 
 	/// Specifies a new type of component, returns its index to be used when accessing.
+	/// Complexity: O(NUM_INITIAL_COMPONENTS_CAPACITY) memory allocation operation
+	/// TODO: Parameter for initial number of components to allocate space for
 	uint32_t createComponentTypeRaw(uint32_t bytesPerComponent) noexcept;
 	
 	/// Returns the current number of component types in this system. The maximum number is defined
 	/// by the MAX_NUM_COMPONENT_TYPES constant.
+	/// Complexity: O(1) operation
 	uint32_t currentNumComponentTypes() const noexcept;
 
 	/// Adds a component of the specified type to the specified entity.
+	/// Complexity: O(1) operation
+	/// TODO: Potentially amortized O(1) operation if memory allocation scheme is changed
 	void addComponentRaw(uint32_t entity, uint32_t componentType, const void* component) noexcept;
 
 	/// Removes a component from an entity.
+	/// Complexity: O(NUM_COMPONENTS) operation, moves all components after this one back in the
+	///             list.
+	/// TODO: Could be changed to an O(1) operation by swapping component to be removed and
+	/// component at last position in list. However, this has implications for iteration and list
+	/// order. I.e. it will be harder to keep list sorted.
 	void removeComponent(uint32_t entity, uint32_t componentType) noexcept;
 
 	/// Returns the pointer to the internal array of a given type of component.
+	/// Complexity: O(1) operation
 	void* componentArrayPtrRaw(uint32_t componentType) noexcept;
 	const void* componentArrayPtrRaw(uint32_t componentType) const noexcept;
 
 	/// Returns the number of components of a specific type.
+	/// Complexity: O(1) operation
 	uint32_t numComponents(uint32_t componentType) noexcept;
 
 	/// Returns pointer to the component of specified type for a given entity. Returns nullptr if
 	/// component does not exist.
+	/// Complexity: O(1) operation, however componentArrayPtrRaw() should be used instead if more
+	///             than one component is to be accessed.
 	void* getComponentRaw(uint32_t entity, uint32_t componentType) noexcept;
 	const void* getComponentRaw(uint32_t entity, uint32_t componentType) const noexcept;
 

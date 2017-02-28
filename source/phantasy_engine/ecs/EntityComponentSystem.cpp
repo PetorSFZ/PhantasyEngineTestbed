@@ -121,7 +121,7 @@ uint32_t EntityComponentSystem::createEntity() noexcept
 
 	// Sets existence bit
 	ComponentMask& mask = mImpl->masks[entity];
-	mask = ComponentMask::fromType(0);
+	mask = ComponentMask::existenceMask();
 
 	return entity;
 }
