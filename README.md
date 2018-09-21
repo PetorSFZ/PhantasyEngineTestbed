@@ -4,7 +4,7 @@ __NOTE: THIS IS DEPRECATED!__ This is a precursor to the current Phantasy Engine
 
 ## About
 
-This started of as the initial work on a game engine called Phantasy Engine. Later it turned into a joint effort by me (Peter Hillerström - [PetorSFZ](https://github.com/PetorSFZ)), Niklas Helmertz ([helmertz](https://github.com/helmertz)) and Johan Hasselqvist ([Hasselmannen](https://github.com/Hasselmannen)) to build a real-time raytracer in CUDA as a school project.
+This started out as the initial work on a game engine called Phantasy Engine. Later it turned into a joint effort by me (Peter Hillerström - [PetorSFZ](https://github.com/PetorSFZ)), Niklas Helmertz ([helmertz](https://github.com/helmertz)) and Johan Hasselqvist ([Hasselmannen](https://github.com/Hasselmannen)) to build a real-time raytracer in CUDA as a school project.
 
 The current branch (master) is essentially the state we left the project in, a promising start but a lot of way to go. A lot of issues are known, a lot of things are unfinished. It's probably not worth the effort to attempt to build the engine, a pre-compiled binary is available under releases if you want to try it out.
 
